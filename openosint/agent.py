@@ -29,6 +29,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_email import run_email_osint
 from openosint.tools.search_github import run_github_osint
+from openosint.tools.search_sherlockeye import run_sherlockeye_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
@@ -303,6 +304,38 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["domain"],
         },
     },
+    {
+        "name": "search_sherlockeye",
+        "description": (
+            "Reverse Lookup & AI-Powered OSINT search via Sherlockeye for email, phone, username, "
+            "domain, IP, name, CPF, or CNPJ. Accepts a plain value (type inferred) or "
+            "explicit type:\"value\" (e.g. email:\"user@example.com\"). Returns aggregated "
+            "findings from Sherlockeye data sources. Use for broad identity pivots when you "
+            "need enriched cross-source results beyond holehe/sherlock alone. "
+            "Set deep_research=true for email/phone/name to enable digital account expansion. "
+            "Requires SHERLOCKEYE_API_KEY."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "Target value or type:\"value\" (email, phone, name, domain, ip, "
+                        "username, cpf, cnpj)."
+                    ),
+                },
+                "deep_research": {
+                    "type": "boolean",
+                    "description": (
+                        "Enable Deep Research (digital_accounts_expansion) for email, phone, "
+                        "or name searches."
+                    ),
+                },
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -326,6 +359,11 @@ _TOOL_MAP: dict[str, Any] = {
     "search_abuseipdb": lambda a: run_abuseipdb_osint(a["ip"], timeout_seconds=30),
     "search_github": lambda a: run_github_osint(a["query"], timeout_seconds=30),
     "search_dns": lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
+    "search_sherlockeye": lambda a: run_sherlockeye_osint(
+        a["query"],
+        timeout_seconds=120,
+        deep_research=bool(a.get("deep_research", False)),
+    ),
 }
 
 SYSTEM_PROMPT = """You are OpenOSINT, an expert OSINT analyst assistant running in a terminal.
@@ -338,6 +376,8 @@ INVESTIGATION STRATEGY:
 - For an IP: run search_ip and optionally search_shodan or search_censys for open ports/services.
 - For a GitHub username or handle: use search_github to retrieve profile data, repos, and commit-discovered emails.
 - For IP reputation/abuse: use search_abuseipdb to get the abuseConfidenceScore — a score above 50% indicates a high-risk IP; combine with search_ip or search_shodan for full context.
+- For broad identity pivots (email, phone, name, username, domain, IP, CPF, CNPJ): use search_sherlockeye for Reverse Lookup & AI-Powered OSINT enriched results; prefer search_email/search_username for fast platform enumeration, then search_sherlockeye for deeper cross-source enrichment.
+- Use search_sherlockeye with deep_research=true only for email, phone, or name when the user wants linked digital accounts and social profiles.
 - For a domain or IP infrastructure: use search_censys for certificate history and port data.
 - For a Shodan query or banners: use search_shodan.
 - Chain tools intelligently: use findings from each step to decide the next.

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openosint"
-version = "2.18.0"
-description = "AI-powered OSINT agent, MCP server, and CLI. Interactive REPL + 16 tools. Anthropic Claude or local Ollama. For authorized security research use only."
+version = "2.19.0"
+description = "AI-powered OSINT agent, MCP server, and CLI. Interactive REPL + 17 tools. Anthropic Claude or local Ollama. For authorized security research use only."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

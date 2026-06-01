@@ -51,9 +51,10 @@ from openosint.tools.search_phone import run_phone_osint
 from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
+from openosint.tools.search_sherlockeye import run_sherlockeye_osint
 from openosint.tools.search_whois import run_whois_osint
 
-_VERSION = "2.18.0"
+_VERSION = "2.19.0"
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -207,6 +208,17 @@ _TOOL_CATALOG: list[dict] = [
         "requires_env": ["VIRUSTOTAL_API_KEY"],
         "env_hints": {"VIRUSTOTAL_API_KEY": "virustotal.com/gui/my-apikey"},
     },
+    {
+        "name": "search_sherlockeye",
+        "description": "Reverse Lookup & AI-Powered OSINT via Sherlockeye (email, phone, IP, username, etc.).",
+        "input_label": "Query (value or type:\"value\")",
+        "input_placeholder": "user@example.com",
+        "category": "Identity",
+        "icon": "🔎",
+        "requires_binary": [],
+        "requires_env": ["SHERLOCKEYE_API_KEY"],
+        "env_hints": {"SHERLOCKEYE_API_KEY": "app.sherlockeye.io/api"},
+    },
 ]
 
 # Map tool name → async callable(input_value: str, timeout: int) -> str
@@ -224,6 +236,7 @@ _RUNNERS: dict[str, object] = {
     "search_shodan": lambda v, t: run_shodan_osint(v, timeout_seconds=t),
     "search_virustotal": lambda v, t: run_virustotal_osint(v, timeout_seconds=t),
     "search_censys": lambda v, t: run_censys_osint(v, timeout_seconds=t),
+    "search_sherlockeye": lambda v, t: run_sherlockeye_osint(v, timeout_seconds=t),
 }
 
 # Claude tool schemas (one string "input" param per tool)
@@ -269,6 +282,7 @@ _KNOWN_ENV_KEYS = [
     "CENSYS_SECRET",
     "SHODAN_API_KEY",
     "VIRUSTOTAL_API_KEY",
+    "SHERLOCKEYE_API_KEY",
 ]
 
 

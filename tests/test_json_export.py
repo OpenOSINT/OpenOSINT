@@ -27,6 +27,7 @@ ALL_TOOLS = [
     "search_phone",
     "search_shodan",
     "search_virustotal",
+    "search_sherlockeye",
 ]
 
 

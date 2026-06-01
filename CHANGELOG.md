@@ -7,6 +7,27 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.19.0] — 2026-06-01
+
+### Added
+
+- **Sherlockeye integration** (`openosint/tools/search_sherlockeye.py`): new tool
+  `search_sherlockeye` that queries the Sherlockeye API for Reverse Lookup & AI-Powered OSINT
+  across email, phone, username, domain, IP, name, CPF, and CNPJ. Supports plain values
+  (type inferred), explicit `type:"value"` syntax, optional Deep Research via
+  `digital_accounts_expansion`, sync search with polling fallback, and formatted
+  aggregated results. Requires `SHERLOCKEYE_API_KEY`. Available as CLI subcommand
+  `openosint sherlockeye QUERY [--deep-research] [-t SECONDS]`, in the AI agent tool
+  loop, MCP server, and web UI.
+
+### Changed
+
+- Version bumped to 2.19.0.
+- Agent SYSTEM_PROMPT updated with Sherlockeye usage guidance.
+- MCP server docstring updated to reflect 17 tools.
+
+---
+
 ## [2.15.0] — 2026-05-25
 
 ### Added

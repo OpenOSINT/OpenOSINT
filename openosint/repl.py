@@ -58,6 +58,7 @@ _TOOL_INFO_ROWS = [
     ("search_abuseipdb", "AbuseIPDB API", "IP abuse confidence score"),
     ("search_github", "GitHub API", "Profile, repos, commit-email discovery"),
     ("search_dns", "dnspython", "DNS records & email security audit"),
+    ("search_sherlockeye", "Sherlockeye API", "Reverse Lookup & AI-Powered OSINT (email, phone, IP, etc.)"),
 ]
 
 # ---------------------------------------------------------------------------

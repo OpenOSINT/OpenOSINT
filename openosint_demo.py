@@ -30,6 +30,7 @@ _TOOLS: list[tuple[str, str, str, bool]] = [
     ("search_censys",      "Censys API",       "Certificates, ports, infrastructure",     True),
     ("search_ip2location", "IP2Location.io",   "Geoloc + VPN/Proxy/Tor  (sponsored)",    True),
     ("search_abuseipdb",   "AbuseIPDB API",    "Abuse reputation, confidence score",      True),
+    ("search_sherlockeye", "Sherlockeye API",  "Reverse Lookup & AI-Powered OSINT",              True),
 ]
 
 

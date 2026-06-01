@@ -1,13 +1,13 @@
 # openosint/mcp_server.py
 """
-OpenOSINT MCP Server — v2.18.0
+OpenOSINT MCP Server — v2.19.0
 
-Exposes all 16 OSINT tool capabilities plus multi-target investigation
+Exposes all 17 OSINT tool capabilities plus multi-target investigation
 to MCP-compliant AI clients over standard I/O. Tools include:
 search_email, search_username, search_breach, search_whois, search_ip,
 search_domain, generate_dorks, search_paste, search_phone, search_shodan,
 search_virustotal, search_censys, search_ip2location, search_abuseipdb,
-search_github, search_dns.
+search_github, search_dns, search_sherlockeye.
 """
 
 from __future__ import annotations
@@ -36,6 +36,7 @@ from openosint.tools.search_phone import run_phone_osint
 from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
+from openosint.tools.search_sherlockeye import run_sherlockeye_osint
 from openosint.tools.search_whois import run_whois_osint
 
 logging.basicConfig(level=logging.INFO, format="[MCP] %(levelname)s: %(message)s")
@@ -256,6 +257,28 @@ async def list_tools() -> list[Tool]:
             ),
         ),
         Tool(
+            name="search_sherlockeye",
+            description=(
+                "Reverse Lookup & AI-Powered OSINT search via Sherlockeye for email, phone, username, "
+                "domain, IP, name, CPF, or CNPJ. Accepts plain values (type inferred) or "
+                "type:\"value\" syntax. Set deep_research=true for digital account expansion "
+                "on email/phone/name. Requires SHERLOCKEYE_API_KEY env var."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "deep_research": {
+                            "type": "boolean",
+                            "description": "Enable digital_accounts_expansion module.",
+                        },
+                    },
+                    "required": ["query"],
+                }
+            ),
+        ),
+        Tool(
             name="investigate_multi",
             description=(
                 "Investigate multiple targets in parallel using the full OSINT tool chain. "
@@ -336,6 +359,14 @@ _HANDLERS: dict[str, tuple] = {
     "search_dns": (
         lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
         lambda a: a["domain"],
+    ),
+    "search_sherlockeye": (
+        lambda a: run_sherlockeye_osint(
+            a["query"],
+            timeout_seconds=120,
+            deep_research=bool(a.get("deep_research", False)),
+        ),
+        lambda a: a["query"],
     ),
 }
 

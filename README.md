@@ -99,6 +99,7 @@ Store all keys in a `.env` file at the project root (copy `.env.example`). `pyth
 | `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Optional | Censys Search API — [get one](https://censys.io/account) |
 | `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Optional | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
 | `GITHUB_TOKEN` | `search_github` | Optional | GitHub API — raises rate limit from 60 to 5000 req/h — [get one](https://github.com/settings/tokens) |
+| `SHERLOCKEYE_API_KEY` | `search_sherlockeye` | Optional | Sherlockeye API — [get one](https://app.sherlockeye.io/api) |
 
 **Optional Python packages:**
 
@@ -129,6 +130,7 @@ Store all keys in a `.env` file at the project root (copy `.env.example`). `pyth
 | `search_abuseipdb` | AbuseIPDB v2 API | IP abuse reputation: confidence score, reports, country, ISP |
 | `search_github` | GitHub REST API | Profile, repos, commit-discovered emails, username/keyword search |
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
+| `search_sherlockeye` | Sherlockeye API | Reverse Lookup & AI-Powered OSINT: email, phone, IP, username, domain, CPF/CNPJ |
 
 ### search_email
 
@@ -509,6 +511,7 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | Censys | https://censys.io | `search_censys` | Community |
 | AbuseIPDB | https://www.abuseipdb.com | `search_abuseipdb` | Community |
 | GitHub    | https://github.com        | `search_github`    | Community |
+| Sherlockeye | https://sherlockeye.io  | `search_sherlockeye` | Community |
 
 ## Sponsor this project
 
