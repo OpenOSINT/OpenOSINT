@@ -7,6 +7,29 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.20.0] — 2026-06-06
+
+### Added
+- **Hudson Rock infostealer intelligence** (`openosint/tools/search_hudsonrock.py`):
+  new tool `search_hudsonrock` querying Hudson Rock's Cavalier API for credentials
+  exposed via infostealer malware corpora (RedLine, Lumma, Raccoon, Vidar, StealC,
+  …). Auto-routes by input shape: emails to `/search-by-email`, domains to
+  `/search-by-domain`, usernames and phone numbers (E.164) to `/search-by-username`.
+  No API key required — free public endpoint with a 50 req/10s rate limit.
+  Available as CLI subcommand `openosint hudsonrock QUERY [-t SECONDS]`, in the AI
+  agent tool loop, the MCP server, the REPL, and the Web UI. Closes
+  [#4](https://github.com/OpenOSINT/OpenOSINT/issues/4).
+
+### Changed
+- Version bumped to 2.20.0; tool count: 16 → 17.
+- Agent `SYSTEM_PROMPT` updated: infostealer-compromise checks now suggest
+  `search_hudsonrock` alongside `search_breach`.
+- MCP server docstring updated to reflect 17 tools.
+- `web_server.py` `_VERSION` bumped from 2.18.1 → 2.20.0 (was stale).
+- README tools table, feature line, and tool count updated.
+
+---
+
 ## [2.19.0] — 2026-06-05
 
 ### Added

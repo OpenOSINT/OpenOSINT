@@ -4,7 +4,7 @@ mcp-name: io.github.OpenOSINT/openosint
   <img src="docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
   <p><strong>AI-powered OSINT agent. Interactive REPL · CLI · MCP Server · Web UI</strong></p>
-  <p>16 tools. Powered by Anthropic Claude or local Ollama. For authorized security research only.</p>
+  <p>17 tools. Powered by Anthropic Claude or local Ollama. For authorized security research only.</p>
 </div>
 
 <div align="center">
@@ -37,8 +37,8 @@ OpenOSINT is an AI agent for Open Source Intelligence with three interfaces: an 
 
 ## Features
 
-- **AI tool chaining** — the agent decides which of 16 tools to run, chains them based on findings, and compiles a structured report
-- **16 modular tools** covering email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, and DNS
+- **AI tool chaining** — the agent decides which of 17 tools to run, chains them based on findings, and compiles a structured report
+- **17 modular tools** covering email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, and Hudson Rock infostealer corpus
 - **Anthropic, Ollama, or any OpenAI-compatible endpoint** — use Claude via API key, run fully offline with a local Ollama model, or point at any OpenAI-compatible server (LiteLLM, llama-swap, vLLM, LM Studio, …)
 - **MCP server** — expose all tools natively to Claude Code and Claude Desktop
 - **Parallel execution** — `--parallel` runs complementary tools concurrently via `asyncio.gather()`
@@ -102,6 +102,7 @@ Store all keys in a `.env` file at the project root (copy `.env.example`). `pyth
 | `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Optional | Censys Search API — [get one](https://censys.io/account) |
 | `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Optional | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
 | `GITHUB_TOKEN` | `search_github` | Optional | GitHub API — raises rate limit from 60 to 5000 req/h — [get one](https://github.com/settings/tokens) |
+| `HUDSONROCK_API_KEY` | `search_hudsonrock` | Optional | Hudson Rock Cavalier API — free public endpoint works without a key; this var is sent as Bearer auth when set (commercial-tier access) — [Hudson Rock](https://www.hudsonrock.com/) |
 
 **Optional Python packages:**
 
@@ -133,6 +134,7 @@ Store all keys in a `.env` file at the project root (copy `.env.example`). `pyth
 | `search_abuseipdb` | AbuseIPDB v2 API | IP abuse reputation: confidence score, reports, country, ISP |
 | `search_github` | GitHub REST API | Profile, repos, commit-discovered emails, username/keyword search |
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
+| `search_hudsonrock` | Hudson Rock Cavalier API | Infostealer-compromised credentials per email, domain, username, or phone — no key required |
 
 ### search_email
 
@@ -605,7 +607,7 @@ For commercial use in closed-source products, a separate license is required. �
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.19.0 — June 5, 2026*
+*OpenOSINT v2.20.0 — June 5, 2026*
 
 ## Star History
 
