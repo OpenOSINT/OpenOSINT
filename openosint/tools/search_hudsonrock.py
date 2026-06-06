@@ -169,7 +169,7 @@ def _format_stealers(kind: Kind, query: str, data: dict) -> str:
         logins = s.get("top_logins")
         if isinstance(logins, list) and logins:
             lines.append(
-                f"[HudsonRock]   Top logins (redacted): {', '.join(str(x) for x in logins[:3])}"
+                f"[HudsonRock]   Top logins (as returned by API): {', '.join(str(x) for x in logins[:3])}"
             )
 
     if len(stealers) > 3:

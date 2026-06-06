@@ -7,7 +7,7 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [2.20.0] — 2026-06-06
+## [2.20.0] — 2026-06-05
 
 ### Added
 - **Hudson Rock infostealer intelligence** (`openosint/tools/search_hudsonrock.py`):
