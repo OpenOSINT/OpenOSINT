@@ -38,6 +38,7 @@ from openosint.tools.search_censys import run_censys_osint  # noqa: E402
 from openosint.tools.search_dns import run_dns_osint  # noqa: E402
 from openosint.tools.search_email import run_email_osint  # noqa: E402
 from openosint.tools.search_github import run_github_osint  # noqa: E402
+from openosint.tools.search_hudsonrock import run_hudsonrock_osint  # noqa: E402
 from openosint.tools.search_ip2location import run_ip2location_osint  # noqa: E402
 from openosint.tools.search_paste import run_paste_osint  # noqa: E402
 from openosint.tools.search_shodan import run_shodan_osint  # noqa: E402
@@ -103,6 +104,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  openosint multi a@x.com,b@y.com             # multi-target inline\n"
             "  openosint --parallel email target@example.com\n"
             "  openosint --json email target@example.com\n"
+            "  openosint hudsonrock tesla.com              # infostealer corpus check\n"
             "  openosint --provider ollama                 # use local Ollama\n"
             "  openosint --provider ollama --ollama-model mistral\n"
         ),
@@ -331,6 +333,26 @@ def _build_parser() -> argparse.ArgumentParser:
         default=10,
         metavar="SECONDS",
         help="DNS query timeout (default: 10).",
+    )
+
+    # hudsonrock
+    hudsonrock_cmd = subparsers.add_parser(
+        "hudsonrock",
+        help="Hudson Rock infostealer-corpus check (no AI). No API key required.",
+    )
+    hudsonrock_cmd.add_argument(
+        "query",
+        type=str,
+        metavar="QUERY",
+        help="Email, domain, username, or phone number (E.164).",
+    )
+    hudsonrock_cmd.add_argument(
+        "-t",
+        "--timeout",
+        type=int,
+        default=30,
+        metavar="SECONDS",
+        help="Request timeout (default: 30).",
     )
 
     # abuseipdb
@@ -612,6 +634,19 @@ async def _handle_dns(
         _print_result(result)
 
 
+async def _handle_hudsonrock(
+    query: str,
+    timeout: int,
+    json_output: bool = False,
+) -> None:
+    print(f"[*] Hudson Rock lookup: {query}", file=sys.stderr)
+    result = await run_hudsonrock_osint(query=query, timeout_seconds=timeout)
+    if json_output:
+        _emit_json(format_tool_result("search_hudsonrock", query, result))
+    else:
+        _print_result(result)
+
+
 async def _handle_ip2location(
     ip: str,
     timeout: int,
@@ -797,6 +832,8 @@ async def _async_main() -> None:
         await _handle_github(args.query, args.timeout, json_output=json_output)
     elif args.command == "dns":
         await _handle_dns(args.domain, args.timeout, json_output=json_output)
+    elif args.command == "hudsonrock":
+        await _handle_hudsonrock(args.query, args.timeout, json_output=json_output)
     elif args.command == "abuseipdb":
         await _handle_abuseipdb(args.ip, args.timeout, json_output=json_output)
     elif args.command == "ip2location":

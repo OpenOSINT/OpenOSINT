@@ -32,6 +32,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_email import run_email_osint
 from openosint.tools.search_github import run_github_osint
+from openosint.tools.search_hudsonrock import run_hudsonrock_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
@@ -306,6 +307,30 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "required": ["domain"],
         },
     },
+    {
+        "name": "search_hudsonrock",
+        "description": (
+            "Query Hudson Rock's Cavalier infostealer corpus for credentials and assets "
+            "exposed via malware (RedLine, Lumma, Raccoon, Vidar, StealC, …). "
+            "Auto-routes by input shape: emails → per-record stealer history; domains → "
+            "aggregate employee/user/third-party compromise stats; usernames and phone "
+            "numbers (E.164) → per-record stealer history. "
+            "Pairs naturally with search_breach for a fuller credential-exposure picture. "
+            "No API key required — free public endpoint."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "Target email address, domain, username, or phone number in E.164 format."
+                    ),
+                }
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 # ---------------------------------------------------------------------------
@@ -329,6 +354,7 @@ _TOOL_MAP: dict[str, Any] = {
     "search_abuseipdb": lambda a: run_abuseipdb_osint(a["ip"], timeout_seconds=30),
     "search_github": lambda a: run_github_osint(a["query"], timeout_seconds=30),
     "search_dns": lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
+    "search_hudsonrock": lambda a: run_hudsonrock_osint(a["query"], timeout_seconds=30),
 }
 
 SYSTEM_PROMPT = """You are OpenOSINT, an expert OSINT analyst assistant running in a terminal.
@@ -341,6 +367,7 @@ INVESTIGATION STRATEGY:
 - For an IP: run search_ip and optionally search_shodan or search_censys for open ports/services.
 - For a GitHub username or handle: use search_github to retrieve profile data, repos, and commit-discovered emails.
 - For IP reputation/abuse: use search_abuseipdb to get the abuseConfidenceScore — a score above 50% indicates a high-risk IP; combine with search_ip or search_shodan for full context.
+- For infostealer-compromise checks (credentials exposed via malware logs like RedLine/Lumma/Raccoon): use search_hudsonrock on the target email, domain, username, or E.164 phone. Pairs naturally with search_breach.
 - For a domain or IP infrastructure: use search_censys for certificate history and port data.
 - For a Shodan query or banners: use search_shodan.
 - Chain tools intelligently: use findings from each step to decide the next.

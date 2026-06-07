@@ -2,8 +2,8 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.OpenOSINT/openosint",
   "title": "OpenOSINT",
-  "description": "AI-powered OSINT agent & MCP server. 16 tools: email, breach, IP, WHOIS, DNS, Shodan, GitHub & more.",
-  "version": "2.19.0",
+  "description": "AI-powered OSINT agent & MCP server. 17 tools: email, breach, IP, WHOIS, DNS, Shodan, GitHub, Hudson Rock & more.",
+  "version": "2.20.0",
   "websiteUrl": "https://openosint.tech",
   "repository": {
     "url": "https://github.com/OpenOSINT/OpenOSINT",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "openosint",
-      "version": "2.19.0",
+      "version": "2.20.0",
       "transport": {
         "type": "stdio"
       },
@@ -50,6 +50,13 @@
         {
           "name": "ABUSEIPDB_API_KEY",
           "description": "AbuseIPDB API key for IP abuse reputation checks (search_abuseipdb tool)",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "HUDSONROCK_API_KEY",
+          "description": "Hudson Rock Cavalier API key for infostealer-corpus checks (search_hudsonrock tool). Free public endpoint works without a key; this variable is sent as Bearer auth when set (commercial-tier access).",
           "isRequired": false,
           "isSecret": true,
           "format": "string"

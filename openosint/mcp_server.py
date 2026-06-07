@@ -1,13 +1,13 @@
 # openosint/mcp_server.py
 """
-OpenOSINT MCP Server — v2.18.1
+OpenOSINT MCP Server.
 
-Exposes all 16 OSINT tool capabilities plus multi-target investigation
+Exposes all 17 OSINT tool capabilities plus multi-target investigation
 to MCP-compliant AI clients over standard I/O. Tools include:
 search_email, search_username, search_breach, search_whois, search_ip,
 search_domain, generate_dorks, search_paste, search_phone, search_shodan,
 search_virustotal, search_censys, search_ip2location, search_abuseipdb,
-search_github, search_dns.
+search_github, search_dns, search_hudsonrock.
 """
 
 from __future__ import annotations
@@ -29,6 +29,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_email import run_email_osint
 from openosint.tools.search_github import run_github_osint
+from openosint.tools.search_hudsonrock import run_hudsonrock_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
@@ -256,6 +257,24 @@ async def list_tools() -> list[Tool]:
             ),
         ),
         Tool(
+            name="search_hudsonrock",
+            description=(
+                "Query Hudson Rock's Cavalier infostealer corpus for credentials and assets "
+                "exposed via malware (RedLine, Lumma, Raccoon, Vidar, StealC, …). "
+                "Auto-routes by input shape: email → per-record stealer history; "
+                "domain → aggregate compromise stats; "
+                "username or phone (E.164) → per-record stealer history. "
+                "No API key required — free public endpoint."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {"query": {"type": "string"}},
+                    "required": ["query"],
+                }
+            ),
+        ),
+        Tool(
             name="investigate_multi",
             description=(
                 "Investigate multiple targets in parallel using the full OSINT tool chain. "
@@ -336,6 +355,10 @@ _HANDLERS: dict[str, tuple] = {
     "search_dns": (
         lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
         lambda a: a["domain"],
+    ),
+    "search_hudsonrock": (
+        lambda a: run_hudsonrock_osint(a["query"], timeout_seconds=30),
+        lambda a: a["query"],
     ),
 }
 

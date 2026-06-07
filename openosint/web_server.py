@@ -44,6 +44,7 @@ from openosint.tools.search_breach import run_breach_osint
 from openosint.tools.search_censys import run_censys_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_hudsonrock import run_hudsonrock_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
@@ -53,7 +54,7 @@ from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 
-_VERSION = "2.18.1"
+_VERSION = "2.20.0"
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -207,6 +208,16 @@ _TOOL_CATALOG: list[dict] = [
         "requires_env": ["VIRUSTOTAL_API_KEY"],
         "env_hints": {"VIRUSTOTAL_API_KEY": "virustotal.com/gui/my-apikey"},
     },
+    {
+        "name": "search_hudsonrock",
+        "description": "Check Hudson Rock's infostealer corpus for compromised credentials.",
+        "input_label": "Email, domain, or username/phone",
+        "input_placeholder": "user@example.com",
+        "category": "Identity",
+        "icon": "🦹",
+        "requires_binary": [],
+        "requires_env": [],
+    },
 ]
 
 # Map tool name → async callable(input_value: str, timeout: int) -> str
@@ -224,6 +235,7 @@ _RUNNERS: dict[str, object] = {
     "search_shodan": lambda v, t: run_shodan_osint(v, timeout_seconds=t),
     "search_virustotal": lambda v, t: run_virustotal_osint(v, timeout_seconds=t),
     "search_censys": lambda v, t: run_censys_osint(v, timeout_seconds=t),
+    "search_hudsonrock": lambda v, t: run_hudsonrock_osint(v, timeout_seconds=t),
 }
 
 # Claude tool schemas (one string "input" param per tool)
