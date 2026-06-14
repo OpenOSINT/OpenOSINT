@@ -191,6 +191,18 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--openai-raw-socket",
+        action="store_true",
+        dest="use_raw_socket",
+        default=False,
+        help=(
+            "Use a raw TCP socket transport instead of httpx's default HTTP "
+            "transport.  Workaround for llama.cpp servers that return HTTP 400 "
+            "when using the standard httpx/httpcore stack.  Only relevant when "
+            "--provider openai points to a llama.cpp server."
+        ),
+    )
+    parser.add_argument(
         "--no-pdf",
         action="store_true",
         dest="is_pdf_disabled",
@@ -897,6 +909,7 @@ async def _async_main() -> None:
             openai_base_url=getattr(args, "openai_base_url", "http://localhost:8080/v1"),
             openai_model=getattr(args, "openai_model", "gpt-4o-mini"),
             openai_api_key=getattr(args, "openai_api_key", None),
+            use_raw_socket=getattr(args, "use_raw_socket", False),
             is_pdf_disabled=getattr(args, "is_pdf_disabled", False),
         )
         await repl.run()
