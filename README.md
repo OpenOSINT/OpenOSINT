@@ -520,6 +520,17 @@ openosint --provider openai \
   --openai-model gpt-4o-mini
 ```
 
+> **llama.cpp users:** If your llama.cpp server returns HTTP 400 errors, add
+> `--openai-raw-socket` to use an alternative TCP socket transport that
+> works around a compatibility issue with httpx's default HTTP stack:
+>
+> ```bash
+> openosint --provider openai \
+>   --openai-base-url http://localhost:8000/v1 \
+>   --openai-model Qwen3.6-35B-A3B-Q4_K_M-GGUF \
+>   --openai-raw-socket
+> ```
+
 <div align="center">
   <strong>Web UI</strong> — launch with <code>openosint web</code>
 </div>
@@ -608,6 +619,7 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | `--openai-base-url URL` | OpenAI-compatible endpoint base URL (env: `OPENAI_BASE_URL`) |
 | `--openai-model MODEL` | Model to request from the endpoint (default: `gpt-4o-mini`; env: `OPENAI_MODEL`) |
 | `--openai-api-key KEY` | API key for the endpoint (env: `OPENAI_API_KEY`) |
+| `--openai-raw-socket` | Use raw TCP socket transport (workaround for llama.cpp HTTP 400 issues) |
 | `--no-pdf` | Disable automatic PDF generation |
 
 ## Integrations
