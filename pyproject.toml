@@ -80,6 +80,9 @@ web = [
     "sse-starlette>=1.8.0",
     "python-dotenv>=1.0.0",
     "anthropic>=0.25.0",
+    "slowapi>=0.1.9",
+    "prometheus-fastapi-instrumentator>=7.0.0",
+    "python-json-logger>=2.0.0",
 ]
 all = [
     "shodan>=1.31.0",

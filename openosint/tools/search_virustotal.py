@@ -24,6 +24,7 @@ import re
 
 import requests
 
+from openosint.cache import cached
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -257,6 +258,7 @@ def _lookup_hash(api_key: str, file_hash: str, timeout: int) -> str:
 # ---------------------------------------------------------------------------
 
 
+@cached(ttl=600)
 async def run_virustotal_osint(target: str, timeout_seconds: int = _DEFAULT_TIMEOUT) -> str:
     """
     Check *target* against VirusTotal's 70+ antivirus engines.

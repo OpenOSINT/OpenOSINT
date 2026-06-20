@@ -15,6 +15,7 @@ import logging
 import os
 import re
 
+from openosint.cache import cached
 from openosint.tools.exceptions import OSINTError
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,7 @@ def _format_search(results: dict, query: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+@cached(ttl=300)
 async def run_shodan_osint(query: str, timeout_seconds: int = _DEFAULT_TIMEOUT) -> str:
     """
     Run a Shodan lookup for *query*.

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import re
 import shutil
@@ -36,7 +37,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
+
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+except ImportError:
+    Instrumentator = None  # type: ignore
 
 from openosint import __version__ as _VERSION
 from openosint.tools.generate_dorks import run_dork_osint
@@ -57,6 +66,23 @@ from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
+
+# Optional JSON logging (LOG_FORMAT=json)
+if os.environ.get("LOG_FORMAT", "").lower() == "json":
+    try:
+        from pythonjsonlogger import jsonlogger
+
+        handler = logging.StreamHandler()
+        formatter = jsonlogger.JsonFormatter(
+            fmt="%(asctime)s %(name)s %(levelname)s %(message)s",
+            timestamp=True,
+        )
+        handler.setFormatter(formatter)
+        root = logging.getLogger()
+        root.addHandler(handler)
+        root.setLevel(logging.INFO)
+    except ImportError:
+        pass  # python-json-logger not installed, fall back to default
 
 _ROOT = Path(__file__).parent.parent
 
@@ -949,13 +975,25 @@ def create_app() -> FastAPI:
             return response
         # Preflight (OPTIONS) requests from allowed origins
         if request.method == "OPTIONS":
-            return JSONResponse({"ok": True}, headers={
-                "Access-Control-Allow-Origin": origin,
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization",
-            })
+            return JSONResponse(
+                {"ok": True},
+                headers={
+                    "Access-Control-Allow-Origin": origin,
+                    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+                },
+            )
         response = await call_next(request)
         return response
+
+    # Rate limiting
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+    # Prometheus metrics (optional — requires prometheus-fastapi-instrumentator)
+    if Instrumentator is not None:
+        Instrumentator().instrument(app).expose(app)
 
     # ------------------------------------------------------------------
     # GET /api/health
@@ -964,13 +1002,28 @@ def create_app() -> FastAPI:
     @app.get("/api/health")
     async def health():
         ai_backend, ollama_host, ollama_reachable = _get_ai_backend()
+        from datetime import datetime, timezone
+
         return {
             "status": "ok",
             "version": _VERSION,
+            "tools_count": len(_TOOL_CATALOG),
             "setup_complete": _is_setup_complete(),
+            "api_keys": {
+                "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()),
+                "shodan": bool(os.environ.get("SHODAN_API_KEY", "").strip()),
+                "virustotal": bool(os.environ.get("VIRUSTOTAL_API_KEY", "").strip()),
+                "hibp": bool(os.environ.get("HIBP_API_KEY", "").strip()),
+                "censys": bool(os.environ.get("CENSYS_API_ID", "").strip()),
+                "ip2location": bool(os.environ.get("IP2LOCATION_API_KEY", "").strip()),
+                "abuseipdb": bool(os.environ.get("ABUSEIPDB_API_KEY", "").strip()),
+                "github": bool(os.environ.get("GITHUB_TOKEN", "").strip()),
+                "brightdata": bool(os.environ.get("BRIGHTDATA_API_KEY", "").strip()),
+            },
             "ai_backend": ai_backend,
             "ollama_host": ollama_host,
             "ollama_reachable": ollama_reachable,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     # ------------------------------------------------------------------
@@ -1015,7 +1068,8 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/run/{tool_name}")
-    async def run_tool(tool_name: str, req: RunRequest):
+    @limiter.limit("10/minute")
+    async def run_tool(request: Request, tool_name: str, req: RunRequest):
         if tool_name not in _RUNNERS:
             return JSONResponse(
                 {
@@ -1133,7 +1187,8 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/chat")
-    async def chat(req: ChatRequest):
+    @limiter.limit("10/minute")
+    async def chat(request: Request, req: ChatRequest):
         messages: list[dict] = []
         for h in req.history:
             role = h.get("role", "user")
@@ -1245,6 +1300,15 @@ def create_app() -> FastAPI:
             "https://github.com/OpenOSINT/OpenOSINT/issues</p>"
             "<p>If running from source, make sure <code>openosint/web/index.html</code> exists.</p>",
             status_code=404,
+        )
+
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger = logging.getLogger(__name__)
+        logger.error("Unhandled exception: %s", exc, exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(exc), "status": "internal_error"},
         )
 
     return app

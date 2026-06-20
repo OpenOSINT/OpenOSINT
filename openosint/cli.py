@@ -76,6 +76,25 @@ def _check_ollama_server(host: str) -> bool:
 
 def _configure_logging(verbose: bool) -> None:
     level = logging.DEBUG if verbose else logging.WARNING
+
+    # Use JSON logging when LOG_FORMAT=json (requires python-json-logger)
+    if os.environ.get("LOG_FORMAT", "").lower() == "json":
+        try:
+            from pythonjsonlogger import jsonlogger
+
+            handler = logging.StreamHandler()
+            formatter = jsonlogger.JsonFormatter(
+                fmt="%(asctime)s %(name)s %(levelname)s %(message)s",
+                timestamp=True,
+            )
+            handler.setFormatter(formatter)
+            root = logging.getLogger()
+            root.addHandler(handler)
+            root.setLevel(level)
+            return
+        except ImportError:
+            pass  # fall through to default format
+
     logging.basicConfig(level=level, format="[%(levelname)s] %(name)s: %(message)s")
 
 

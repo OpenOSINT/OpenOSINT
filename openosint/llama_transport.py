@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import ssl
 from urllib.parse import urlparse
 
 import httpx
@@ -127,10 +128,10 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
         if parsed.query:
             path += "?" + parsed.query
 
-        if parsed.scheme != "http":
+        is_ssl = parsed.scheme == "https"
+        if parsed.scheme not in ("http", "https"):
             raise httpx.UnsupportedProtocol(
-                f"LlamaCppTransport only supports http://, got {parsed.scheme!r}. "
-                "Use a plain HTTP endpoint for llama.cpp."
+                f"LlamaCppTransport only supports http:// and https://, got {parsed.scheme!r}."
             )
 
         # Build the raw HTTP/1.1 request bytes.
@@ -151,8 +152,9 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
 
         # ---- Send via raw TCP socket ----
         try:
+            ssl_ctx = ssl.create_default_context() if is_ssl else None
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(host, port),
+                asyncio.open_connection(host, port, ssl=ssl_ctx),
                 timeout=10.0,
             )
         except (OSError, asyncio.TimeoutError) as exc:

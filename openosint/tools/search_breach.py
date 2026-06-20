@@ -16,6 +16,7 @@ import urllib.parse
 
 import requests
 
+from openosint.cache import cached
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -80,6 +81,7 @@ def _format_breach_results(breaches: list[dict], email: str) -> str:
     return "\n".join(lines)
 
 
+@cached(ttl=600)
 async def run_breach_osint(
     email: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,

@@ -80,12 +80,17 @@ class TestLlamaCppTransport:
         assert response.status_code == 200
         assert response.content == b"hello"
 
-    async def test_https_is_rejected(self):
-        """LlamaCppTransport must reject https:// URLs loudly."""
+    async def test_https_is_accepted(self):
+        """LlamaCppTransport must accept https:// URLs (now supports SSL)."""
         request = _fake_request("GET", "https://example.com/v1/models")
         transport = LlamaCppTransport()
-        with pytest.raises(httpx.UnsupportedProtocol):
+        # Should NOT raise UnsupportedProtocol (HTTPS is now supported)
+        try:
             await transport.handle_async_request(request)
+        except httpx.UnsupportedProtocol:
+            pytest.fail("HTTPS should be supported now")
+        except (httpx.ConnectError, OSError):
+            pass  # Expected — real SSL connection will fail in test env
 
 
 @pytest.mark.asyncio
