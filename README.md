@@ -60,7 +60,7 @@ OpenOSINT is an AI agent for Open Source Intelligence with three interfaces: an 
 
 - **AI tool chaining** — the agent decides which of 18 tools to run, chains them based on findings, and compiles a structured report
 - **18 modular tools** covering email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, and DNS
-- **Anthropic, Ollama, or any OpenAI-compatible endpoint** — use Claude via API key, run fully offline with a local Ollama model, or point at any OpenAI-compatible server (LiteLLM, llama-swap, vLLM, LM Studio, …)
+- **Anthropic, Ollama, local, or any OpenAI-compatible endpoint** — use Claude via API key, run fully offline with a local Ollama model, specify a custom endpoint with `--provider local`, or point at any OpenAI-compatible server (LiteLLM, llama-swap, vLLM, LM Studio, …)
 - **MCP server** — expose all tools natively to Claude Code and Claude Desktop
 - **Parallel execution** — `--parallel` runs complementary tools concurrently via `asyncio.gather()`
 - **PDF + Markdown reports** — auto-saved after every investigation; PDF export via `reportlab`
@@ -617,14 +617,23 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | `--api-key KEY` | Anthropic API key (overrides env var) |
 | `--parallel` | Run complementary tools concurrently |
 | `--json` | Output results as structured JSON |
-| `--provider {anthropic,ollama,openai}` | AI provider (default: `anthropic`) |
+| `--provider {anthropic,ollama,openai,local}` | AI provider (default: `anthropic`) |
 | `--ollama-model MODEL` | Ollama model name (default: `llama3.2`) |
 | `--ollama-host URL` | Ollama server URL (default: `http://localhost:11434`) |
 | `--openai-base-url URL` | OpenAI-compatible endpoint base URL (env: `OPENAI_BASE_URL`) |
 | `--openai-model MODEL` | Model to request from the endpoint (default: `gpt-4o-mini`; env: `OPENAI_MODEL`) |
 | `--openai-api-key KEY` | API key for the endpoint (env: `OPENAI_API_KEY`) |
+| `--base URL` | Base URL for OpenAI-compatible endpoint (for `--provider local`) |
+| `--key KEY` | API key for the endpoint (for `--provider local`) |
 | `--openai-raw-socket` | Use raw TCP socket transport (workaround for llama.cpp HTTP 400 issues) |
 | `--no-pdf` | Disable automatic PDF generation |
+
+### Usage Examples
+
+```bash
+# Use a custom OpenAI-compatible endpoint with local provider
+openosint --provider local --base http://localhost:3001/v1 --key sk-test-123
+```
 
 ## Integrations
 

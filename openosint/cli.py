@@ -126,6 +126,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  openosint --json email target@example.com\n"
             "  openosint --provider ollama                 # use local Ollama\n"
             "  openosint --provider ollama --ollama-model mistral\n"
+            "  openosint --provider local --base http://localhost:3001/v1 --key sk-...\n"
         ),
     )
     parser.add_argument(
@@ -168,8 +169,28 @@ def _build_parser() -> argparse.ArgumentParser:
         "--provider",
         type=str,
         default="anthropic",
-        choices=["anthropic", "ollama", "openai"],
+        choices=["anthropic", "ollama", "openai", "local"],
         help="AI provider for the interactive REPL (default: anthropic).",
+    )
+    parser.add_argument(
+        "--base",
+        type=str,
+        default=None,
+        metavar="URL",
+        help=(
+            "Base URL of an OpenAI-compatible endpoint (for --provider local).  "
+            "Overrides $OPENAI_BASE_URL.  Example: http://localhost:3001/v1"
+        ),
+    )
+    parser.add_argument(
+        "--key",
+        type=str,
+        default=None,
+        metavar="KEY",
+        help=(
+            "API key for the OpenAI-compatible endpoint (for --provider local).  "
+            "Overrides $OPENAI_API_KEY.  Example: freellmapi-..."
+        ),
     )
     parser.add_argument(
         "--ollama-model",
@@ -927,15 +948,32 @@ async def _async_main() -> None:
 
         from openosint.repl import OpenOSINTRepl
 
+        # Resolve provider — map "local" → "openai" internally
+        raw_provider = getattr(args, "provider", "anthropic")
+        effective_provider = raw_provider if raw_provider != "local" else "openai"
+
+        # Resolve base URL and API key — local provider args take precedence
+        openai_base_url = getattr(args, "openai_base_url", "http://localhost:8080/v1")
+        openai_api_key = getattr(args, "openai_api_key", None)
+        if raw_provider == "local":
+            local_base = getattr(args, "base", None)
+            if local_base:
+                openai_base_url = local_base
+            local_key = getattr(args, "key", None)
+            if local_key:
+                openai_api_key = local_key
+            if not openai_api_key:
+                openai_api_key = "sk-no-key-required"
+
         repl = OpenOSINTRepl(
             api_key=getattr(args, "api_key", None),
             anthropic_model=getattr(args, "anthropic_model", "claude-sonnet-4-20250514"),
-            provider=getattr(args, "provider", "anthropic"),
+            provider=effective_provider,
             ollama_model=getattr(args, "ollama_model", "llama3.2"),
             ollama_host=getattr(args, "ollama_host", "http://localhost:11434"),
-            openai_base_url=getattr(args, "openai_base_url", "http://localhost:8080/v1"),
+            openai_base_url=openai_base_url,
             openai_model=getattr(args, "openai_model", "gpt-4o-mini"),
-            openai_api_key=getattr(args, "openai_api_key", None),
+            openai_api_key=openai_api_key,
             use_raw_socket=getattr(args, "use_raw_socket", False),
             is_pdf_disabled=getattr(args, "is_pdf_disabled", False),
         )

@@ -101,7 +101,7 @@ def _featured_integrations_line() -> str:
 def _print_banner(provider: str, model: str) -> None:
     if provider == "ollama":
         provider_info = f"[dim]Provider: Ollama ({model})[/]"
-    elif provider == "openai":
+    elif provider in ("openai", "local"):
         provider_info = f"[dim]Provider: OpenAI-compatible ({model})[/]"
     else:
         provider_info = f"[dim]Provider: Anthropic ({model})[/]"

@@ -196,3 +196,67 @@ class TestReplOpenaiProviderWiring:
         )
         assert isinstance(repl._agent, OpenAICompatibleAgent)
         assert repl._agent.api_key  # non-empty sentinel is set
+
+
+# ---------------------------------------------------------------------------
+# Local provider tests
+# ---------------------------------------------------------------------------
+
+
+class TestLocalProvider:
+    """Tests for --provider local with --base and --key arguments."""
+
+    def test_provider_local_parses_base_and_key(self):
+        """Argument parser should accept --provider local --base URL --key KEY."""
+        from openosint.cli import _build_parser
+
+        parser = _build_parser()
+        args = parser.parse_args([
+            "--provider", "local",
+            "--base", "http://localhost:3001/v1",
+            "--key", "freellmapi-test-key",
+        ])
+        assert args.provider == "local"
+        assert args.base == "http://localhost:3001/v1"
+        assert args.key == "freellmapi-test-key"
+
+    def test_provider_local_accepts_base_without_key(self):
+        """--base should work without --key."""
+        from openosint.cli import _build_parser
+
+        parser = _build_parser()
+        args = parser.parse_args([
+            "--provider", "local",
+            "--base", "http://localhost:3001/v1",
+        ])
+        assert args.provider == "local"
+        assert args.base == "http://localhost:3001/v1"
+        assert args.key is None
+
+    def test_provider_openai_still_works(self):
+        """Existing --provider openai with --openai-base-url must still work."""
+        from openosint.cli import _build_parser
+
+        parser = _build_parser()
+        args = parser.parse_args([
+            "--provider", "openai",
+            "--openai-base-url", "http://localhost:8080/v1",
+        ])
+        assert args.provider == "openai"
+        assert args.openai_base_url == "http://localhost:8080/v1"
+
+    def test_local_is_valid_choice(self):
+        """--provider must accept 'local' as a valid choice."""
+        from openosint.cli import _build_parser
+
+        parser = _build_parser()
+        args = parser.parse_args(["--provider", "local"])
+        assert args.provider == "local"
+
+    def test_default_provider_is_still_anthropic(self):
+        """Without --provider, default should remain 'anthropic'."""
+        from openosint.cli import _build_parser
+
+        parser = _build_parser()
+        args = parser.parse_args([])
+        assert args.provider == "anthropic"
