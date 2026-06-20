@@ -4,7 +4,7 @@ mcp-name: io.github.OpenOSINT/openosint
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/v2.19.1/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
   <p><strong>AI-powered OSINT agent. Interactive REPL · CLI · MCP Server · Web UI</strong></p>
-  <p>16 tools. Powered by Anthropic Claude or local Ollama. For authorized security research only.</p>
+  <p>18 tools. Powered by Anthropic Claude or local Ollama. For authorized security research only.</p>
 </div>
 
 <div align="center">
@@ -58,8 +58,8 @@ OpenOSINT is an AI agent for Open Source Intelligence with three interfaces: an 
 
 ## Features
 
-- **AI tool chaining** — the agent decides which of 16 tools to run, chains them based on findings, and compiles a structured report
-- **16 modular tools** covering email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, and DNS
+- **AI tool chaining** — the agent decides which of 18 tools to run, chains them based on findings, and compiles a structured report
+- **18 modular tools** covering email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, and DNS
 - **Anthropic, Ollama, or any OpenAI-compatible endpoint** — use Claude via API key, run fully offline with a local Ollama model, or point at any OpenAI-compatible server (LiteLLM, llama-swap, vLLM, LM Studio, …)
 - **MCP server** — expose all tools natively to Claude Code and Claude Desktop
 - **Parallel execution** — `--parallel` runs complementary tools concurrently via `asyncio.gather()`
@@ -547,7 +547,7 @@ The interactive documentation at [openosint.tech](https://openosint.tech/) cover
 
 ### MCP Server
 
-Expose all 16 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 16 tools during conversations.
+Expose all 18 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 18 tools during conversations.
 
 **Claude Code:**
 
@@ -606,6 +606,10 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | `openosint abuseipdb IP [-t N]` | AbuseIPDB reputation check |
 | `openosint github QUERY [-t N]` | GitHub profile/repo/email discovery |
 | `openosint dns DOMAIN [-t N]` | DNS records + email security analysis |
+| `openosint search-dorks-live TARGET [--max-dorks N] [-t N]` | Live Google dork search via Bright Data |
+| `openosint scrape URL [-t N]` | Fetch any URL bypassing Cloudflare/CAPTCHA |
+| `openosint sponsors` | Display current sponsors |
+| `openosint shell` | Start interactive REPL (alias for `openosint` with no args) |
 | `openosint multi TARGETS` | Parallel multi-target investigation (max 10) |
 | `openosint history [--all] [open N] [clear]` | View/manage REPL session history |
 | `-v, --verbose` | Enable debug logging to stderr |
@@ -725,7 +729,7 @@ For commercial use in closed-source products, a separate license is required. �
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.19.0 — June 5, 2026*
+*OpenOSINT v2.20.0 — June 20, 2026*
 
 ## Star History
 

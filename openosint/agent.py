@@ -25,10 +25,7 @@ from typing import Any
 import anthropic
 import httpx
 
-from openosint.llama_transport import (
-    LLAMA_CPP_ACCEPT_HEADER,
-    LlamaCppTransport,
-)
+from openosint.llama_transport import LlamaCppTransport
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint

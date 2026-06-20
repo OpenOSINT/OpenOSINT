@@ -39,13 +39,17 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
+from openosint import __version__ as _VERSION
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
+from openosint.tools.search_abuseipdb import run_abuseipdb_osint
 from openosint.tools.search_breach import run_breach_osint
 from openosint.tools.search_censys import run_censys_osint
+from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
@@ -55,7 +59,6 @@ from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 
-_VERSION = "2.18.1"
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -243,6 +246,38 @@ _TOOL_CATALOG: list[dict] = [
             "BRIGHTDATA_UNLOCKER_ZONE": "Your Bright Data Web Unlocker zone name",
         },
     },
+    {
+        "name": "search_abuseipdb",
+        "description": "IP abuse reputation: confidence score, reports, country, ISP",
+        "input_label": "IP address",
+        "input_placeholder": "8.8.8.8",
+        "category": "Network",
+        "icon": "🛡️",
+        "requires_binary": [],
+        "requires_env": ["ABUSEIPDB_API_KEY"],
+        "env_hints": {"ABUSEIPDB_API_KEY": "abuseipdb.com"},
+    },
+    {
+        "name": "search_dns",
+        "description": "DNS records + email security analysis (SPF, DMARC, DKIM)",
+        "input_label": "Domain name",
+        "input_placeholder": "example.com",
+        "category": "Network",
+        "icon": "🌐",
+        "requires_binary": [],
+        "requires_env": [],
+    },
+    {
+        "name": "search_github",
+        "description": "Profile, repos, commit-discovered emails, username/keyword search",
+        "input_label": "Username, repo, or keyword",
+        "input_placeholder": "targetuser",
+        "category": "Recon",
+        "icon": "💻",
+        "requires_binary": [],
+        "requires_env": ["GITHUB_TOKEN"],
+        "env_hints": {"GITHUB_TOKEN": "github.com/settings/tokens"},
+    },
 ]
 
 # Map tool name → async callable(input_value: str, timeout: int) -> str
@@ -262,6 +297,9 @@ _RUNNERS: dict[str, object] = {
     "search_censys": lambda v, t: run_censys_osint(v, timeout_seconds=t),
     "search_dorks_live": lambda v, t: run_dorks_live_osint(v, timeout_seconds=t),
     "scrape_url": lambda v, t: run_scrape_url_osint(v, timeout_seconds=t),
+    "search_abuseipdb": lambda v, t: run_abuseipdb_osint(v, timeout_seconds=t),
+    "search_dns": lambda v, t: run_dns_osint(v, timeout_seconds=t),
+    "search_github": lambda v, t: run_github_osint(v, timeout_seconds=t),
 }
 
 # Claude tool schemas (one string "input" param per tool)
@@ -897,7 +935,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
         allow_methods=["*"],
         allow_headers=["*"],
     )

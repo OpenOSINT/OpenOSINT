@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import urllib.parse
 
 import requests
 
@@ -39,7 +40,7 @@ def _fetch_ip_data(ip: str, timeout_seconds: int) -> dict:
 
     try:
         response = requests.get(
-            _IPINFO_URL.format(ip=ip),
+            _IPINFO_URL.format(ip=urllib.parse.quote(ip, safe="")),
             params=params,
             timeout=timeout_seconds,
         )

@@ -1,0 +1,5 @@
+include openosint/web/index.html
+graft openosint/web
+prune tests
+prune docs
+prune assets

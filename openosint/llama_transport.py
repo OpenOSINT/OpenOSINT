@@ -34,7 +34,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import AsyncIterator
 from urllib.parse import urlparse
 
 import httpx
@@ -80,6 +79,15 @@ async def _read_chunked_body(reader: asyncio.StreamReader) -> bytes:
     return bytes(body)
 
 
+async def _read_headers(reader: asyncio.StreamReader, header_data: bytearray) -> None:
+    """Read HTTP response headers until the blank line separator."""
+    while b"\r\n\r\n" not in header_data:
+        byte = await reader.read(1)
+        if not byte:
+            raise httpx.ProtocolError("server closed connection before sending headers")
+        header_data.extend(byte)
+
+
 # ---------------------------------------------------------------------------
 # Transport
 # ---------------------------------------------------------------------------
@@ -105,7 +113,8 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
        streaming version of this transport.
     """
 
-    _READ_SIZE = 65536
+    def __init__(self, timeout: float = 120.0) -> None:
+        self._read_timeout = timeout
 
     async def handle_async_request(
         self,
@@ -118,15 +127,18 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
         if parsed.query:
             path += "?" + parsed.query
 
+        if parsed.scheme != "http":
+            raise httpx.UnsupportedProtocol(
+                f"LlamaCppTransport only supports http://, got {parsed.scheme!r}. "
+                "Use a plain HTTP endpoint for llama.cpp."
+            )
+
         # Build the raw HTTP/1.1 request bytes.
         headers = dict(request.headers)
         # httpx sets ``host`` from the URL, but we use our own below.
         headers.pop("host", None)
 
-        raw = (
-            f"{request.method} {path} HTTP/1.1\r\n"
-            f"Host: {host}:{port}\r\n"
-        )
+        raw = f"{request.method} {path} HTTP/1.1\r\nHost: {host}:{port}\r\n"
         for key, value in headers.items():
             raw += f"{key}: {value}\r\n"
         raw += "\r\n"
@@ -144,9 +156,7 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
                 timeout=10.0,
             )
         except (OSError, asyncio.TimeoutError) as exc:
-            raise httpx.ConnectError(
-                f"cannot connect to {host}:{port} — {exc}"
-            ) from exc
+            raise httpx.ConnectError(f"cannot connect to {host}:{port} — {exc}") from exc
 
         try:
             writer.write(raw_bytes)
@@ -154,22 +164,20 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
 
             # ---- Read response headers ----
             header_data = bytearray()
-            while b"\r\n\r\n" not in header_data:
-                byte = await reader.read(1)
-                if not byte:
-                    raise httpx.ProtocolError(
-                        "server closed connection before sending headers"
-                    )
-                header_data.extend(byte)
+            try:
+                await asyncio.wait_for(
+                    _read_headers(reader, header_data),
+                    timeout=self._read_timeout,
+                )
+            except asyncio.TimeoutError as exc:
+                raise httpx.TimeoutException("timed out reading response headers") from exc
 
             header_str = header_data.decode("utf-8", errors="replace")
             status_line = header_str.split("\r\n")[0]
             try:
                 status_code = int(status_line.split(" ", 2)[1])
             except (IndexError, ValueError) as exc:
-                raise httpx.ProtocolError(
-                    f"malformed status line: {status_line!r}"
-                ) from exc
+                raise httpx.ProtocolError(f"malformed status line: {status_line!r}") from exc
 
             resp_headers: dict[str, str] = {}
             for line in header_str.split("\r\n")[1:]:
@@ -181,14 +189,26 @@ class LlamaCppTransport(httpx.AsyncBaseTransport):
             te = resp_headers.get("transfer-encoding", "")
             cl = resp_headers.get("content-length")
 
-            if "chunked" in te:
-                response_body = await _read_chunked_body(reader)
-            elif cl is not None:
-                body_len = int(cl)
-                response_body = await reader.readexactly(body_len)
-            else:
-                # Connection-close or unknown length.
-                response_body = await reader.read()
+            try:
+                if "chunked" in te:
+                    response_body = await asyncio.wait_for(
+                        _read_chunked_body(reader),
+                        timeout=self._read_timeout,
+                    )
+                elif cl is not None:
+                    body_len = int(cl)
+                    response_body = await asyncio.wait_for(
+                        reader.readexactly(body_len),
+                        timeout=self._read_timeout,
+                    )
+                else:
+                    # Connection-close or unknown length.
+                    response_body = await asyncio.wait_for(
+                        reader.read(),
+                        timeout=self._read_timeout,
+                    )
+            except asyncio.TimeoutError as exc:
+                raise httpx.TimeoutException("timed out reading response body") from exc
 
         finally:
             writer.close()
@@ -220,6 +240,6 @@ def make_llama_cpp_http_client(
     inference requests.
     """
     return httpx.AsyncClient(
-        transport=LlamaCppTransport(),
+        transport=LlamaCppTransport(timeout=timeout),
         timeout=httpx.Timeout(timeout, connect=connect_timeout),
     )

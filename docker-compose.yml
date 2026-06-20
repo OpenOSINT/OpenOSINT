@@ -7,3 +7,9 @@ services:
     volumes:
       - ./reports:/app/reports
       - ./.env:/app/.env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import http.client; c=http.client.HTTPConnection('localhost',8080); c.request('GET','/api/health'); assert c.getresponse().status==200"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

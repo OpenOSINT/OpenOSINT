@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import urllib.parse
 
 import requests
 
@@ -35,7 +36,7 @@ def _fetch_paste_data(query: str, timeout_seconds: int) -> list[dict]:
     """
     try:
         response = requests.get(
-            _PSBDMP_URL.format(query=query),
+            _PSBDMP_URL.format(query=urllib.parse.quote(query, safe="")),
             timeout=timeout_seconds,
         )
     except requests.RequestException as exc:
