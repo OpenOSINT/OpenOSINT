@@ -275,6 +275,7 @@ class OpenOSINTRepl:
         openai_base_url: str = "http://localhost:8080/v1",
         openai_model: str = "gpt-4o-mini",
         openai_api_key: str | None = None,
+        use_raw_socket: bool = False,
         is_pdf_disabled: bool = False,
     ) -> None:
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
@@ -284,6 +285,7 @@ class OpenOSINTRepl:
         self._openai_base_url = openai_base_url
         self._openai_model = openai_model
         self._openai_api_key = openai_api_key
+        self._use_raw_socket = use_raw_socket
         self._is_pdf_disabled = is_pdf_disabled
 
         self._agent: OpenOSINTAgent | OllamaAgent | OpenAICompatibleAgent
@@ -298,6 +300,8 @@ class OpenOSINTRepl:
                 model=openai_model,
                 base_url=openai_base_url,
                 api_key=openai_api_key,
+                use_raw_socket=use_raw_socket,
+                accept_header="text/event-stream, application/json" if use_raw_socket else None,
             )
             self._display_model = openai_model
         else:

@@ -23,7 +23,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import anthropic
+import httpx
 
+from openosint.llama_transport import (
+    LLAMA_CPP_ACCEPT_HEADER,
+    LlamaCppTransport,
+)
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
@@ -857,11 +862,15 @@ class OpenAICompatibleAgent:
         model: str = "gpt-4o-mini",
         base_url: str = "http://localhost:8080/v1",
         api_key: str | None = None,
+        use_raw_socket: bool = False,
+        accept_header: str | None = None,
     ) -> None:
         self.model = model
         self.base_url = base_url
         # Many local servers ignore the key, but the SDK requires a non-empty string.
         self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "") or "sk-no-key-required"
+        self.use_raw_socket = use_raw_socket
+        self.accept_header = accept_header
         self.history: list[dict[str, Any]] = []
 
     def clear_history(self) -> None:
@@ -908,7 +917,19 @@ class OpenAICompatibleAgent:
         ctx = _AgentRunContext(messages=messages, tool_calls=[], on_tool_call=on_tool_call)
 
         try:
-            client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key)
+            # Build client kwargs — allow custom transport for llama.cpp
+            client_kwargs: dict[str, Any] = {
+                "base_url": self.base_url,
+                "api_key": self.api_key,
+            }
+            if self.accept_header:
+                client_kwargs["default_headers"] = {"Accept": self.accept_header}
+            if self.use_raw_socket:
+                client_kwargs["http_client"] = httpx.AsyncClient(
+                    transport=LlamaCppTransport(),
+                    timeout=httpx.Timeout(120.0, connect=10.0),
+                )
+            client = openai.AsyncOpenAI(**client_kwargs)
             while True:
                 response = await client.chat.completions.create(
                     model=self.model,
