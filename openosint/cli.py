@@ -123,6 +123,13 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Anthropic API key (overrides ANTHROPIC_API_KEY env var).",
     )
     parser.add_argument(
+        "--anthropic-model",
+        type=str,
+        default=os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514"),
+        metavar="MODEL",
+        help="Anthropic model name (default: claude-sonnet-4-20250514, or $ANTHROPIC_MODEL).",
+    )
+    parser.add_argument(
         "--parallel",
         action="store_true",
         dest="is_parallel",
@@ -903,6 +910,7 @@ async def _async_main() -> None:
 
         repl = OpenOSINTRepl(
             api_key=getattr(args, "api_key", None),
+            anthropic_model=getattr(args, "anthropic_model", "claude-sonnet-4-20250514"),
             provider=getattr(args, "provider", "anthropic"),
             ollama_model=getattr(args, "ollama_model", "llama3.2"),
             ollama_host=getattr(args, "ollama_host", "http://localhost:11434"),

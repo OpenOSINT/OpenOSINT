@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, patch
 
 import dns.exception
 import dns.resolver
-import pytest
 
 from openosint.tools.search_dns import run_dns_osint
 

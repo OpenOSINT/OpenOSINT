@@ -36,7 +36,7 @@ def _fetch_paste_data(query: str, timeout_seconds: int) -> list[dict]:
     """
     try:
         response = requests.get(
-            _PSBDMP_URL.format(query=urllib.parse.quote(query, safe="")),
+            _PSBDMP_URL.format(query=urllib.parse.quote(query, safe="@/")),
             timeout=timeout_seconds,
         )
     except requests.RequestException as exc:

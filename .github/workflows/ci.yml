@@ -26,3 +26,17 @@ jobs:
         run: ruff check openosint/
       - name: Test with pytest
         run: pytest
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t openosint-test .
+      - name: Test container starts
+        run: |
+          docker run -d -p 8080:8080 --name openosint-test openosint-test
+          sleep 5
+          curl -s --fail http://localhost:8080/api/health || exit 1
+          docker stop openosint-test

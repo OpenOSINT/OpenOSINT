@@ -42,7 +42,7 @@ def _fetch_hibp_breaches(email: str, timeout_seconds: int) -> list[dict]:
         )
 
     headers = {"hibp-api-key": api_key, "user-agent": _USER_AGENT}
-    url = _HIBP_API_URL.format(email=urllib.parse.quote(email, safe=""))
+    url = _HIBP_API_URL.format(email=urllib.parse.quote(email, safe="@/"))
 
     try:
         response = requests.get(

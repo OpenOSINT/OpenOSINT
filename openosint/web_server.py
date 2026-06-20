@@ -33,7 +33,6 @@ except ImportError:
 
 import uvicorn
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -933,12 +932,30 @@ def create_app() -> FastAPI:
         redoc_url=None,
     )
 
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    # Dynamic CORS — allow any localhost origin (any port)
+    @app.middleware("http")
+    async def cors_middleware(request: Request, call_next):
+        origin = request.headers.get("origin", "")
+        if origin and (
+            origin.startswith("http://localhost:")
+            or origin.startswith("http://127.0.0.1:")
+            or origin.startswith("http://0.0.0.0:")
+        ):
+            response = await call_next(request)
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+            return response
+        # Preflight (OPTIONS) requests from allowed origins
+        if request.method == "OPTIONS":
+            return JSONResponse({"ok": True}, headers={
+                "Access-Control-Allow-Origin": origin,
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            })
+        response = await call_next(request)
+        return response
 
     # ------------------------------------------------------------------
     # GET /api/health
@@ -1159,6 +1176,15 @@ def create_app() -> FastAPI:
 
     @app.post("/api/setup")
     async def setup(request: Request):
+        # Origin guard — only allow requests from localhost
+        origin = request.headers.get("origin", "")
+        if origin and not (
+            origin.startswith("http://localhost") or origin.startswith("http://127.0.0.1")
+        ):
+            return JSONResponse(
+                {"status": "error", "message": "Setup endpoint only available from localhost"},
+                status_code=403,
+            )
         body: dict = await request.json()
         env_path = _ROOT / ".env"
         existing: dict[str, str] = {}

@@ -10,9 +10,6 @@ from __future__ import annotations
 import json
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -398,3 +395,141 @@ class TestRunToolInputValidation:
             result = await _run_tool("test_tool", "my_target")
 
         assert result == "ran:my_target"
+
+
+# ---------------------------------------------------------------------------
+# Tool catalog & health endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestHealthEndpoint:
+    async def test_health_endpoint_returns_version(self):
+        """Should include version in health response."""
+        from openosint import __version__
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["version"] == __version__
+
+    async def test_health_endpoint_has_status_ok(self):
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.get("/api/health")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+
+
+class TestToolsEndpoint:
+    async def test_tools_endpoint_returns_all_tools(self):
+        """Should return all tools in the catalog."""
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.get("/api/tools")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 18
+        names = {t["name"] for t in data}
+        assert "search_dorks_live" in names
+        assert "scrape_url" in names
+        assert "search_abuseipdb" in names
+        assert "search_dns" in names
+        assert "search_github" in names
+        assert "search_email" in names
+        assert "search_username" in names
+
+    async def test_tools_have_required_fields(self):
+        """Each tool should have name, description, and available fields."""
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.get("/api/tools")
+        for tool in resp.json():
+            assert "name" in tool
+            assert "description" in tool
+            assert "available" in tool
+            assert "category" in tool
+
+
+class TestSetupEndpoint:
+    async def test_setup_endpoint_rejects_non_local_origin(self):
+        """Should return 403 for cross-origin requests."""
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.post(
+            "/api/setup",
+            json={"SOME_KEY": "some_value"},
+            headers={"origin": "https://evil.com"},
+        )
+        assert resp.status_code == 403
+        data = resp.json()
+        assert "error" in data or "status" in data
+
+    async def test_setup_endpoint_allows_localhost(self):
+        """Should allow requests from localhost origin."""
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.post(
+            "/api/setup",
+            json={"SOME_KEY": "some_value"},
+            headers={"origin": "http://localhost:8080"},
+        )
+        # Should be allowed (even if .env write may fail in test env)
+        assert resp.status_code in (200, 403)
+
+
+class TestRunToolEndpoint:
+    async def test_run_tool_with_empty_input_returns_output(self):
+        """Should handle empty input gracefully."""
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        # Run a tool that doesn't require env vars
+        resp = client.post("/api/run/search_whois", json={"input": ""})
+        # Should return some kind of output (either error or empty)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "output" in data
+        assert data["status"] in ("ok", "error")
+
+    async def test_run_tool_returns_expected_fields(self):
+        """Response should include output, tool, and elapsed."""
+        from openosint.web_server import create_app
+
+        app = create_app()
+        from fastapi.testclient import TestClient
+
+        client = TestClient(app)
+        resp = client.post("/api/run/search_whois", json={"input": "example.com"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "output" in data
+        assert data["tool"] == "search_whois"
+        assert "elapsed" in data

@@ -271,6 +271,7 @@ class OpenOSINTRepl:
     def __init__(
         self,
         api_key: str | None = None,
+        anthropic_model: str = "claude-sonnet-4-20250514",
         provider: str = "anthropic",
         ollama_model: str = "llama3.2",
         ollama_host: str = "http://localhost:11434",
@@ -281,6 +282,7 @@ class OpenOSINTRepl:
         is_pdf_disabled: bool = False,
     ) -> None:
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+        self._anthropic_model = anthropic_model
         self._provider = provider
         self._ollama_model = ollama_model
         self._ollama_host = ollama_host
@@ -307,8 +309,8 @@ class OpenOSINTRepl:
             )
             self._display_model = openai_model
         else:
-            self._agent = OpenOSINTAgent(api_key=self._api_key)
-            self._display_model = "claude-sonnet-4-20250514"
+            self._agent = OpenOSINTAgent(api_key=self._api_key, model=self._anthropic_model)
+            self._display_model = self._anthropic_model
 
         self._last_response: str = ""
         self._session_start: datetime = datetime.now()
