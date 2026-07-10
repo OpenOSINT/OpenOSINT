@@ -156,6 +156,7 @@ sources and compliance requirements, I deliver a working integration.
 | `search_paste` | psbdmp.ws | Pastebin dump mentions |
 | `search_phone` | phoneinfoga | Carrier, country, line type |
 | `search_shodan` | Shodan API | Open ports, banners, CVEs |
+| `search_x` | Xquik API | Public X post search with author and engagement context |
 | `search_virustotal` | VirusTotal API v3 | Verdict from 70+ antivirus engines |
 | `search_ip2location` | IP2Location.io API | Enhanced IP intel: VPN/Proxy/Tor/datacenter flags *(sponsored)* |
 | `search_censys` | Censys Search API | Internet-facing infrastructure, certificates |
@@ -277,6 +278,22 @@ openosint shodan "apache port:80 country:DE"
 
 ```text
 [+] Org: Google LLC  |  Open ports: 53, 443
+```
+
+### search_x
+
+Searches public X posts through [Xquik](https://xquik.com). Supports Latest or Top ordering and returns post text, authors, timestamps, URLs, and engagement. Requires `XQUIK_API_KEY`.
+
+```bash
+openosint x "market news lang:en"
+openosint x "AI agents" --query-type Top --limit 10
+```
+
+```text
+[Xquik] X search: market news lang:en
+1. @analyst (Market Analyst) | 2026-07-10T10:00:00Z
+Text: Market update with useful context
+Engagement: likes 12 | reposts 3 | replies 2 | quotes 1
 ```
 
 ### search_virustotal
@@ -535,6 +552,7 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | `HIBP_API_KEY` | `search_breach` | Optional | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
 | `IPINFO_TOKEN` | `search_ip` | Optional | ipinfo.io higher rate limits |
 | `SHODAN_API_KEY` | `search_shodan` | Optional | Shodan API — [get one](https://account.shodan.io) |
+| `XQUIK_API_KEY` | `search_x` | Optional | Xquik API - [create a key](https://dashboard.xquik.com) |
 | `VIRUSTOTAL_API_KEY` | `search_virustotal` | Optional | VirusTotal API v3 — [get one](https://www.virustotal.com/gui/my-apikey) |
 | `IP2LOCATION_API_KEY` | `search_ip2location` | Optional | IP2Location.io — [get one](https://www.ip2location.io/pricing) *(sponsored)* |
 | `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Optional | Censys — [get one](https://censys.io/account) |
@@ -553,6 +571,7 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | `openosint email ADDRESS [-t N]` | Direct email scan |
 | `openosint username HANDLE [-t N]` | Direct username scan |
 | `openosint shodan QUERY [-t N]` | Shodan lookup |
+| `openosint x QUERY [--query-type Latest\|Top] [--limit N] [-t N]` | Public X post search through Xquik |
 | `openosint virustotal TARGET [-t N]` | VirusTotal lookup |
 | `openosint censys TARGET [-t N]` | Censys lookup |
 | `openosint ip2location IP [-t N]` | IP2Location lookup |
@@ -607,6 +626,7 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | sublist3r | https://github.com/aboul3la/Sublist3r | `search_domain` | Community | None — local binary |
 | VirusTotal | https://www.virustotal.com | `search_virustotal` | Community | API key — free tier |
 | WHOIS (IANA) | https://www.iana.org/whois | `search_whois` | Community | None |
+| Xquik | https://xquik.com | `search_x` | Community | API key |
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
 

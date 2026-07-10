@@ -35,15 +35,17 @@ except ImportError:
     _httpx = None  # type: ignore
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from dotenv import load_dotenv
 from sse_starlette.sse import EventSourceResponse
 
+from openosint import __version__ as _VERSION
 from openosint.brightdata import BRIGHTDATA_LINK_WEB
+from openosint.regexes import EMAIL_FIND_RE
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
@@ -63,8 +65,8 @@ from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
-from openosint import __version__ as _VERSION
-from openosint.regexes import EMAIL_FIND_RE
+from openosint.tools.search_x import run_x_osint
+
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -371,6 +373,18 @@ _TOOL_CATALOG: list[dict] = [
         "env_hints": {"SHODAN_API_KEY": "account.shodan.io"},
     },
     {
+        "name": "search_x",
+        "description": "Search public X posts through Xquik with author and engagement context.",
+        "input_label": "X search query",
+        "input_placeholder": "market news lang:en",
+        "category": "Recon",
+        "icon": "🔎",
+        "tool_type": "A",
+        "requires_binary": [],
+        "requires_env": ["XQUIK_API_KEY"],
+        "env_hints": {"XQUIK_API_KEY": "dashboard.xquik.com"},
+    },
+    {
         "name": "search_virustotal",
         "description": "Check IP, domain, URL, or file hash against VirusTotal.",
         "input_label": "IP, domain, URL, or file hash",
@@ -468,6 +482,9 @@ _RUNNERS: dict[str, object] = {
     "search_shodan": lambda v, t, keys=None: run_shodan_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("SHODAN_API_KEY")
     ),
+    "search_x": lambda v, t, keys=None: run_x_osint(
+        v, timeout_seconds=t, api_key=(keys or {}).get("XQUIK_API_KEY")
+    ),
     "search_virustotal": lambda v, t, keys=None: run_virustotal_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("VIRUSTOTAL_API_KEY")
     ),
@@ -527,6 +544,7 @@ _KNOWN_ENV_KEYS = [
     "CENSYS_API_ID",
     "CENSYS_SECRET",
     "SHODAN_API_KEY",
+    "XQUIK_API_KEY",
     "VIRUSTOTAL_API_KEY",
     "ABUSEIPDB_API_KEY",
     "GITHUB_TOKEN",
@@ -1057,10 +1075,10 @@ async def _demo_chat_stream(message: str) -> AsyncIterator[dict]:
     # --- tools / availability query ---
     if any(kw in msg_lower for kw in ("tool", "available", "what can")):
         lines = [
-            "I have **16 OSINT tools** available for investigations:\n\n",
+            "I have OSINT tools available for investigations:\n\n",
             "**Identity:** `search_email`, `search_username`, `search_breach`\n\n",
             "**Network:** `search_ip`, `search_whois`, `search_domain`, `search_ip2location`, `search_abuseipdb`\n\n",
-            "**Recon:** `generate_dorks`, `search_paste`, `search_phone`, `search_shodan`, `search_virustotal`, `search_censys`, `search_dns`, `search_github`\n\n",
+            "**Recon:** `generate_dorks`, `search_paste`, `search_phone`, `search_shodan`, `search_x`, `search_virustotal`, `search_censys`, `search_dns`, `search_github`\n\n",
             "Just give me a target — email address, username, domain, or IP.",
         ]
         for line in lines:
