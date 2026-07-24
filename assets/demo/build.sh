@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Regenerates demo.gif from demo.tape and re-extracts the review frames.
+# Regenerates demo.gif and demo.mp4 from demo.tape (single capture, two
+# `Output` lines) and re-extracts the review frames.
 #
 # Requires: vhs, ffmpeg, ffprobe, and `openosint` installed on PATH
 # (https://github.com/OpenOSINT/OpenOSINT). Uses `openosint dns example.com`
@@ -7,7 +8,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "Rendering demo.gif via vhs..."
+echo "Rendering demo.gif + demo.mp4 via vhs..."
 vhs demo.tape
 
 # vhs 0.11.0 ignores `Set Framerate` for GIF output (fixed at 25fps), so

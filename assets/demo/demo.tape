@@ -18,6 +18,7 @@
 # real content wrapping, not an orphaned stub.
 
 Output demo.gif
+Output demo.mp4
 
 Set Shell "bash"
 Set FontSize 18
