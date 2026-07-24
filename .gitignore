@@ -49,6 +49,10 @@ media/output/
 scripts/record-demo/out/
 scripts/record-demo/node_modules/
 
+# assets/demo/demo.mp4 is X-only — build.sh still produces it locally from
+# demo.tape, but the README embeds the GIF, so the MP4 stays untracked.
+assets/demo/demo.mp4
+
 # Distribution / packaging
 .installed.cfg
 lib/
