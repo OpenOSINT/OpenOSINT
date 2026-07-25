@@ -100,12 +100,17 @@ def _render_block(sponsors: list[dict]) -> str:
         for s in featured:
             logo = s.get("html_logo", s["logo"])
             tool_note = f" — powers `{s['tool']}`" if s.get("tool") else ""
+            doc_note = (
+                f" · [Integration guide]({s['integration_doc']})"
+                if s.get("integration_doc")
+                else ""
+            )
             lines.append(
                 f'<a href="{s["url"]}" rel="noopener sponsored">'
                 f'<img src="{logo}" alt="{s["name"]} logo" height="40"></a>'
             )
             lines.append("")
-            lines.append(f"**[{s['name']}]({s['url']})**{tool_note}")
+            lines.append(f"**[{s['name']}]({s['url']})**{tool_note}{doc_note}")
             lines.append("")
             lines.append(f"> {s['tagline']}")
             lines.append("")

@@ -37,7 +37,7 @@ Fiscal host: Open Collective / Open Source Collective — [opencollective.com/op
 - Sponsor badge in the README badge row
 - "Featured (sponsored)" label, listed first in the Integrations table
 - CLI startup banner on every `openosint` invocation
-- Tool documentation page, sponsor-labeled, with a direct API-key sign-up link
+- Tool documentation page, sponsor-labeled, with a direct API-key sign-up link — see [docs/integrations/](docs/integrations/index.md) for the live examples (IP2Location.io, RapidProxy)
 - Web UI settings panel — Featured integrations list
 - `openosint sponsors` CLI subcommand output
 - MCP Registry listing credit

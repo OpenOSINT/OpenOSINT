@@ -8,7 +8,8 @@
     "tier": "featured",
     "tool": "search_ip2location",
     "category": "IP Geolocation & Threat Intelligence",
-    "contact": "sales@ip2location.com"
+    "contact": "sales@ip2location.com",
+    "integration_doc": "docs/integrations/ip2location.md"
   },
   {
     "name": "RapidProxy",
@@ -17,6 +18,7 @@
     "logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg",
     "html_logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg",
     "tier": "featured",
-    "category": "Residential Proxies"
+    "category": "Residential Proxies",
+    "integration_doc": "docs/integrations/rapidproxy.md"
   }
 ]

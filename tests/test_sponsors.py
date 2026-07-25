@@ -322,6 +322,20 @@ def test_renderer_all_tiers(tmp_path):
     assert "Gamma LLC" in content
 
 
+def test_renderer_includes_integration_doc_link(tmp_path):
+    entry = {**_VALID_ENTRY, "integration_doc": "docs/integrations/acme.md"}
+    code, _out, readme = _run_renderer(sponsors_data=[entry], tmp_path=tmp_path)
+    assert code == 0
+    content = readme.read_text()
+    assert "[Integration guide](docs/integrations/acme.md)" in content
+
+
+def test_renderer_omits_integration_doc_link_when_absent(tmp_path):
+    code, _out, readme = _run_renderer(tmp_path=tmp_path)
+    assert code == 0
+    assert "Integration guide" not in readme.read_text()
+
+
 # ---------------------------------------------------------------------------
 # Real sponsors.json smoke test
 # ---------------------------------------------------------------------------
