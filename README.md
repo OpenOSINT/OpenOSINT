@@ -49,6 +49,11 @@ openosint email target@example.com
 
 New to OSINT methodology? Grab the [free 5-prompt starter set](https://openosint.tech/free-prompts?utm_source=github&utm_medium=readme-quickstart&utm_campaign=free_prompts) or the [free AI OSINT Field Manual](https://openosint.tech/free-manual?utm_source=github&utm_medium=readme-quickstart&utm_campaign=free_manual) before your first run.
 
+### 📬 Agents & OSINT — the newsletter
+
+One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
+**[Subscribe →](https://agentsosint.substack.com)**
+
 ## Usage
 
 Start the REPL and investigate any target — the agent decides which tools to run and chains them on findings:
