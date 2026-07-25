@@ -74,6 +74,12 @@ New to OSINT methodology? Grab the [free 5-prompt starter set](https://openosint
 One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
 **[Subscribe →](https://agentsosint.substack.com)**
 
+## Run in the cloud (no install)
+
+No Python, no `holehe` / `sherlock` / `sublist3r` / `phoneinfoga` binaries in `PATH`, no API keys — run OpenOSINT Email Recon from your browser, or as an MCP tool in Claude, Cursor, and Windsurf via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server). Try for free.
+
+**[Try OpenOSINT Email Recon on Apify →](https://apify.com/complete_analogy/openosint-email-recon)**
+
 ## Usage
 
 Start the REPL and investigate any target — the agent decides which tools to run and chains them on findings:
@@ -469,6 +475,8 @@ claude mcp list
 }
 ```
 
+Prefer zero setup? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) is also available as a hosted MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — no server to run, no config file to edit. Try for free.
+
 **Agentic use via Claude Code:**
 
 ```text
@@ -501,6 +509,8 @@ pip install -e .
 | `phoneinfoga` | Phone number intelligence | [Download binary](https://github.com/sundowndev/phoneinfoga/releases) |
 
 If a binary is absent, the corresponding tool returns a descriptive error. All other tools remain operational.
+
+Don't want to install these locally? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) runs email recon in Apify's cloud — zero dependencies, zero local setup.
 
 **Optional Python packages:**
 
