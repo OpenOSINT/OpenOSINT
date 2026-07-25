@@ -2,9 +2,9 @@
   {
     "name": "IP2Location.io",
     "tagline": "Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection",
-    "url": "https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=featured",
+    "url": "https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location",
     "logo": "https://img.shields.io/badge/IP2Location.io-sponsored-FF6B35?style=flat-square",
-    "html_logo": "assets/ip2location-logo.png",
+    "html_logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png",
     "tier": "featured",
     "tool": "search_ip2location",
     "category": "IP Geolocation & Threat Intelligence",
@@ -13,9 +13,9 @@
   {
     "name": "RapidProxy",
     "tagline": "Reliable Residential Proxies for Data Collection & Automation — 90M+ IPs across 200+ countries. 10% off: RAPID10.",
-    "url": "https://www.rapidproxy.io/?ref=openosint",
-    "logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/assets/rapidproxy-logo.svg",
-    "html_logo": "assets/rapidproxy-logo.svg",
+    "url": "https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy",
+    "logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg",
+    "html_logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg",
     "tier": "featured",
     "category": "Residential Proxies"
   }

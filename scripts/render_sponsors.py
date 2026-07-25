@@ -42,6 +42,15 @@ HTML_END_MARKER = "<!-- SPONSORS-HTML:END -->"
 VALID_TIERS = {"featured", "integration", "supporter"}
 REQUIRED_FIELDS = {"name", "tagline", "url", "logo", "tier"}
 
+# Full category list for the "open slots" line — keep in sync with the
+# category table in SPONSORSHIP.md.
+ALL_CATEGORIES = [
+    "Breach / Compromised-Credential Data",
+    "Email / Identity Lookup",
+    "IP Geolocation & Threat Intelligence",
+    "Residential Proxies",
+]
+
 
 # ---------------------------------------------------------------------------
 # Validation (stdlib-only, no openosint import so the script is self-contained)
@@ -89,7 +98,13 @@ def _render_block(sponsors: list[dict]) -> str:
         lines.append("### Featured Integrations")
         lines.append("")
         for s in featured:
+            logo = s.get("html_logo", s["logo"])
             tool_note = f" — powers `{s['tool']}`" if s.get("tool") else ""
+            lines.append(
+                f'<a href="{s["url"]}" rel="noopener sponsored">'
+                f'<img src="{logo}" alt="{s["name"]} logo" height="40"></a>'
+            )
+            lines.append("")
             lines.append(f"**[{s['name']}]({s['url']})**{tool_note}")
             lines.append("")
             lines.append(f"> {s['tagline']}")
@@ -112,9 +127,16 @@ def _render_block(sponsors: list[dict]) -> str:
             lines.append(f"[![{s['name']}]({s['logo']})]({s['url']})")
         lines.append("")
 
-    lines.append(
-        "_Want to sponsor OpenOSINT? See [SPONSORSHIP.md](SPONSORSHIP.md) for tiers and rates._"
-    )
+    taken_categories = {s.get("category") for s in sponsors}
+    open_categories = [c for c in ALL_CATEGORIES if c not in taken_categories]
+    if open_categories:
+        lines.append(
+            f"_Open: {' · '.join(open_categories)} — see [SPONSORSHIP.md](SPONSORSHIP.md)._"
+        )
+    else:
+        lines.append(
+            "_Want to sponsor OpenOSINT? See [SPONSORSHIP.md](SPONSORSHIP.md) for tiers and rates._"
+        )
     lines.append("")
     lines.append(END_MARKER)
     return "\n".join(lines)

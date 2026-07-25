@@ -17,10 +17,30 @@ mcp-name: io.github.OpenOSINT/openosint
 [![GitHub Stars](https://img.shields.io/github/stars/OpenOSINT/OpenOSINT?style=flat-square)](https://github.com/OpenOSINT/OpenOSINT/stargazers)
 [![MCP](https://img.shields.io/badge/protocol-MCP-blueviolet?style=flat-square)](https://modelcontextprotocol.io/)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-published-blueviolet?style=flat-square)](https://registry.modelcontextprotocol.io/servers/io.github.OpenOSINT/openosint)
-[![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io)
-[![Sponsored by RapidProxy](https://img.shields.io/badge/sponsored%20by-RapidProxy-F2622B?style=flat-square)](https://www.rapidproxy.io/?ref=openosint)
+[![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)
+[![Sponsored by RapidProxy](https://img.shields.io/badge/sponsored%20by-RapidProxy-F2622B?style=flat-square)](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)
 
 </div>
+
+<!-- SPONSORS:START -->
+
+### Featured Integrations
+
+<a href="https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png" alt="IP2Location.io logo" height="40"></a>
+
+**[IP2Location.io](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)** — powers `search_ip2location`
+
+> Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
+
+<a href="https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg" alt="RapidProxy logo" height="40"></a>
+
+**[RapidProxy](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)**
+
+> Reliable Residential Proxies for Data Collection & Automation — 90M+ IPs across 200+ countries. 10% off: RAPID10.
+
+_Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [SPONSORSHIP.md](SPONSORSHIP.md)._
+
+<!-- SPONSORS:END -->
 
 <div align="center">
   <a href="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.mp4">
@@ -92,43 +112,6 @@ openosint > investigate target@example.com
 > **Legal Disclaimer**: OpenOSINT is intended for **legal and authorized use only**.
 > Users are solely responsible for ensuring their use complies with all applicable laws and regulations.
 > The authors accept no liability for misuse. See [DISCLAIMER.md](DISCLAIMER.md).
-
-## Sponsors
-
-<table>
-<tr>
-<td align="center" valign="top" width="200">
-<a href="https://www.ip2location.com" rel="noopener sponsored">
-<img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/assets/ip2location-logo.png" alt="IP2Location — IP geolocation and threat intelligence provider" width="140">
-</a><br>
-<sub><b>IP2Location</b></sub><br>
-<sub>IP Geolocation &amp; Threat Intelligence</sub><br>
-<sub><em>Enhanced IP geolocation, ISP, VPN/Proxy/Tor detection.</em></sub>
-</td>
-<td align="center" valign="top" width="200">
-<a href="https://www.rapidproxy.io/?ref=openosint" rel="noopener sponsored">
-<img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/assets/rapidproxy-logo.svg" alt="RapidProxy — residential proxy provider" width="140">
-</a><br>
-<sub><b>RapidProxy</b></sub><br>
-<sub>Residential Proxies</sub><br>
-<sub><em>90M+ rotating residential IPs across 200+ countries — smart rotation & geo-targeting.</em></sub>
-</td>
-<td valign="top">
-<b>Your logo here</b><br>
-<sub>Open: <b>breach data</b> · <b>email/identity</b></sub><br>
-<sub>One vendor per category — exclusive placement across README, docs, CLI, and Web UI.</sub><br><br>
-<sub><a href="https://openosint.tech/sponsors.html">Media kit &amp; pricing →</a> · <a href="https://opencollective.com/openosint_oss">Open Collective</a> · <a href="mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry">commercial@openosint.tech</a></sub>
-</td>
-</tr>
-</table>
-
-**Reliable Residential Proxies for Data Collection & Automation**
-
-**Access 90M+ real residential IPs across 200+ countries with smart rotation, geo-targeting, high-concurrency support, and non-expiring traffic.**
-
-**Use Cases:** Web Scraping · Data Collection · AI Automation · Developer Tools
-
-🎁 10% discount with code **RAPID10** → [Start Free Testing](https://www.rapidproxy.io/?ref=openosint)
 
 ## Custom Integrations
 
@@ -667,27 +650,7 @@ OpenOSINT is used by OSINT practitioners, security researchers, and developers a
 
 **Featured Integration** ($2,000/year or $220/month): recommended/default provider for one tool category, exclusive. Logo + badge across README, docs, CLI banner, and Web UI. One vendor per category.
 
-Open categories: **breach/credential data** · **email/identity lookup**
-
-→ Full media kit and pricing: [openosint.tech/sponsors.html](https://openosint.tech/sponsors.html)
-
-### Current sponsors
-
-<!-- SPONSORS:START -->
-
-### Featured Integrations
-
-**[IP2Location.io](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=featured)** — powers `search_ip2location`
-
-> Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
-
-**[RapidProxy](https://www.rapidproxy.io/?ref=openosint)**
-
-> Reliable Residential Proxies for Data Collection & Automation — 90M+ IPs across 200+ countries. 10% off: RAPID10.
-
-_Want to sponsor OpenOSINT? See [SPONSORSHIP.md](SPONSORSHIP.md) for tiers and rates._
-
-<!-- SPONSORS:END -->
+Current sponsors and open categories are listed in the sponsor block at the top of this README. Full media kit, pricing, and the referral funnel: [SPONSORSHIP.md](SPONSORSHIP.md).
 
 [Open Collective](https://opencollective.com/openosint_oss) · [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry) · [SPONSORSHIP.md](SPONSORSHIP.md)
 
