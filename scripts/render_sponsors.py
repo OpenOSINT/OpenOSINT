@@ -10,11 +10,16 @@ Markers (created automatically if absent):
     <!-- SPONSORS:START -->
     <!-- SPONSORS:END -->
 
+Pass --docs-html to also sync the sponsor cards on docs/sponsors.html from the
+same sponsors.json (markers: <!-- SPONSORS-HTML:START/END -->). Opt-in and off
+by default so this script's default behavior — and the existing test suite —
+is unchanged.
+
 Running this script is idempotent: re-running it produces the same output.
 Wire it to CI or pre-commit to keep README in sync:
 
     pre-commit: python scripts/render_sponsors.py --check
-    CI step:    python scripts/render_sponsors.py && git diff --exit-code README.md
+    CI step:    python scripts/render_sponsors.py --docs-html docs/sponsors.html && git diff --exit-code README.md docs/sponsors.html
 """
 
 from __future__ import annotations
@@ -30,6 +35,9 @@ _SPONSORS_FILE = _REPO_ROOT / "sponsors.json"
 
 START_MARKER = "<!-- SPONSORS:START -->"
 END_MARKER = "<!-- SPONSORS:END -->"
+
+HTML_START_MARKER = "<!-- SPONSORS-HTML:START -->"
+HTML_END_MARKER = "<!-- SPONSORS-HTML:END -->"
 
 VALID_TIERS = {"featured", "integration", "supporter"}
 REQUIRED_FIELDS = {"name", "tagline", "url", "logo", "tier"}
@@ -112,6 +120,45 @@ def _render_block(sponsors: list[dict]) -> str:
     return "\n".join(lines)
 
 
+def _js_string(value: str) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def _render_html_array(sponsors: list[dict]) -> str:
+    """Render the sponsor-card JS array consumed by docs/sponsors.html."""
+    featured = [s for s in sponsors if s["tier"] == "featured"]
+
+    lines = [HTML_START_MARKER, "var SPONSORS = ["]
+    for i, s in enumerate(featured):
+        html_logo = s.get("html_logo", s["logo"])
+        logo_alt = f"{s['name']} logo — sponsor for {s.get('category', s['name'])}"
+        comma = "," if i < len(featured) - 1 else ""
+        lines.append("  {")
+        lines.append(f"    name:        {_js_string(s['name'])},")
+        lines.append(f"    url:         {_js_string(s['url'])},")
+        lines.append(f"    logo:        {_js_string(html_logo)},")
+        lines.append(f"    logo_alt:    {_js_string(logo_alt)},")
+        lines.append(f"    category:    {_js_string(s.get('category', ''))},")
+        lines.append(f"    description: {_js_string(s['tagline'])}")
+        lines.append("  }" + comma)
+    lines.append("];")
+    lines.append(HTML_END_MARKER)
+    return "\n".join(lines)
+
+
+def _inject_docs_html(html_text: str, block: str) -> str:
+    """Replace content between the HTML SPONSORS-HTML markers (inclusive)."""
+    if HTML_START_MARKER not in html_text:
+        sys.exit(
+            f"[render_sponsors] ERROR: {HTML_START_MARKER} not found in docs HTML file. "
+            "Add the marker pair around the `var SPONSORS = [...]` block first."
+        )
+
+    start_idx = html_text.index(HTML_START_MARKER)
+    end_idx = html_text.index(HTML_END_MARKER, start_idx) + len(HTML_END_MARKER)
+    return html_text[:start_idx] + block + html_text[end_idx:]
+
+
 # ---------------------------------------------------------------------------
 # README updater
 # ---------------------------------------------------------------------------
@@ -146,6 +193,15 @@ def main() -> None:
         default=_SPONSORS_FILE,
         help="Path to sponsors.json (default: repo root sponsors.json).",
     )
+    parser.add_argument(
+        "--docs-html",
+        type=Path,
+        default=None,
+        help=(
+            "Path to docs/sponsors.html. When given, also regenerates its sponsor-card "
+            "JS array from sponsors.json (opt-in; omit to touch README only)."
+        ),
+    )
     args = parser.parse_args()
 
     sponsors = _load_and_validate(args.sponsors)
@@ -154,19 +210,31 @@ def main() -> None:
     readme_text = args.readme.read_text(encoding="utf-8")
     updated = _inject(readme_text, block)
 
+    targets = [(args.readme, readme_text, updated)]
+
+    if args.docs_html is not None:
+        html_text = args.docs_html.read_text(encoding="utf-8")
+        html_block = _render_html_array(sponsors)
+        html_updated = _inject_docs_html(html_text, html_block)
+        targets.append((args.docs_html, html_text, html_updated))
+
     if args.check:
-        if updated != readme_text:
-            print("[render_sponsors] README.md sponsors block is out of sync.")
-            print("Run:  python scripts/render_sponsors.py")
+        out_of_sync = [path for path, before, after in targets if before != after]
+        if out_of_sync:
+            for path in out_of_sync:
+                print(f"[render_sponsors] {path} sponsors block is out of sync.")
+            print("Run:  python scripts/render_sponsors.py" + (" --docs-html <path>" if args.docs_html else ""))
             sys.exit(1)
-        print("[render_sponsors] README.md sponsors block is up to date.")
+        for path, _before, _after in targets:
+            print(f"[render_sponsors] {path} is up to date.")
         return
 
-    if updated != readme_text:
-        args.readme.write_text(updated, encoding="utf-8")
-        print(f"[render_sponsors] Updated {args.readme}")
-    else:
-        print(f"[render_sponsors] {args.readme} already up to date.")
+    for path, before, after in targets:
+        if after != before:
+            path.write_text(after, encoding="utf-8")
+            print(f"[render_sponsors] Updated {path}")
+        else:
+            print(f"[render_sponsors] {path} already up to date.")
 
 
 if __name__ == "__main__":
