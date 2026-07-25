@@ -1,0 +1,284 @@
+{
+  "github": {
+    "stars": 1165,
+    "forks": 172,
+    "watchers": 10,
+    "traffic": {
+      "views": {
+        "total": 4958,
+        "unique_total": 2375,
+        "daily": [
+          {
+            "date": "2026-07-11",
+            "count": 195,
+            "uniques": 148
+          },
+          {
+            "date": "2026-07-12",
+            "count": 327,
+            "uniques": 150
+          },
+          {
+            "date": "2026-07-13",
+            "count": 321,
+            "uniques": 153
+          },
+          {
+            "date": "2026-07-14",
+            "count": 298,
+            "uniques": 141
+          },
+          {
+            "date": "2026-07-15",
+            "count": 327,
+            "uniques": 196
+          },
+          {
+            "date": "2026-07-16",
+            "count": 384,
+            "uniques": 234
+          },
+          {
+            "date": "2026-07-17",
+            "count": 333,
+            "uniques": 161
+          },
+          {
+            "date": "2026-07-18",
+            "count": 290,
+            "uniques": 143
+          },
+          {
+            "date": "2026-07-19",
+            "count": 409,
+            "uniques": 185
+          },
+          {
+            "date": "2026-07-20",
+            "count": 323,
+            "uniques": 178
+          },
+          {
+            "date": "2026-07-21",
+            "count": 380,
+            "uniques": 228
+          },
+          {
+            "date": "2026-07-22",
+            "count": 408,
+            "uniques": 272
+          },
+          {
+            "date": "2026-07-23",
+            "count": 500,
+            "uniques": 261
+          },
+          {
+            "date": "2026-07-24",
+            "count": 463,
+            "uniques": 281
+          }
+        ]
+      },
+      "clones": {
+        "total": 831,
+        "unique_total": 529,
+        "daily": [
+          {
+            "date": "2026-07-11",
+            "count": 35,
+            "uniques": 30
+          },
+          {
+            "date": "2026-07-12",
+            "count": 39,
+            "uniques": 35
+          },
+          {
+            "date": "2026-07-13",
+            "count": 122,
+            "uniques": 65
+          },
+          {
+            "date": "2026-07-14",
+            "count": 80,
+            "uniques": 53
+          },
+          {
+            "date": "2026-07-15",
+            "count": 55,
+            "uniques": 47
+          },
+          {
+            "date": "2026-07-16",
+            "count": 78,
+            "uniques": 55
+          },
+          {
+            "date": "2026-07-17",
+            "count": 55,
+            "uniques": 43
+          },
+          {
+            "date": "2026-07-18",
+            "count": 67,
+            "uniques": 53
+          },
+          {
+            "date": "2026-07-19",
+            "count": 35,
+            "uniques": 30
+          },
+          {
+            "date": "2026-07-20",
+            "count": 49,
+            "uniques": 43
+          },
+          {
+            "date": "2026-07-21",
+            "count": 62,
+            "uniques": 50
+          },
+          {
+            "date": "2026-07-22",
+            "count": 46,
+            "uniques": 37
+          },
+          {
+            "date": "2026-07-23",
+            "count": 63,
+            "uniques": 50
+          },
+          {
+            "date": "2026-07-24",
+            "count": 45,
+            "uniques": 40
+          }
+        ]
+      },
+      "referrers": [
+        {
+          "referrer": "Google",
+          "count": 783,
+          "uniques": 495
+        },
+        {
+          "referrer": "github.com",
+          "count": 650,
+          "uniques": 374
+        },
+        {
+          "referrer": "t.co",
+          "count": 228,
+          "uniques": 154
+        },
+        {
+          "referrer": "l.facebook.com",
+          "count": 171,
+          "uniques": 116
+        },
+        {
+          "referrer": "search.brave.com",
+          "count": 121,
+          "uniques": 65
+        },
+        {
+          "referrer": "linkedin.com",
+          "count": 120,
+          "uniques": 79
+        },
+        {
+          "referrer": "lm.facebook.com",
+          "count": 117,
+          "uniques": 100
+        },
+        {
+          "referrer": "Bing",
+          "count": 101,
+          "uniques": 58
+        },
+        {
+          "referrer": "DuckDuckGo",
+          "count": 85,
+          "uniques": 64
+        },
+        {
+          "referrer": "facebook.com",
+          "count": 62,
+          "uniques": 49
+        }
+      ],
+      "paths": [
+        {
+          "path": "/OpenOSINT/OpenOSINT",
+          "count": 3852,
+          "uniques": 2212
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/stargazers",
+          "count": 348,
+          "uniques": 1
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/pull/25",
+          "count": 70,
+          "uniques": 4
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/issues",
+          "count": 54,
+          "uniques": 33
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/releases/tag/v2.23.1",
+          "count": 31,
+          "uniques": 26
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/blob/main/README.md",
+          "count": 29,
+          "uniques": 22
+        },
+        {
+          "path": "/openosint/openosint",
+          "count": 29,
+          "uniques": 12
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/pulls",
+          "count": 26,
+          "uniques": 17
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/releases/tag/v2.23.0",
+          "count": 20,
+          "uniques": 5
+        },
+        {
+          "path": "/OpenOSINT/OpenOSINT/tree/main/openosint",
+          "count": 18,
+          "uniques": 14
+        }
+      ]
+    }
+  },
+  "pypi": {
+    "downloads_last_day": 80,
+    "downloads_last_week": 911,
+    "downloads_last_month": 3341
+  },
+  "date": "2026-07-25",
+  "repo": "OpenOSINT/OpenOSINT",
+  "trailing_30_days": {
+    "views": {
+      "count": 4958,
+      "unique_days_sum": 2731,
+      "days_covered": 14
+    },
+    "clones": {
+      "count": 831,
+      "unique_days_sum": 631,
+      "days_covered": 14
+    }
+  }
+}
