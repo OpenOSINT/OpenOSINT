@@ -1,7 +1,7 @@
 mcp-name: io.github.OpenOSINT/openosint
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/v2.19.1/docs/logo.svg" alt="OpenOSINT" width="200" />
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
   <p>OSINT agent for security researchers and analysts: 18 investigation tools behind a natural-language interface.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
@@ -416,7 +416,7 @@ openosint web
 Run `openosint` with no arguments to start the AI-powered REPL:
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/v2.19.1/assets/demo.gif" alt="OpenOSINT terminal REPL demo" width="900" />
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo.gif" alt="OpenOSINT terminal REPL demo" width="900" />
 </div>
 
 **REPL commands:**
@@ -448,7 +448,7 @@ openosint --provider openai \
 Full per-tool reference, CLI flags, and configuration options at [openosint.tech](https://openosint.tech/).
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/v2.19.1/assets/demo-web.gif" alt="openosint.tech documentation tour" width="900" />
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo-web.gif" alt="openosint.tech documentation tour" width="900" />
 </div>
 
 ### MCP Server

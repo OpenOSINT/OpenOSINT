@@ -148,6 +148,7 @@ coverage.json
 # These are runtime results from manual tool runs, not source files
 researcher*.txt
 testuser*.txt
+johndoe*.txt
 *.osint.txt
 
 # Empty placeholder files
