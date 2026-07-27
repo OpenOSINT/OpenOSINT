@@ -54,6 +54,8 @@ _Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [
 pip install openosint
 ```
 
+**Paid:** [Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit) (prompts + playbook + setup, bundled) · [Setup Sprint — $350](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint) (done-for-you install) · [Commercial License — from €300/yr](./COMMERCIAL.md) (vendor contract, SLA, indemnification)
+
 ## Quick Start
 
 ```bash
@@ -610,13 +612,29 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
 
-## Learn the Method
+## Get the Method
 
-OpenOSINT is the tool. The **AI OSINT Operator's Playbook** (paid guide, $39) is the method — step-by-step workflows for running investigations with ChatGPT, Claude, and OpenOSINT.
+OpenOSINT is the tool. The **AI OSINT Complete Kit** ($55) is the method, bundled: the Prompt Pack, the Operator's Playbook, and setup guidance in one package.
 
-**→ [Get the Playbook](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)**
+**→ [Get the Complete Kit ($55)](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit)**
 
-## Resources
+### AI OSINT Prompt Pack
+
+OpenOSINT gives you the tooling. The **AI OSINT Prompt Pack** gives you the method: 30+ tested prompts that make ChatGPT / Claude collect → pivot → verify against real public sources instead of hallucinating.
+
+- Email, username, domain, IP, phone, company due-diligence, image & reporting prompts
+- One repeatable investigation flow + an ethics & legal primer
+- 7-page PDF · instant download · pairs directly with OpenOSINT
+
+**→ [Get the Prompt Pack ($29)](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=prompt_pack)**
+
+### AI OSINT Operator's Playbook
+
+Step-by-step workflows for running investigations with ChatGPT, Claude, and OpenOSINT.
+
+**→ [Get the Playbook ($39)](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)**
+
+_Buying directly funds OpenOSINT's development._
 
 ### Free Starter Set
 
@@ -637,22 +655,6 @@ New to AI-assisted OSINT? The **AI OSINT Field Manual** is a free guide to the r
 - Free PDF, instant download — just your email
 
 **→ [Get the free Field Manual](https://openosint.tech/free-manual?utm_source=github&utm_medium=readme-resources&utm_campaign=free_manual)**
-
-### AI OSINT Prompt Pack
-
-OpenOSINT gives you the tooling. The **AI OSINT Prompt Pack** gives you the method: 30+ tested prompts that make ChatGPT / Claude collect → pivot → verify against real public sources instead of hallucinating.
-
-- Email, username, domain, IP, phone, company due-diligence, image & reporting prompts
-- One repeatable investigation flow + an ethics & legal primer
-- 7-page PDF · instant download · pairs directly with OpenOSINT
-
-Not ready to buy? Start with the [free 5-prompt starter set](https://openosint.tech/free-prompts?utm_source=github&utm_medium=readme-promptpack&utm_campaign=free_prompts).
-
-**→ [Get the Prompt Pack ($29)](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=prompt_pack)**
-
-Also available: [AI OSINT Operator's Playbook](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook) — paid guide, $39, covering full investigation workflows.
-
-_Buying it directly funds OpenOSINT's development._
 
 ## Sponsor this project
 
@@ -684,7 +686,7 @@ The framework is free and MIT-licensed. This is an optional paid setup service o
 
 Get OpenOSINT wired into your stack in 3–5 days — done-for-you, fully async, no calls.
 
-**[Book the Setup Sprint → $350 (founding price, first 5 teams)](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint)**
+**[Book the Setup Sprint → $350 (founding price, first 5 teams)](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint)**
 
 → Or email [commercial@openosint.tech](mailto:commercial@openosint.tech) · [LinkedIn](https://www.linkedin.com/company/openosintoss)
 
