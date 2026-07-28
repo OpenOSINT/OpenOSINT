@@ -172,3 +172,31 @@ def test_no_banned_page_count_phrasing():
         for match in _BANNED_PAGE_COUNT_RE.finditer(raw):
             violations.append(f"{path.relative_to(ROOT)}: {match.group(0)!r}")
     assert not violations, "banned page-count phrasing found:\n" + "\n".join(violations)
+
+
+# Paid products must not be positioned as a fix for AI hallucination — that
+# contradicts the README's own claim that hallucinated tool results are
+# structurally impossible. Scoped to the CTA block immediately containing
+# each paid Gumroad link, not the whole file, so legitimate technical prose
+# elsewhere on the page (e.g. a blog post literally about hallucination, or
+# an unrelated "see also" link) doesn't trip a false positive. The block
+# boundary is the nearest preceding container/heading start — <aside>,
+# an oo-cta div, an <h2>, or a Markdown ## / ### heading — not a fixed
+# character count, so unrelated prior content is excluded regardless of
+# how close it happens to sit to the link.
+_CTA_LOOKBACK_CHARS = 600  # fallback only, if no boundary precedes the link
+_CTA_BOUNDARY_RE = re.compile(r'<aside\b|<div class="oo-cta|<h2\b|^#{2,3}\s', re.MULTILINE)
+_HALLUCINATION_RE = re.compile(r"hallucinat", re.IGNORECASE)
+
+
+def test_no_hallucination_framing_in_cta_copy():
+    violations = []
+    for path in _iter_all_doc_files():
+        raw = path.read_text(encoding="utf-8")
+        for match in _GUMROAD_LINK_RE.finditer(raw):
+            boundaries = [b.start() for b in _CTA_BOUNDARY_RE.finditer(raw, 0, match.start())]
+            window_start = boundaries[-1] if boundaries else max(0, match.start() - _CTA_LOOKBACK_CHARS)
+            window = raw[window_start : match.start()]
+            if _HALLUCINATION_RE.search(window):
+                violations.append(f"{path.relative_to(ROOT)}: hallucination framing near {match.group(0)!r}")
+    assert not violations, "hallucination framing found in paid CTA copy:\n" + "\n".join(violations)
