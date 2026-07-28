@@ -62,7 +62,7 @@ Works with Claude, ChatGPT, or any AI assistant. Pairs directly with [OpenOSINT]
 - Ethics and authorisation check built into every prompt
 - Works standalone or integrated with the Playbook workflow
 
-**Format:** Two PDFs, instant download. No DRM.
+**Format:** Instant download. No DRM.
 
 ### The concrete result
 

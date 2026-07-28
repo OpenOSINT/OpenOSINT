@@ -54,7 +54,7 @@ _Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [
 pip install openosint
 ```
 
-**Paid:** [Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit) (prompts + playbook + setup, bundled) · [Setup Sprint — $350](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint) (done-for-you install) · [Commercial License — from €300/yr](./COMMERCIAL.md) (vendor contract, SLA, indemnification)
+**Paid:** [Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit) (prompts + playbook, bundled) · [Setup Sprint — $350](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint) (done-for-you install) · [Commercial License — from €300/yr](./COMMERCIAL.md) (vendor contract, SLA, indemnification)
 
 ## Quick Start
 
@@ -621,17 +621,17 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 
 ## Get the Method
 
-OpenOSINT is the tool. The **AI OSINT Complete Kit** ($55) is the method, bundled: the Prompt Pack, the Operator's Playbook, and setup guidance in one package.
+OpenOSINT is the tool. The **AI OSINT Complete Kit** ($55) is the method: the Prompt Pack and the Operator's Playbook, bundled.
 
 **→ [Get the Complete Kit ($55)](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit)**
 
 ### AI OSINT Prompt Pack
 
-OpenOSINT gives you the tooling. The **AI OSINT Prompt Pack** gives you the method: 30+ tested prompts that make ChatGPT / Claude collect → pivot → verify against real public sources instead of hallucinating.
+OpenOSINT gives you the tooling. The **AI OSINT Prompt Pack** gives you the method: 30+ tested prompts across 8 target types, with one repeatable collect → pivot → verify → document flow for running OpenOSINT investigations.
 
 - Email, username, domain, IP, phone, company due-diligence, image & reporting prompts
 - One repeatable investigation flow + an ethics & legal primer
-- 7-page PDF · instant download · pairs directly with OpenOSINT
+- Instant download · pairs directly with OpenOSINT
 
 **→ [Get the Prompt Pack ($29)](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=prompt_pack)**
 

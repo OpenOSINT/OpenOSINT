@@ -94,3 +94,81 @@ def test_docs_index_footer_version_matches_pyproject():
     footer_match = re.search(r"OpenOSINT (\d+\.\d+\.\d+)", html)
     assert footer_match, "docs/index.html footer version (OpenOSINT X.Y.Z) not found"
     assert footer_match.group(1) == version
+
+
+# --------------------------------------------------------------------------
+# Phase 3 — Gumroad link, price, and page-count consistency for the two
+# revenue products (Prompt Pack, Complete Kit). No in-repo source of truth
+# exists for these (unlike tool count / version), so drift can only be
+# caught by cross-checking every stated occurrence against every other.
+# --------------------------------------------------------------------------
+
+
+def _iter_all_doc_files():
+    yield ROOT / "README.md"
+    docs = ROOT / "docs"
+    for path in sorted(docs.rglob("*.html")):
+        yield path
+
+
+_GUMROAD_LINK_RE = re.compile(
+    r"https://tommasodev\.gumroad\.com/l/(ai-osint-prompt-pack|ai-osint-complete-kit)((?:/[A-Za-z0-9_-]+)?)\?"
+)
+
+
+def test_gumroad_links_share_base_url_and_offer_code_per_product():
+    seen: dict[str, set[str]] = {}
+    for path in _iter_all_doc_files():
+        raw = path.read_text(encoding="utf-8")
+        for product, offer_code in _GUMROAD_LINK_RE.findall(raw):
+            seen.setdefault(product, set()).add(offer_code)
+    mismatches = {product: codes for product, codes in seen.items() if len(codes) > 1}
+    assert not mismatches, f"Gumroad links use inconsistent offer codes per product: {mismatches}"
+
+
+# Each pattern anchors the price tightly to the product name (compare-card
+# markup, "Get the pack/kit" CTAs, and "Name ($NN)" mentions) so unrelated
+# dollar amounts elsewhere on the page can't be misattributed.
+_PRICE_PATTERNS = {
+    "Prompt Pack": [
+        re.compile(
+            r'<h4>(?:AI OSINT )?Prompt Pack(?:\s*<span[^>]*>[^<]*</span>)?</h4>\s*'
+            r'<div class="price">\$(\d+(?:\.\d{2})?)</div>',
+            re.IGNORECASE,
+        ),
+        re.compile(r"Get the (?:Prompt )?[Pp]ack[^$\n<]{0,15}\$(\d+(?:\.\d{2})?)", re.IGNORECASE),
+        re.compile(r"(?:AI OSINT )?Prompt Pack\**\s*\(\$(\d+(?:\.\d{2})?)\)", re.IGNORECASE),
+    ],
+    "Complete Kit": [
+        re.compile(
+            r'<h4>(?:AI OSINT )?Complete Kit(?:\s*<span[^>]*>[^<]*</span>)?</h4>\s*'
+            r'<div class="price">\$(\d+(?:\.\d{2})?)</div>',
+            re.IGNORECASE,
+        ),
+        re.compile(r"Get the (?:Complete )?[Kk]it[^$\n<]{0,15}\$(\d+(?:\.\d{2})?)", re.IGNORECASE),
+        re.compile(r"(?:AI OSINT )?Complete Kit\**\s*\(\$(\d+(?:\.\d{2})?)\)", re.IGNORECASE),
+    ],
+}
+
+
+def test_stated_prices_are_identical_per_product():
+    found: dict[str, set[str]] = {}
+    for path in _iter_all_doc_files():
+        raw = path.read_text(encoding="utf-8")
+        for product, patterns in _PRICE_PATTERNS.items():
+            for pattern in patterns:
+                found.setdefault(product, set()).update(pattern.findall(raw))
+    mismatches = {product: prices for product, prices in found.items() if len(prices) > 1}
+    assert not mismatches, f"Inconsistent stated prices per product: {mismatches}"
+
+
+_BANNED_PAGE_COUNT_RE = re.compile(r"\b\d+-page\b|\b\d+\s+pages?\b|\bpdf pages\b", re.IGNORECASE)
+
+
+def test_no_banned_page_count_phrasing():
+    violations = []
+    for path in _iter_all_doc_files():
+        raw = path.read_text(encoding="utf-8")
+        for match in _BANNED_PAGE_COUNT_RE.finditer(raw):
+            violations.append(f"{path.relative_to(ROOT)}: {match.group(0)!r}")
+    assert not violations, "banned page-count phrasing found:\n" + "\n".join(violations)

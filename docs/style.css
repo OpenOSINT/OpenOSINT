@@ -275,7 +275,7 @@ a:visited {
   text-align: center;
 }
 
-.oo-cta-compare > div.featured { border-color: #3fb950; }
+.oo-cta-compare > div.featured { border-color: #3fb950; border-width: 2px; flex: 1.15; padding: 20px; }
 
 .oo-cta-compare h4 {
   color: #e6edf3;
