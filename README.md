@@ -69,8 +69,6 @@ openosint web
 openosint email target@example.com
 ```
 
-New to OSINT methodology? Grab the [free 5-prompt starter set](https://openosint.tech/free-prompts?utm_source=github&utm_medium=readme-quickstart&utm_campaign=free_prompts) or the [free AI OSINT Field Manual](https://openosint.tech/free-manual?utm_source=github&utm_medium=readme-quickstart&utm_campaign=free_manual) before your first run.
-
 ### 📬 Agents & OSINT — the newsletter
 
 One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
@@ -644,26 +642,6 @@ Step-by-step workflows for running investigations with ChatGPT, Claude, and Open
 **→ [Get the Playbook ($39)](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)**
 
 _Buying directly funds OpenOSINT's development._
-
-### Free Starter Set
-
-New to AI-assisted OSINT? The **free starter set** gives you 5 structured prompts — one per stage of a real investigation — that make ChatGPT and Claude collect real public data instead of hallucinating it.
-
-- Scope → Collect → Pivot → Verify → Document
-- Works with any AI assistant (Claude, ChatGPT, Gemini)
-- Free PDF, instant download — just your email
-
-**→ [Get the free starter set](https://openosint.tech/free-prompts?utm_source=github&utm_medium=readme-resources&utm_campaign=free_prompts)**
-
-### AI OSINT Field Manual (Free Edition)
-
-New to AI-assisted OSINT? The **AI OSINT Field Manual** is a free guide to the repeatable 5-phase method for AI-assisted OSINT investigations.
-
-- The repeatable 5-phase method for AI-assisted OSINT investigations
-- Works with any AI assistant (Claude, ChatGPT, Gemini)
-- Free PDF, instant download — just your email
-
-**→ [Get the free Field Manual](https://openosint.tech/free-manual?utm_source=github&utm_medium=readme-resources&utm_campaign=free_manual)**
 
 ## Sponsor this project
 
