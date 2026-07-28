@@ -50,7 +50,7 @@ Each prompt includes a short explanation of why it's written the way it is, so y
 - Investigators running AI-assisted due diligence on people, companies, or IPs
 - Anyone who has tried ChatGPT for OSINT and gotten hallucinated garbage
 
-Works with Claude, ChatGPT, Gemini, or any AI assistant. Pairs directly with [OpenOSINT](https://github.com/OpenOSINT/OpenOSINT), the open-source OSINT framework with 14 tools and an MCP server.
+Works with Claude, ChatGPT, Gemini, or any AI assistant. Pairs directly with [OpenOSINT](https://github.com/OpenOSINT/OpenOSINT), the open-source OSINT framework with 19 tools and an MCP server.
 
 ---
 

@@ -44,7 +44,7 @@ Running AI-assisted OSINT without a system means starting from scratch every tim
 - OSINT analysts running multi-stage investigations on people, companies, or infrastructure
 - Anyone who has the Prompt Pack and wants the methodology it fits into — or vice versa
 
-Works with Claude, ChatGPT, or any AI assistant. Pairs directly with [OpenOSINT](https://github.com/OpenOSINT/OpenOSINT) (open-source, MIT, 14 tools, MCP server) — but you don't need it.
+Works with Claude, ChatGPT, or any AI assistant. Pairs directly with [OpenOSINT](https://github.com/OpenOSINT/OpenOSINT) (open-source, MIT, 19 tools, MCP server) — but you don't need it.
 
 ### What's inside
 

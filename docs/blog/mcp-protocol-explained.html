@@ -117,7 +117,7 @@
 
 <p>With MCP, tools are defined once in the server and advertised to any connecting client via the <code>tools/list</code> method. The client fetches the list at session start. If the server adds a new tool, clients automatically see it on the next session without any code changes on the client side.</p>
 
-<p>The tradeoff: direct tool use requires less setup (no subprocess, no protocol negotiation) and gives you full control over the request. MCP requires running a server process but enables multi-client reuse and decoupling of tool development from client development. For a framework like <a href="/">OpenOSINT</a> where the same 14 tools should be accessible from multiple AI clients, MCP is the right choice for the server component while direct tool use remains the right choice for the standalone agentic REPL.</p>
+<p>The tradeoff: direct tool use requires less setup (no subprocess, no protocol negotiation) and gives you full control over the request. MCP requires running a server process but enables multi-client reuse and decoupling of tool development from client development. For a framework like <a href="/">OpenOSINT</a> where the same modular tool suite should be accessible from multiple AI clients, MCP is the right choice for the server component while direct tool use remains the right choice for the standalone agentic REPL.</p>
 
 <p>The <a href="/blog/osint-with-mcp.html">OSINT with MCP</a> article covers the practical setup steps for connecting OpenOSINT to Claude Desktop.</p>
 </div>

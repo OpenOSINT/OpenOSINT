@@ -3,7 +3,7 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>OSINT agent for security researchers and analysts: 18 investigation tools behind a natural-language interface.</p>
+  <p>OSINT agent for security researchers and analysts: 19 investigation tools behind a natural-language interface.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
   <p><em>The AI issues hard-stop tool calls; your code executes the real binary — hallucinated findings are structurally impossible.</em></p>
 </div>
@@ -107,9 +107,9 @@ openosint > investigate target@example.com
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 18 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping |
+| 19 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | All 18 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
+| Native MCP server | All 19 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -153,6 +153,7 @@ sources and compliance requirements, I deliver a working integration.
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
 | `search_dorks_live` | Bright Data SERP API | Live Google search results for dork queries (title, URL, snippet) |
 | `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown |
+| `search_footprint` | Bright Data SERP API | Entity-type-aware public search-engine footprint: detects email/username/domain/phone/name and returns structured results + Entity Correlation Graph nodes/edges |
 
 Full per-tool documentation, CLI flags, and output formats: [openosint.tech](https://openosint.tech/).
 
@@ -378,6 +379,14 @@ openosint scrape https://example.com
 This domain is for use in illustrative examples in documents.
 ```
 
+### search_footprint
+
+Collects a target's public search-engine footprint via [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges for discovered domains and profiles. Requires `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE`.
+
+```bash
+openosint footprint johndoe99
+```
+
 ---
 
 ## Interfaces
@@ -455,7 +464,7 @@ Full per-tool reference, CLI flags, and configuration options at [openosint.tech
 
 ### MCP Server
 
-Expose all 18 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 18 tools during conversations.
+Expose all 19 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 19 tools during conversations.
 
 **Claude Code:**
 
@@ -542,8 +551,8 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Optional | Censys — [get one](https://censys.io/account) |
 | `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Optional | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
 | `GITHUB_TOKEN` | `search_github` | Optional | GitHub API — raises rate limit 60 → 5000 req/h — [get one](https://github.com/settings/tokens) |
-| `BRIGHTDATA_API_KEY` | `search_dorks_live`, `scrape_url` | Optional | Bright Data — [get one](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ (free tier: 5,000 req/month) |
-| `BRIGHTDATA_SERP_ZONE` | `search_dorks_live` | Optional | Your Bright Data SERP zone name (e.g. `serp_api1`) |
+| `BRIGHTDATA_API_KEY` | `search_dorks_live`, `scrape_url`, `search_footprint` | Optional | Bright Data — [get one](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ (free tier: 5,000 req/month) |
+| `BRIGHTDATA_SERP_ZONE` | `search_dorks_live`, `search_footprint` | Optional | Your Bright Data SERP zone name (e.g. `serp_api1`) |
 | `BRIGHTDATA_UNLOCKER_ZONE` | `scrape_url` | Optional | Your Bright Data Web Unlocker zone name (e.g. `web_unlocker1`) |
 
 ## CLI Reference

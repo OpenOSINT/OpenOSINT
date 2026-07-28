@@ -43,7 +43,7 @@ You open ChatGPT, type "investigate this email address", and get back a paragrap
 - **OSINT analysts** who want a repeatable, auditable investigation method
 - **Investigators** doing due diligence on people, companies, or IP assets
 
-Works with Claude, ChatGPT, or any AI assistant. Pairs with [OpenOSINT](https://github.com/OpenOSINT/OpenOSINT) (open-source, 14 tools, MCP server) — but you don't need it.
+Works with Claude, ChatGPT, or any AI assistant. Pairs with [OpenOSINT](https://github.com/OpenOSINT/OpenOSINT) (open-source, 19 tools, MCP server) — but you don't need it.
 
 ### What's inside
 

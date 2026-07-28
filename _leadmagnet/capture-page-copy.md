@@ -32,7 +32,7 @@ No spam. Unsubscribe anytime. You'll also get a few short emails on OSINT method
 
 ## Trust line
 
-From OpenOSINT — free, open-source, 1,000+ stars on GitHub. github.com/OpenOSINT/OpenOSINT
+From OpenOSINT — free, open-source, actively starred on GitHub. github.com/OpenOSINT/OpenOSINT
 
 ## Below the fold — soft pitch
 

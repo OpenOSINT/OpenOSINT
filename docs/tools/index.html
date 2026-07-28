@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenOSINT Tools — 14 Intelligence Modules Reference</title>
-<meta name="description" content="Complete reference for all 14 OpenOSINT intelligence tools. Email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
+<title>OpenOSINT Tools — 19 Intelligence Modules Reference</title>
+<meta name="description" content="Complete reference for all 19 OpenOSINT intelligence tools. Email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
 <meta name="keywords" content="OSINT tools, email enumeration, IP lookup, username search, WHOIS lookup, breach detection, subdomain scanner, AbuseIPDB, IP2Location">
 <link rel="canonical" href="https://openosint.tech/tools/">
-<meta property="og:title" content="OpenOSINT Tools — 14 Intelligence Modules Reference">
-<meta property="og:description" content="Reference for all 14 OpenOSINT intelligence tools: email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
+<meta property="og:title" content="OpenOSINT Tools — 19 Intelligence Modules Reference">
+<meta property="og:description" content="Reference for all 19 OpenOSINT intelligence tools: email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
 <meta property="og:url" content="https://openosint.tech/tools/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OpenOSINT">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OpenOSINT Tools — 14 Intelligence Modules Reference">
-<meta name="twitter:description" content="Reference for all 14 OpenOSINT tools: email, username, IP, WHOIS, breach, domain, phone, dorks, and more.">
+<meta name="twitter:title" content="OpenOSINT Tools — 19 Intelligence Modules Reference">
+<meta name="twitter:description" content="Reference for all 19 OpenOSINT tools: email, username, IP, WHOIS, breach, domain, phone, dorks, and more.">
 <link rel="icon" type="image/svg+xml" href="../logo.svg">
 <link rel="stylesheet" href="../style.css">
 </head>
@@ -35,7 +35,7 @@
 
 <h2>TOOLS REFERENCE</h2>
 <div class="indent">
-<p>OpenOSINT exposes 14 intelligence-gathering modules. Each tool is an async Python wrapper around an external binary or API. All tools are available via the <a href="/">interactive REPL</a>, the CLI, and the <a href="/#mcp">MCP server</a>.</p>
+<p>OpenOSINT exposes 19 intelligence-gathering modules. Each tool is an async Python wrapper around an external binary or API. All tools are available via the <a href="/">interactive REPL</a>, the CLI, and the <a href="/#mcp">MCP server</a>.</p>
 
 <aside class="oo-cta">
   <strong>Running these tools by hand? The prompts decide what to ask them.</strong>
@@ -62,6 +62,11 @@
 <tr><td><a href="#search_shodan"><code>search_shodan</code></a></td><td>Shodan API</td><td>Host banners, open ports</td><td>SHODAN_API_KEY</td></tr>
 <tr><td><a href="#search_ip2location"><code>search_ip2location</code></a></td><td>IP2Location API</td><td>Geo, ISP, VPN/Proxy/Tor detection</td><td>IP2LOCATION_API_KEY</td></tr>
 <tr><td><a href="#search_abuseipdb"><code>search_abuseipdb</code></a></td><td>AbuseIPDB v2 API</td><td>Abuse score, reports, ISP</td><td>ABUSEIPDB_API_KEY</td></tr>
+<tr><td><a href="#search_github"><code>search_github</code></a></td><td>GitHub REST API</td><td>Profile, repos, commit-discovered emails</td><td>&mdash;</td></tr>
+<tr><td><a href="#search_dns"><code>search_dns</code></a></td><td>dnspython (built-in)</td><td>A/AAAA/MX/NS/TXT/CNAME/SOA, SPF/DMARC/DKIM</td><td>&mdash;</td></tr>
+<tr><td><a href="#search_dorks_live"><code>search_dorks_live</code></a></td><td>Bright Data SERP API</td><td>Live Google dork results (title, URL, snippet)</td><td>BRIGHTDATA_API_KEY</td></tr>
+<tr><td><a href="#scrape_url"><code>scrape_url</code></a></td><td>Bright Data Web Unlocker</td><td>Fetch any URL bypassing Cloudflare/CAPTCHA</td><td>BRIGHTDATA_API_KEY</td></tr>
+<tr><td><a href="#search_footprint"><code>search_footprint</code></a></td><td>Bright Data SERP API</td><td>Entity-type-aware SERP footprint + correlation graph</td><td>BRIGHTDATA_API_KEY</td></tr>
 </table>
 
 <aside class="oo-cta">
@@ -233,10 +238,66 @@
 
 <hr>
 
+<h2 id="search_github">SEARCH_GITHUB</h2>
+<div class="indent">
+<p>Queries the <a href="https://docs.github.com/en/rest" target="_blank" rel="noopener">GitHub REST API</a>. Username &rarr; profile, repos, commit-discovered emails. Keyword &rarr; user/repo search.</p>
+<p><b>MCP parameter:</b> <code>query</code> (string) &nbsp;|&nbsp; <b>Optional:</b> <code>GITHUB_TOKEN</code> (raises rate limit from 60 to 5000 req/h)</p>
+<pre>$ openosint github johndoe99
+[GitHub] Repos: 42  |  Followers: 128
+[GitHub] Commit email: johndoe@example.com</pre>
+</div>
+
+<hr>
+
+<h2 id="search_dns">SEARCH_DNS</h2>
+<div class="indent">
+<p>Queries A/AAAA/MX/NS/TXT/CNAME/SOA records and analyzes SPF, DMARC, and DKIM configuration using <a href="https://www.dnspython.org" target="_blank" rel="noopener">dnspython</a> (no external API).</p>
+<p><b>MCP parameter:</b> <code>domain</code> (string) &nbsp;|&nbsp; <b>No API key required</b></p>
+<pre>$ openosint dns example.com
+[DNS] A: 93.184.216.34
+[DNS] MX: mail.example.com (priority 10)
+[DNS] SPF: v=spf1 include:_spf.google.com ~all</pre>
+</div>
+
+<hr>
+
+<h2 id="search_dorks_live">SEARCH_DORKS_LIVE</h2>
+<div class="indent">
+<p>Executes live Google dork queries through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
+<p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
+<pre>$ openosint search-dorks-live "john doe" --max-dorks 3
+[+] Dork: "john doe" site:linkedin.com
+    Title:   John Doe | LinkedIn
+    URL:     https://www.linkedin.com/in/john-doe-12345</pre>
+</div>
+
+<hr>
+
+<h2 id="scrape_url">SCRAPE_URL</h2>
+<div class="indent">
+<p>Fetches any public URL through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
+<p><b>MCP parameter:</b> <code>url</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_UNLOCKER_ZONE</code></p>
+<pre>$ openosint scrape https://example.com
+[Web Unlocker] Remote status: 200
+# Example Domain
+This domain is for use in illustrative examples in documents.</pre>
+</div>
+
+<hr>
+
+<h2 id="search_footprint">SEARCH_FOOTPRINT</h2>
+<div class="indent">
+<p>Collects a target's public search-engine footprint via the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
+<p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
+<pre>$ openosint footprint johndoe99</pre>
+</div>
+
+<hr>
+
 <div class="oo-cta-row" style="margin:24px 0;">
   <div class="oo-cta">
     <strong>Just need the tools?</strong>
-    <p>All 14 modules above are free and MIT-licensed. Grab the 5-prompt starter set to see the scope &rarr; collect &rarr; pivot &rarr; verify &rarr; document method in action.</p>
+    <p>All 19 modules above are free and MIT-licensed. Grab the 5-prompt starter set to see the scope &rarr; collect &rarr; pivot &rarr; verify &rarr; document method in action.</p>
     <a href="/free-prompts/?utm_source=site&amp;utm_medium=tools_footer&amp;utm_campaign=free_starter" class="oo-cta-btn oo-cta-btn--ghost">Download free PDF &rarr;</a>
   </div>
   <div class="oo-cta">
