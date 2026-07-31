@@ -7,6 +7,7 @@ Implements the agentic loop using either:
   - A local Ollama model (``provider="ollama"``).
   - Any OpenAI-compatible chat-completions endpoint (``provider="openai"``) —
     LiteLLM, llama-swap, vLLM, LM Studio, etc.
+  - MiniMax text models on a selected global or CN endpoint (``provider="minimax"``).
 
 All agents share the same ``run()`` interface and return an ``AgentResponse``.
 No manual JSON parsing.  The model issues hard stops when it needs a tool,
@@ -849,6 +850,10 @@ class OpenAICompatibleAgent:
     tool_call → execute real binary → feed real output back → loop until done.
     """
 
+    provider_name = "OpenAI-compatible"
+    api_key_env = "OPENAI_API_KEY"
+    retry_command = "openosint --provider openai"
+
     def __init__(
         self,
         model: str = "gpt-4o-mini",
@@ -858,7 +863,7 @@ class OpenAICompatibleAgent:
         self.model = model
         self.base_url = base_url
         # Many local servers ignore the key, but the SDK requires a non-empty string.
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "") or "sk-no-key-required"
+        self.api_key = api_key or os.environ.get(self.api_key_env, "") or "sk-no-key-required"
         self.history: list[dict[str, Any]] = []
 
     def clear_history(self) -> None:
@@ -893,7 +898,7 @@ class OpenAICompatibleAgent:
                 error=(
                     "The 'openai' Python library is not installed.\n"
                     "Install it with:  pip install openai\n\n"
-                    "Then retry:  openosint --provider openai"
+                    f"Then retry:  {self.retry_command}"
                 ),
             )
 
@@ -918,7 +923,8 @@ class OpenAICompatibleAgent:
                     return AgentResponse(
                         content="",
                         error=(
-                            f"OpenAI endpoint returned no choices from {self.base_url}. "
+                            f"{self.provider_name} endpoint returned no choices "
+                            f"from {self.base_url}. "
                             "Verify the model supports tool/function calling."
                         ),
                     )
@@ -932,21 +938,60 @@ class OpenAICompatibleAgent:
             return AgentResponse(
                 content="",
                 error=(
-                    f"Authentication failed for the OpenAI-compatible endpoint at "
-                    f"{self.base_url}.  Check your API key (OPENAI_API_KEY)."
+                    f"Authentication failed for the {self.provider_name} endpoint at "
+                    f"{self.base_url}.  Check your API key ({self.api_key_env})."
                 ),
             )
         except openai.APIConnectionError:
             return AgentResponse(
                 content="",
                 error=(
-                    f"[ERROR] Cannot reach the OpenAI-compatible server at {self.base_url}\n\n"
-                    "Verify the base URL is correct and the server is running, e.g.:\n"
-                    "  openosint --provider openai \\\n"
-                    "    --openai-base-url http://localhost:4000/v1 \\\n"
-                    "    --openai-model gpt-4o-mini"
+                    f"[ERROR] Cannot reach the {self.provider_name} server at {self.base_url}\n\n"
+                    "Verify the base URL is correct and the server is running, then retry:\n"
+                    f"  {self.retry_command}"
                 ),
             )
         except Exception as exc:
             logger.exception("Unexpected error in OpenAI-compatible agent loop.")
             return AgentResponse(content="", error=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# MiniMax agent
+# ---------------------------------------------------------------------------
+
+
+MINIMAX_MODELS = ("MiniMax-M3", "MiniMax-M2.7")
+MINIMAX_BASE_URLS = {
+    "global": "https://api.minimax.io/v1",
+    "cn": "https://api.minimaxi.com/v1",
+}
+
+
+class MiniMaxAgent(OpenAICompatibleAgent):
+    """OpenAI-compatible MiniMax agent with built-in model and region settings."""
+
+    provider_name = "MiniMax"
+    api_key_env = "MINIMAX_API_KEY"
+    retry_command = "openosint --provider minimax"
+
+    def __init__(
+        self,
+        model: str = MINIMAX_MODELS[0],
+        region: str = "global",
+        api_key: str | None = None,
+    ) -> None:
+        try:
+            base_url = MINIMAX_BASE_URLS[region]
+        except KeyError as exc:
+            supported_regions = ", ".join(MINIMAX_BASE_URLS)
+            raise ValueError(
+                f"Unsupported MiniMax region {region!r}; choose one of: {supported_regions}."
+            ) from exc
+
+        super().__init__(
+            model=model,
+            base_url=base_url,
+            api_key=api_key,
+        )
+        self.region = region
