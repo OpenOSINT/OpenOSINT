@@ -16,9 +16,10 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from cloud import db, keys
 from cloud.config import DATABASE_URL, resolve_session_secret
-from cloud.routes import dashboard, enrich, oauth as oauth_routes, usage
+from cloud.routes import dashboard, enrich, usage
 from cloud.routes import keys as keys_route
-from cloud.routes.mcp_gateway import create_mcp_asgi_app
+from cloud.routes import oauth as oauth_routes
+from cloud.routes.mcp_gateway import _mcp, create_mcp_asgi_app
 
 logging.basicConfig(
     level=logging.INFO, format="[%(levelname)s] %(name)s: %(message)s", force=True
@@ -29,7 +30,8 @@ logging.basicConfig(
 async def _lifespan(app: FastAPI):
     await db.init_pool()
     keys.init_keys()
-    yield
+    async with _mcp.session_manager.run():
+        yield
     await db.close_pool()
 
 

@@ -17,12 +17,15 @@ Coverage:
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 from cloud import db, keys
+from cloud.main import _lifespan, app
 from cloud.routes.mcp_gateway import (
     _AuthMiddleware,
     _customer_ctx,
@@ -292,6 +295,57 @@ async def test_auth_middleware_sets_none_for_missing_header():
 
     await middleware(scope, _noop_receive, _noop_send)
     assert captured[0] is None
+
+
+async def test_mounted_mcp_app_completes_initialize_and_tools_list():
+    initialize = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "test-client", "version": "0"},
+        },
+    }
+
+    async with _lifespan(app):
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://127.0.0.1:8000",
+        ) as client:
+            response = await client.post(
+                "/mcp/",
+                headers={
+                    "accept": "application/json, text/event-stream",
+                    "content-type": "application/json",
+                },
+                json=initialize,
+            )
+
+            assert response.status_code == 200
+            session_id = response.headers.get("mcp-session-id")
+            assert session_id
+
+            response = await client.post(
+                "/mcp/",
+                headers={
+                    "accept": "application/json, text/event-stream",
+                    "content-type": "application/json",
+                    "mcp-session-id": session_id,
+                },
+                json={"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+            )
+
+    assert response.status_code == 200
+    payload = json.loads(
+        next(
+            line.removeprefix("data: ")
+            for line in response.text.splitlines()
+            if line.startswith("data:")
+        )
+    )
+    assert {tool["name"] for tool in payload["result"]["tools"]} == _EXPECTED_MCP_TOOLS
 
 
 # ── (i) Shodan attribution reaches the MCP text result ───────────────────────
