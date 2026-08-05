@@ -69,6 +69,8 @@ openosint web
 openosint email target@example.com
 ```
 
+New to OSINT methodology? Grab the [free 5-prompt starter set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme_quickstart&utm_campaign=free_starter) or the [free Playbook edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme_quickstart&utm_campaign=free_manual) before your first run.
+
 ### 📬 Agents & OSINT — the newsletter
 
 One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
@@ -642,6 +644,25 @@ Step-by-step workflows for running investigations with ChatGPT, Claude, and Open
 **→ [Get the Playbook ($39)](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)**
 
 _Buying directly funds OpenOSINT's development._
+
+### AI OSINT Prompts — Free Starter Set
+
+New to AI-assisted OSINT? The **free starter set** gives you 5 structured prompts — one per stage of a real investigation — that make ChatGPT and Claude collect real public data instead of hallucinating it.
+
+- Scope → Collect → Pivot → Verify → Document
+- Works with any AI assistant (Claude, ChatGPT, Gemini)
+- Instant PDF, no card required
+
+**→ [Get the free starter set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free_starter)**
+
+### AI OSINT Operator's Playbook — Free Edition
+
+The free edition walks the 5-phase method once, end to end, on a single worked case: scope → collect → pivot → verify → document. Includes one sample prompt and the confidence rubric used to grade findings.
+
+- Free edition: the method + one worked investigation
+- Full edition ($39): 12 complete workflows, per-tool playbooks, reporting templates, and the legal/ethics primer
+
+**→ [Get the free edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme&utm_campaign=free_manual)** · [Full Playbook ($39) →](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)
 
 ## Sponsor this project
 
