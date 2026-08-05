@@ -229,7 +229,7 @@ Return findings as &#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x25
   if (ref && !overrides.utm_medium) overrides.utm_medium = ref;
   if (!Object.keys(overrides).length) return;
 
-  document.querySelectorAll('a.fp-gumroad-link').forEach(function (link) {
+  document.querySelectorAll('a.fp-cta-btn.fp-gumroad-link').forEach(function (link) {
     var url = new URL(link.href);
     Object.keys(overrides).forEach(function (key) {
       url.searchParams.set(key, overrides[key]);

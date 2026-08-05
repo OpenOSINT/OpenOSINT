@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Free AI OSINT Field Manual — The 5-Phase Method for AI-Assisted Investigations</title>
+<title>AI OSINT Operator's Playbook — Free Edition: The 5-Phase Method for AI-Assisted Investigations</title>
 <meta name="description" content="Free PDF: the repeatable 5-phase method for AI-assisted OSINT investigations. From the maker of OpenOSINT.">
 <link rel="canonical" href="https://openosint.tech/free-manual/">
 
 <!-- Open Graph -->
-<meta property="og:title" content="Free AI OSINT Field Manual — The 5-Phase Method for AI-Assisted Investigations">
+<meta property="og:title" content="AI OSINT Operator's Playbook — Free Edition: The 5-Phase Method for AI-Assisted Investigations">
 <meta property="og:description" content="The repeatable 5-phase method for AI-assisted OSINT investigations. Free PDF — instant download, no card needed.">
 <meta property="og:url" content="https://openosint.tech/free-manual/">
 <meta property="og:type" content="website">
@@ -17,7 +17,7 @@
 
 <!-- Twitter / X card -->
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Free AI OSINT Field Manual — The 5-Phase Method">
+<meta name="twitter:title" content="AI OSINT Operator's Playbook — Free Edition">
 <meta name="twitter:description" content="The repeatable 5-phase method for AI-assisted OSINT investigations. Free PDF — no card needed. From the maker of OpenOSINT.">
 
 <link rel="icon" type="image/svg+xml" href="../logo.svg">
@@ -74,7 +74,7 @@
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
 <td class="mhead-l">OPENOSINT(1)</td>
-<td class="mhead-c">Free AI OSINT Field Manual</td>
+<td class="mhead-c">AI OSINT Operator's Playbook (Free Edition)</td>
 <td class="mhead-r">OPENOSINT(1)</td>
 </tr>
 </table>
@@ -133,7 +133,7 @@ or guess any data yet.</span>
 Ask me anything ambiguous instead of assuming.</pre>
 </div>
 
-<h2 id="get">GET THE FREE FIELD MANUAL</h2>
+<h2 id="get">GET THE FREE PLAYBOOK</h2>
 <div class="indent">
 <p>Enter $0 on Gumroad. No card, no account required. The PDF downloads immediately.</p>
 <a class="fm-cta-btn fm-gumroad-link" href="https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?wanted=true&amp;utm_source=site&amp;utm_medium=free_manual_page&amp;utm_campaign=free_manual" target="_blank" rel="noopener">Download free PDF &rarr;</a>
@@ -187,7 +187,7 @@ Ask me anything ambiguous instead of assuming.</pre>
   if (ref && !overrides.utm_medium) overrides.utm_medium = ref;
   if (!Object.keys(overrides).length) return;
 
-  document.querySelectorAll('a.fm-gumroad-link').forEach(function (link) {
+  document.querySelectorAll('a.fm-cta-btn.fm-gumroad-link').forEach(function (link) {
     var url = new URL(link.href);
     Object.keys(overrides).forEach(function (key) {
       url.searchParams.set(key, overrides[key]);
