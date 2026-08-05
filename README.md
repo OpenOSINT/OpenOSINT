@@ -1,3 +1,5 @@
+[![MCP Toplist](https://mcptoplist.com/badge/io.github.SonoTommy%2Fopenosint.svg)](https://mcptoplist.com/server/io.github.SonoTommy%2Fopenosint)
+
 mcp-name: io.github.OpenOSINT/openosint
 
 <div align="center">
