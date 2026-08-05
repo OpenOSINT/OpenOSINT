@@ -133,19 +133,19 @@ or guess any data yet.</span>
 Ask me anything ambiguous instead of assuming.</pre>
 </div>
 
-<h2 id="full-kit">GET THE COMPLETE KIT</h2>
-<div class="indent">
-<p>This manual walks the method once. The <b>AI OSINT Complete Kit</b> bundles the full <b>AI OSINT Prompt Pack</b> (30+ prompts across every investigation type) with the <b>Operator's Playbook</b> &mdash; the same 5-phase method worked end to end, built for running real investigations with OpenOSINT.</p>
-<p><a class="fm-gumroad-link oo-cta-btn" href="https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=site&amp;utm_medium=free_manual_page&amp;utm_campaign=complete_kit" target="_blank" rel="noopener">Get the kit ($55) &rarr;</a></p>
-</div>
-
-<hr>
-
-<h2 id="get">OR: FREE FIELD MANUAL</h2>
+<h2 id="get">GET THE FREE FIELD MANUAL</h2>
 <div class="indent">
 <p>Enter $0 on Gumroad. No card, no account required. The PDF downloads immediately.</p>
 <a class="fm-cta-btn fm-gumroad-link" href="https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?wanted=true&amp;utm_source=site&amp;utm_medium=free_manual_page&amp;utm_campaign=free_manual" target="_blank" rel="noopener">Download free PDF &rarr;</a>
 <p style="margin-top:14px;font-size:12px;color:#666;">From the maker of OpenOSINT, an open-source OSINT framework used by security researchers and analysts worldwide. No spam &mdash; unsubscribe anytime.</p>
+</div>
+
+<hr>
+
+<h2 id="full-kit">OR: COMPLETE KIT</h2>
+<div class="indent">
+<p>This manual walks the method once. The <b>AI OSINT Complete Kit</b> bundles the full <b>AI OSINT Prompt Pack</b> (30+ prompts across every investigation type) with the <b>Operator's Playbook</b> &mdash; the same 5-phase method worked end to end, built for running real investigations with OpenOSINT.</p>
+<p><a class="fm-gumroad-link oo-cta-btn" href="https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=site&amp;utm_medium=free_manual_page&amp;utm_campaign=complete_kit" target="_blank" rel="noopener">Get the kit ($55) &rarr;</a></p>
 </div>
 
 <hr>
@@ -171,15 +171,20 @@ Ask me anything ambiguous instead of assuming.</pre>
 
 <script>
 (function () {
-  // ponytail: forwards the incoming referrer's UTM params onto the outbound
-  // Gumroad link so per-placement conversion survives the /free-manual hop
-  // instead of collapsing into the hardcoded utm_medium=free_manual_page.
+  // ponytail: internal nav uses ?ref=<slug>, no utm_ params, so on-site
+  // navigation doesn't reset analytics sessions. Maps the incoming ref onto
+  // the outbound Gumroad utm_medium so per-placement conversion still
+  // survives the /free-manual hop instead of collapsing into the hardcoded
+  // utm_medium=free_manual_page. An explicit utm_medium in the query string
+  // (e.g. a direct campaign link) still wins over ref.
   var qs = new URLSearchParams(window.location.search);
   var overrides = {};
   ['utm_source', 'utm_medium', 'utm_campaign'].forEach(function (key) {
     var value = qs.get(key);
     if (value) overrides[key] = value;
   });
+  var ref = qs.get('ref');
+  if (ref && !overrides.utm_medium) overrides.utm_medium = ref;
   if (!Object.keys(overrides).length) return;
 
   document.querySelectorAll('a.fm-gumroad-link').forEach(function (link) {
