@@ -238,9 +238,10 @@
     <!-- OpenAI-compat panel -->
     <div x-show="byok.provider === 'openai'" class="bg-app border border-app rounded-md p-4 space-y-3 mb-4">
       <p class="text-muted text-xs leading-relaxed">
-        Any OpenAI-compatible endpoint (OpenRouter, LiteLLM, vLLM, llama.cpp, …).
+        Any OpenAI-compatible endpoint (OpenRouter, OrcaRouter, LiteLLM, vLLM, llama.cpp, …).
         <strong class="text-warning">api.openai.com blocks browser requests</strong> — use
-        <span class="font-mono text-accent text-xs">openrouter.ai/api/v1</span> instead.
+        <span class="font-mono text-accent text-xs">openrouter.ai/api/v1</span> or
+        <span class="font-mono text-accent text-xs">api.orcarouter.ai/v1</span> instead.
       </p>
       <div>
         <label class="text-muted text-xs uppercase tracking-wider block mb-1.5">Base URL</label>
@@ -479,7 +480,7 @@
            class="mb-8 border border-app rounded-lg p-4 bg-surface">
         <p class="text-sm text-primary font-medium mb-1">Add your own API key to get started</p>
         <p class="text-muted text-xs mb-3 leading-relaxed">
-          This is a live demo — server-side AI is disabled. Bring your own Anthropic, Ollama, or OpenRouter key to run real investigations.
+          This is a live demo — server-side AI is disabled. Bring your own Anthropic, Ollama, OpenRouter, or OrcaRouter key to run real investigations.
         </p>
         <button @click="showSettings = true"
                 class="px-4 py-2 rounded-md bg-accent hover:bg-accent-80 text-bg text-xs font-medium transition-colors">

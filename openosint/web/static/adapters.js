@@ -75,7 +75,7 @@ class AnthropicAdapter {
 }
 
 // ---------------------------------------------------------------------------
-// OpenAI-compatible adapter (OpenRouter, vLLM, LiteLLM, llama.cpp, etc.)
+// OpenAI-compatible adapter (OpenRouter, OrcaRouter, vLLM, LiteLLM, llama.cpp, etc.)
 // ---------------------------------------------------------------------------
 
 class OpenAIAdapter {
@@ -99,7 +99,7 @@ class OpenAIAdapter {
     if (/api\.openai\.com/i.test(this.baseUrl)) {
       throw new Error(
         "OpenAI's production API (api.openai.com) blocks direct browser requests via CORS. " +
-        'Use OpenRouter (https://openrouter.ai/api/v1) or a local endpoint instead.'
+        'Use OpenRouter (https://openrouter.ai/api/v1), OrcaRouter (https://api.orcarouter.ai/v1), or a local endpoint instead.'
       );
     }
 
