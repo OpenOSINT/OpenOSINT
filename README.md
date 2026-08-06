@@ -108,7 +108,7 @@ openosint > investigate target@example.com
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
 | 19 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
-| Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
+| Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, OrcaRouter, ...) |
 | Native MCP server | All 19 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
@@ -407,7 +407,7 @@ Browser-based AI chat with streaming tool output, inline result cards, light/dar
          alt="OpenOSINT Web UI — live entity correlation graph demo: investigating openosint.tech"
          width="900" />
   </a>
-  <p><a href="https://demo.openosint.tech">Try the live demo →</a> — bring your own Anthropic / OpenRouter / Ollama key, no signup.</p>
+  <p><a href="https://demo.openosint.tech">Try the live demo →</a> — bring your own Anthropic / OpenRouter / OrcaRouter / Ollama key, no signup.</p>
 </div>
 
 ```bash
@@ -418,6 +418,17 @@ openosint web
 
 # OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...)
 export OPENAI_BASE_URL="http://localhost:4000/v1"
+openosint web
+# Settings -> OpenAI API
+
+# Or via [OrcaRouter](https://www.orcarouter.ai), a unified OpenAI-compatible
+# gateway: one key for 150+ models from OpenAI, Anthropic, Google, DeepSeek,
+# and more, with gateway-level, zero-trust AI-agent security on the same
+# endpoint (screening every prompt/response and governing every tool call on a
+# default-deny basis — no application code changes).
+export OPENAI_BASE_URL="https://api.orcarouter.ai/v1"
+export OPENAI_MODEL="orcarouter/auto"
+export OPENAI_API_KEY="sk-orca-..."
 openosint web
 # Settings -> OpenAI API
 ```
@@ -540,7 +551,7 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | Variable | Tool | Required | Purpose |
 |----------|------|----------|---------|
 | `ANTHROPIC_API_KEY` | AI agent | Yes (or Ollama / OpenAI) | Anthropic API key |
-| `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`) |
+| `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`, or `https://api.orcarouter.ai/v1` for [OrcaRouter](https://www.orcarouter.ai)) |
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
 | `HIBP_API_KEY` | `search_breach` | Optional | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
