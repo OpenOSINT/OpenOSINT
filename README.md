@@ -32,7 +32,7 @@ mcp-name: io.github.OpenOSINT/openosint
 
 > Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
 
-<a href="https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy.png" alt="RapidProxy logo" height="40"></a>
+<a href="https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy" rel="noopener sponsored"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-dark.png"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-light.png" alt="RapidProxy logo" width="400"></picture></a>
 
 **[RapidProxy](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)** · [Integration guide](docs/integrations/rapidproxy.md)
 

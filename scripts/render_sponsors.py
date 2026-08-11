@@ -99,6 +99,16 @@ def _render_block(sponsors: list[dict]) -> str:
         lines.append("")
         for s in featured:
             logo = s.get("html_logo", s["logo"])
+            logo_dark = s.get("html_logo_dark")
+            if logo_dark:
+                img_tag = (
+                    '<picture>'
+                    f'<source media="(prefers-color-scheme: dark)" srcset="{logo_dark}">'
+                    f'<img src="{logo}" alt="{s["name"]} logo" width="400">'
+                    '</picture>'
+                )
+            else:
+                img_tag = f'<img src="{logo}" alt="{s["name"]} logo" height="40">'
             tool_note = f" — powers `{s['tool']}`" if s.get("tool") else ""
             doc_note = (
                 f" · [Integration guide]({s['integration_doc']})"
@@ -106,8 +116,7 @@ def _render_block(sponsors: list[dict]) -> str:
                 else ""
             )
             lines.append(
-                f'<a href="{s["url"]}" rel="noopener sponsored">'
-                f'<img src="{logo}" alt="{s["name"]} logo" height="40"></a>'
+                f'<a href="{s["url"]}" rel="noopener sponsored">{img_tag}</a>'
             )
             lines.append("")
             lines.append(f"**[{s['name']}]({s['url']})**{tool_note}{doc_note}")
@@ -158,12 +167,14 @@ def _render_html_array(sponsors: list[dict]) -> str:
     lines = [HTML_START_MARKER, "var SPONSORS = ["]
     for i, s in enumerate(featured):
         html_logo = s.get("html_logo", s["logo"])
+        html_logo_dark = s.get("html_logo_dark", "")
         logo_alt = f"{s['name']} logo — sponsor for {s.get('category', s['name'])}"
         comma = "," if i < len(featured) - 1 else ""
         lines.append("  {")
         lines.append(f"    name:        {_js_string(s['name'])},")
         lines.append(f"    url:         {_js_string(s['url'])},")
         lines.append(f"    logo:        {_js_string(html_logo)},")
+        lines.append(f"    logo_dark:   {_js_string(html_logo_dark)},")
         lines.append(f"    logo_alt:    {_js_string(logo_alt)},")
         lines.append(f"    category:    {_js_string(s.get('category', ''))},")
         lines.append(f"    description: {_js_string(s['tagline'])}")
