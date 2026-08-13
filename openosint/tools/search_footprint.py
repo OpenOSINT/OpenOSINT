@@ -164,7 +164,7 @@ async def run_footprint_osint(
     timeout_seconds: int = _DEFAULT_TIMEOUT,
     *,
     api_keys: dict[str, str] | None = None,
-) -> str:
+) -> dict | str:
     """
     Collect a target's public search-engine footprint via the Bright Data SERP API.
 
@@ -189,8 +189,8 @@ async def run_footprint_osint(
 
     Returns
     -------
-    str
-        Formatted footprint report with graph-compatible URL lines, or a
+    dict | str
+        Structured footprint report with graph-compatible URL lines, or a
         descriptive error message.
     """
     _k = api_keys or {}
@@ -220,51 +220,56 @@ async def run_footprint_osint(
         "Starting footprint search for '%s' (type=%s, %d queries)", target, kind, len(queries)
     )
 
-    lines: list[str] = [
-        f"[Footprint] {target}  |  type: {kind}  |  "
-        f"{len(queries)} quer{'y' if len(queries) == 1 else 'ies'}\n"
-    ]
-
     seen_urls: set[str] = set()
     seen_domains: set[str] = set()
     discovered_urls: list[str] = []
     error_count = 0
+    
+    structured_results = {
+        "target": target,
+        "target_type": kind,
+        "queries": [],
+        "discovered_urls": [],
+        "seen_domains": []
+    }
 
     for i, query in enumerate(queries, start=1):
         google_url = _build_google_url(query)
-        lines.append(f"[+] Query {i}/{len(queries)}: {query}")
+        
+        query_data = {
+            "query": query,
+            "results": [],
+            "error": None
+        }
+
         try:
             data = await asyncio.to_thread(
                 _fetch_serp, google_url, api_key, zone, timeout_seconds
             )
             results = _extract_organic(data)
             if results:
+                query_data["results"] = results
                 for r in results:
                     url_key = r["url"].rstrip("/")
                     if url_key in seen_urls:
                         continue
                     seen_urls.add(url_key)
                     discovered_urls.append(r["url"])
-                    lines.append(f"    {r['rank']}. {r['title']}")
-                    lines.append(f"       URL:     {r['url']}")
-                    if r["display_url"]:
-                        lines.append(f"       Display: {r['display_url']}")
-                    if r["snippet"]:
-                        lines.append(f"       Snippet: {r['snippet']}")
-                    lines.append("")
-            else:
-                lines.append("    (no organic results)")
-                lines.append("")
+                    
+                    domain = _domain_from_url(r["url"])
+                    if domain and domain not in seen_domains:
+                        seen_domains.add(domain)
+
         except OSINTError as exc:
             error_count += 1
             logger.warning("Footprint SERP query failed: %s", exc)
-            lines.append(f"    (error: {exc})")
-            lines.append("")
+            query_data["error"] = str(exc)
         except Exception as exc:
             error_count += 1
             logger.exception("Unexpected error in footprint SERP query.")
-            lines.append(f"    (internal error: {exc})")
-            lines.append("")
+            query_data["error"] = f"internal error: {exc}"
+            
+        structured_results["queries"].append(query_data)
 
     if error_count == len(queries):
         return (
@@ -272,15 +277,8 @@ async def run_footprint_osint(
             "Check BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
         )
 
-    # Append graph-compatible summary lines (parsed by _extract_footprint in extractors.py)
-    if discovered_urls:
-        lines.append("── Discovered URLs " + "─" * 42)
-        for url in discovered_urls:
-            lines.append(f"[Footprint] URL: {url}")
-            domain = _domain_from_url(url)
-            if domain and domain not in seen_domains:
-                seen_domains.add(domain)
-                lines.append(f"[Footprint] Domain: {domain}")
+    structured_results["discovered_urls"] = discovered_urls
+    structured_results["seen_domains"] = list(seen_domains)
 
     logger.info(
         "Footprint search complete for '%s': %d URLs, %d domains",
@@ -288,4 +286,4 @@ async def run_footprint_osint(
         len(discovered_urls),
         len(seen_domains),
     )
-    return "\n".join(lines)
+    return structured_results

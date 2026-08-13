@@ -464,14 +464,25 @@ const _REGISTRY = {
     const inferredType = _inferType(target);
     const rootId = `${inferredType}:${target.toLowerCase().trim()}`;
 
-    _vals(output, '\\[Footprint\\] URL:').forEach(url => {
-      const n = _node('social_account', url, { source: 'footprint' });
-      nodes.push(n); edges.push(_edge(rootId, n.id, 'links to'));
-    });
-    _vals(output, '\\[Footprint\\] Domain:').forEach(d => {
-      const n = _node('domain', d, {});
-      nodes.push(n); edges.push(_edge(rootId, n.id, 'found at'));
-    });
+    if (typeof output === 'object' && output !== null) {
+      (output.discovered_urls || []).forEach(url => {
+        const n = _node('social_account', url, { source: 'footprint' });
+        nodes.push(n); edges.push(_edge(rootId, n.id, 'links to'));
+      });
+      (output.seen_domains || []).forEach(d => {
+        const n = _node('domain', d, {});
+        nodes.push(n); edges.push(_edge(rootId, n.id, 'found at'));
+      });
+    } else {
+      _vals(output, '\\[Footprint\\] URL:').forEach(url => {
+        const n = _node('social_account', url, { source: 'footprint' });
+        nodes.push(n); edges.push(_edge(rootId, n.id, 'links to'));
+      });
+      _vals(output, '\\[Footprint\\] Domain:').forEach(d => {
+        const n = _node('domain', d, {});
+        nodes.push(n); edges.push(_edge(rootId, n.id, 'found at'));
+      });
+    }
     return { nodes, edges };
   },
 

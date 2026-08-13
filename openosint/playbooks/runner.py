@@ -140,27 +140,28 @@ def _missing_requirements(tool: str) -> tuple[list[str], str | None]:
 # ---------------------------------------------------------------------------
 
 
-async def _run_step(tool: str, target: str) -> tuple[StepState, str]:
+async def _run_step(tool: str, target: str) -> tuple[StepState, object]:
     """Run a single tool step.  Never raises."""
     missing, _note = _missing_requirements(tool)
     if missing:
         return StepState.NOT_CONFIGURED, ""
 
     try:
-        output: str = await TOOL_MAP[tool](target)  # type: ignore[call-arg]
+        output = await TOOL_MAP[tool](target)  # type: ignore[call-arg]
     except Exception as exc:
         logger.debug("Step '%s' raised: %s", tool, exc)
         return StepState.ERROR, str(exc)
 
-    if not output or not output.strip():
+    if not output:
+        return StepState.EMPTY, ""
+    if isinstance(output, str) and not output.strip():
         return StepState.EMPTY, ""
 
-    # Detect self-caught errors returned as plain strings — check invalid
-    # input first (more specific) before the generic error prefix check.
-    if _looks_like_invalid_input(output):
-        return StepState.INVALID_INPUT, output
-    if _looks_like_tool_error(output):
-        return StepState.ERROR, output
+    if isinstance(output, str):
+        if _looks_like_invalid_input(output):
+            return StepState.INVALID_INPUT, output
+        if _looks_like_tool_error(output):
+            return StepState.ERROR, output
 
     return StepState.SUCCESS, output
 
@@ -306,7 +307,27 @@ def _format_subdomains(output: str) -> str:
     return "\n".join(t)
 
 
-def _format_footprint(output: str) -> str:
+def _format_footprint(output: object) -> str:
+    if isinstance(output, dict):
+        if output.get("error"):
+            return f"```\n{output['error']}\n```"
+            
+        urls = output.get("discovered_urls", [])
+        if not urls:
+            return "No results found."
+            
+        rendered: list[str] = []
+        if output.get("queries"):
+            rendered.append(f"**Queries Run: {output.get('queries', 0)}**\n")
+            
+        for i, url in enumerate(urls, 1):
+            rendered.append(f"{i}. **[{url}]({url})**")
+            
+        return "\n".join(rendered).rstrip()
+        
+    if not isinstance(output, str):
+        return f"```\n{output}\n```"
+
     query_blocks: list[tuple[str, list[dict]]] = []
     current_query: str | None = None
     current_results: list[dict] = []
@@ -369,7 +390,7 @@ def _format_footprint(output: str) -> str:
     if not query_blocks:
         return f"```\n{output.strip()}\n```"
 
-    rendered: list[str] = []
+    rendered = []
     counter = 0
     for query_text, results in query_blocks:
         rendered.append(f"**Query: `{query_text}`**")
@@ -489,29 +510,33 @@ def _format_holehe(output: str) -> str:
     return "\n".join(found)
 
 
-def _format_step_output(tool_name: str, output: str) -> str:
+def _format_step_output(tool_name: str, output: object) -> str:
     """Dispatch to a tool-specific Markdown formatter, falling back to fenced code."""
     if tool_name == "search_whois":
-        return _format_whois(output)
+        return _format_whois(output)  # type: ignore
     if tool_name == "search_dns":
-        return _format_dns(output)
+        return _format_dns(output)  # type: ignore
     if tool_name == "generate_dorks":
-        return _format_dorks(output)
+        return _format_dorks(output)  # type: ignore
     if tool_name == "search_domain":
-        return _format_subdomains(output)
+        return _format_subdomains(output)  # type: ignore
     if tool_name == "search_footprint":
         return _format_footprint(output)
     if tool_name == "search_ip":
-        return _format_ip_info(output)
+        return _format_ip_info(output)  # type: ignore
     if tool_name == "search_virustotal":
-        return _format_virustotal(output)
+        return _format_virustotal(output)  # type: ignore
     if tool_name == "search_paste":
-        return _format_paste(output)
+        return _format_paste(output)  # type: ignore
     if tool_name == "search_username":
-        return _format_username(output)
+        return _format_username(output)  # type: ignore
     if tool_name == "search_email":
-        return _format_holehe(output)
-    return f"```\n{output.strip()}\n```"
+        return _format_holehe(output)  # type: ignore
+    
+    if isinstance(output, str):
+        return f"```\n{output.strip()}\n```"
+    import json
+    return f"```json\n{json.dumps(output, indent=2)}\n```"
 
 
 # ---------------------------------------------------------------------------
@@ -659,7 +684,7 @@ def _build_observations(
 def _build_summary(
     target: str,
     recipe_target_type: str,
-    step_results: list[tuple[str, str, StepState, str]],
+    step_results: list[tuple[str, str, StepState, object]],
 ) -> str:
     from openosint.correlation import EntityType, make_entity
     from openosint.extractors import EXTRACTOR_REGISTRY
@@ -772,7 +797,7 @@ def _build_report(
     target_type: str,
     target: str,
     date_str: str,
-    step_results: list[tuple[str, str, StepState, str]],
+    step_results: list[tuple[str, str, StepState, object]],
     summary: str,
     observations: str,
     steps_map: dict[str, tuple[str, str]],

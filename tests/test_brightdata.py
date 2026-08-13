@@ -98,9 +98,10 @@ class TestSearchDorksLive:
 
             result = await run_dorks_live_osint("john doe", max_dorks=1)
 
-        assert "John Doe LinkedIn" in result
-        assert "linkedin.com/in/johndoe" in result
-        assert "Software engineer" in result
+        assert len(result) == 1
+        assert result[0]["results"][0]["title"] == "John Doe LinkedIn"
+        assert result[0]["results"][0]["url"] == "https://linkedin.com/in/johndoe"
+        assert "Software engineer" in result[0]["results"][0]["snippet"]
 
     async def test_success_result_contains_dork_header(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
@@ -112,7 +113,8 @@ class TestSearchDorksLive:
 
             result = await run_dorks_live_osint("example.com", max_dorks=1)
 
-        assert "[+] Dork:" in result
+        assert len(result) == 1
+        assert "site:" in result[0]["query"] or "example.com" in result[0]["query"]
 
     async def test_no_organic_results_shows_placeholder(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
@@ -124,7 +126,8 @@ class TestSearchDorksLive:
 
             result = await run_dorks_live_osint("target", max_dorks=1)
 
-        assert "no organic results" in result
+        assert len(result) == 1
+        assert result[0]["results"] == []
 
     async def test_organic_link_field_used_as_url(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
@@ -143,7 +146,8 @@ class TestSearchDorksLive:
 
             result = await run_dorks_live_osint("target", max_dorks=1)
 
-        assert "primary-link.com" in result
+        assert len(result) == 1
+        assert result[0]["results"][0]["url"] == "https://primary-link.com"
 
     async def test_request_uses_format_raw_not_json(self, monkeypatch):
         """Verify the outbound request body uses format=raw to prevent envelope wrapping."""

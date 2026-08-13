@@ -16,7 +16,7 @@ from typing import Callable
 
 from openosint.correlation import Entity, EntityType, Relationship, make_entity
 
-ExtractorFn = Callable[[str, Entity], tuple[list[Entity], list[Relationship]]]
+ExtractorFn = Callable[[str | dict | list, Entity], tuple[list[Entity], list[Relationship]]]
 
 # ---------------------------------------------------------------------------
 # Shared regex patterns
@@ -455,7 +455,7 @@ def _extract_abuseipdb(raw: str, seed: Entity) -> tuple[list[Entity], list[Relat
     return entities, relationships
 
 
-def _extract_footprint(raw: str, seed: Entity) -> tuple[list[Entity], list[Relationship]]:
+def _extract_footprint(raw: str | dict | list, seed: Entity) -> tuple[list[Entity], list[Relationship]]:
     """Extract URL and domain entities from search_footprint output."""
     entities: list[Entity] = []
     relationships: list[Relationship] = []
@@ -464,6 +464,24 @@ def _extract_footprint(raw: str, seed: Entity) -> tuple[list[Entity], list[Relat
         return entities, relationships
 
     seen_domains: set[str] = set()
+
+    if isinstance(raw, dict):
+        for url in raw.get("discovered_urls", []):
+            if url.startswith("http"):
+                e = make_entity(EntityType.URL, url, 0.75, "search_footprint")
+                entities.append(e)
+                relationships.append(
+                    Relationship(seed, e, "found_via_serp", "search_footprint", 0.75)
+                )
+        for domain in raw.get("seen_domains", []):
+            if domain and "." in domain and domain not in seen_domains:
+                seen_domains.add(domain)
+                e = make_entity(EntityType.DOMAIN, domain, 0.7, "search_footprint")
+                entities.append(e)
+                relationships.append(
+                    Relationship(seed, e, "footprint_on", "search_footprint", 0.7)
+                )
+        return entities, relationships
 
     for line in raw.splitlines():
         stripped = line.strip()

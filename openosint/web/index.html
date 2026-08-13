@@ -568,7 +568,7 @@
                     </div>
                     <div x-show="!part.collapsed && part.output"
                          class="border-t border-app bg-app px-3 py-2 max-h-64 overflow-y-auto">
-                      <template x-for="(line, li) in (part.output || '').split('\n')" :key="li">
+                      <template x-for="(line, li) in (typeof part.output === 'string' ? part.output : JSON.stringify(part.output, null, 2)).split('\n')" :key="li">
                         <div class="font-mono text-xs leading-relaxed whitespace-pre-wrap break-all"
                              :class="lineClass(line)"
                              x-text="line || ' '"></div>

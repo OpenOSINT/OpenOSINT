@@ -668,7 +668,7 @@ def _select_chat_backend(req: "ChatRequest") -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _run_tool(tool_name: str, tool_input: str, timeout: int = 120) -> str:
+async def _run_tool(tool_name: str, tool_input: str, timeout: int = 120) -> str | list | dict:
     if tool_name not in _RUNNERS:
         return f"Unknown tool: {tool_name}"
     if not str(tool_input).strip():
@@ -797,7 +797,7 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
                                 {
                                     "type": "tool_result",
                                     "tool_use_id": current_block["id"],
-                                    "content": result,
+                                    "content": result if isinstance(result, str) else json.dumps(result),
                                 }
                             )
 
@@ -909,7 +909,7 @@ async def _stream_ollama(
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
-            tool_results_for_next.append({"role": "tool", "content": result})
+            tool_results_for_next.append({"role": "tool", "content": result if isinstance(result, str) else json.dumps(result)})
 
         msgs = (
             msgs
@@ -1025,7 +1025,7 @@ async def _stream_openai(
                 {
                     "role": "tool",
                     "tool_call_id": tc.get("id", ""),
-                    "content": result,
+                    "content": result if isinstance(result, str) else json.dumps(result),
                 }
             )
 
@@ -1351,7 +1351,8 @@ def create_app() -> FastAPI:
             try:
                 result = await _RUNNERS[tool_name](input, timeout)
                 elapsed = round(time.monotonic() - start, 2)
-                for line in result.splitlines():
+                result_str = result if isinstance(result, str) else json.dumps(result)
+                for line in result_str.splitlines():
                     if await request.is_disconnected():
                         return
                     yield {"data": json.dumps({"line": line, "done": False})}
