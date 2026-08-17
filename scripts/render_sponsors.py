@@ -101,11 +101,12 @@ def _render_block(sponsors: list[dict]) -> str:
             logo = s.get("html_logo", s["logo"])
             logo_dark = s.get("html_logo_dark")
             if logo_dark:
+                width = s.get("logo_width", 400)
                 img_tag = (
-                    '<picture>'
+                    "<picture>"
                     f'<source media="(prefers-color-scheme: dark)" srcset="{logo_dark}">'
-                    f'<img src="{logo}" alt="{s["name"]} logo" width="400">'
-                    '</picture>'
+                    f'<img src="{logo}" alt="{s["name"]} logo" width="{width}">'
+                    "</picture>"
                 )
             else:
                 img_tag = f'<img src="{logo}" alt="{s["name"]} logo" height="40">'
@@ -115,9 +116,7 @@ def _render_block(sponsors: list[dict]) -> str:
                 if s.get("integration_doc")
                 else ""
             )
-            lines.append(
-                f'<a href="{s["url"]}" rel="noopener sponsored">{img_tag}</a>'
-            )
+            lines.append(f'<a href="{s["url"]}" rel="noopener sponsored">{img_tag}</a>')
             lines.append("")
             lines.append(f"**[{s['name']}]({s['url']})**{tool_note}{doc_note}")
             lines.append("")
@@ -177,7 +176,7 @@ def _render_html_array(sponsors: list[dict]) -> str:
         lines.append(f"    logo_dark:   {_js_string(html_logo_dark)},")
         lines.append(f"    logo_alt:    {_js_string(logo_alt)},")
         lines.append(f"    category:    {_js_string(s.get('category', ''))},")
-        lines.append(f"    description: {_js_string(s['tagline'])}")
+        lines.append(f"    description: {_js_string(s.get('tagline_full', s['tagline']))}")
         lines.append("  }" + comma)
     lines.append("];")
     lines.append(HTML_END_MARKER)
@@ -261,7 +260,10 @@ def main() -> None:
         if out_of_sync:
             for path in out_of_sync:
                 print(f"[render_sponsors] {path} sponsors block is out of sync.")
-            print("Run:  python scripts/render_sponsors.py" + (" --docs-html <path>" if args.docs_html else ""))
+            print(
+                "Run:  python scripts/render_sponsors.py"
+                + (" --docs-html <path>" if args.docs_html else "")
+            )
             sys.exit(1)
         for path, _before, _after in targets:
             print(f"[render_sponsors] {path} is up to date.")

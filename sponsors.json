@@ -21,5 +21,17 @@
     "tier": "featured",
     "category": "Residential Proxies",
     "integration_doc": "docs/integrations/rapidproxy.md"
+  },
+  {
+    "name": "TestMu AI",
+    "tagline": "TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams.",
+    "tagline_full": "TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.",
+    "url": "https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab",
+    "logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg",
+    "html_logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg",
+    "html_logo_dark": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg",
+    "logo_width": 353,
+    "tier": "featured",
+    "category": "AI-Native Testing Platform"
   }
 ]
