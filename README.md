@@ -681,6 +681,13 @@ Current sponsors and open categories are listed in the sponsor block at the top 
 
 [Open Collective](https://opencollective.com/openosint_oss) · [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry) · [SPONSORSHIP.md](SPONSORSHIP.md)
 
+## Affiliate program
+
+Earn 30–45% commission promoting the AI OSINT Prompt Pack, Operator's Playbook, and Complete Kit.
+Good fit for OSINT/infosec newsletter authors, security YouTube channels, and tool-directory maintainers.
+
+**→ [Affiliate program details & terms](https://openosint.tech/affiliates/)**
+
 ## SERVICES
 
 The framework is free and MIT-licensed. This is an optional paid setup service offered by the maintainer.

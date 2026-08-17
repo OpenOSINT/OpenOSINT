@@ -86,6 +86,14 @@
     <priority>0.8</priority>
   </url>
 
+  <!-- Affiliate program page -->
+  <url>
+    <loc>https://openosint.tech/affiliates/</loc>
+    <lastmod>2026-08-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- Blog posts -->
   <url>
     <loc>https://openosint.tech/blog/what-is-osint.html</loc>
