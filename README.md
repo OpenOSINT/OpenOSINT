@@ -43,7 +43,7 @@ mcp-name: io.github.OpenOSINT/openosint
 
 **[TestMu AI](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)**
 
-> TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams.
+> TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.
 
 _Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [SPONSORSHIP.md](SPONSORSHIP.md)._
 

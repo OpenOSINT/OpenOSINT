@@ -176,7 +176,7 @@ def _render_html_array(sponsors: list[dict]) -> str:
         lines.append(f"    logo_dark:   {_js_string(html_logo_dark)},")
         lines.append(f"    logo_alt:    {_js_string(logo_alt)},")
         lines.append(f"    category:    {_js_string(s.get('category', ''))},")
-        lines.append(f"    description: {_js_string(s.get('tagline_full', s['tagline']))}")
+        lines.append(f"    description: {_js_string(s['tagline'])}")
         lines.append("  }" + comma)
     lines.append("];")
     lines.append(HTML_END_MARKER)
