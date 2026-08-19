@@ -761,4 +761,4 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=OpenOSINT/OpenOSINT&type=Date)](https://star-history.com/#OpenOSINT/OpenOSINT&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=OpenOSINT/OpenOSINT&type=Date)](https://star-history.dera.page/#OpenOSINT/OpenOSINT&Date)
