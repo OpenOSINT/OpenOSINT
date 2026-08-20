@@ -52,6 +52,7 @@ _TOOL_INFO_ROWS = [
     ("search_paste", "psbdmp.ws", "Pastebin dump mentions"),
     ("search_phone", "phoneinfoga", "Carrier, country, line type"),
     ("search_shodan", "Shodan API", "Open ports, banners, CVEs"),
+    ("search_x", "Xquik API", "Public X posts and engagement"),
     ("search_virustotal", "VirusTotal API", "IP/domain/URL/hash threat analysis"),
     ("search_censys", "Censys API", "Internet infrastructure & certs"),
     ("search_ip2location", "IP2Location.io", "Enhanced IP geolocation & VPN/proxy detection"),

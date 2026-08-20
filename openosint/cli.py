@@ -52,6 +52,7 @@ from openosint.tools.search_paste import run_paste_osint  # noqa: E402
 from openosint.tools.search_shodan import run_shodan_osint  # noqa: E402
 from openosint.tools.search_username import run_username_osint  # noqa: E402
 from openosint.tools.search_virustotal import run_virustotal_osint  # noqa: E402
+from openosint.tools.search_x import run_x_osint  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -107,6 +108,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  openosint email target@example.com          # direct email scan\n"
             "  openosint username johndoe99                # direct username scan\n"
             "  openosint shodan 8.8.8.8                    # Shodan host lookup\n"
+            '  openosint x "market news"                 # Search public X posts\n'
             "  openosint censys 8.8.8.8                   # Censys host lookup\n"
             "  openosint censys example.com               # Censys certificate search\n"
             "  openosint ip2location 8.8.8.8              # IP2Location lookup\n"
@@ -272,6 +274,39 @@ def _build_parser() -> argparse.ArgumentParser:
         help="IP address for host lookup, or any Shodan search query.",
     )
     shodan_cmd.add_argument(
+        "-t",
+        "--timeout",
+        type=int,
+        default=30,
+        metavar="SECONDS",
+        help="Request timeout (default: 30).",
+    )
+
+    # x
+    x_cmd = subparsers.add_parser(
+        "x",
+        help="Search public X posts through Xquik (no AI). Requires XQUIK_API_KEY.",
+    )
+    x_cmd.add_argument(
+        "query",
+        type=str,
+        metavar="QUERY",
+        help="X search query, post ID, or X status URL.",
+    )
+    x_cmd.add_argument(
+        "--query-type",
+        choices=["Latest", "Top"],
+        default="Latest",
+        help="Sort by recency or engagement (default: Latest).",
+    )
+    x_cmd.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        metavar="N",
+        help="Maximum posts to return, from 1 to 50 (default: 20).",
+    )
+    x_cmd.add_argument(
         "-t",
         "--timeout",
         type=int,
@@ -704,6 +739,26 @@ async def _handle_shodan(
         _print_result(result)
 
 
+async def _handle_x(
+    query: str,
+    query_type: str,
+    limit: int,
+    timeout: int,
+    json_output: bool = False,
+) -> None:
+    print(f"[*] X search: {query}", file=sys.stderr)
+    result = await run_x_osint(
+        query=query,
+        query_type=query_type,
+        limit=limit,
+        timeout_seconds=timeout,
+    )
+    if json_output:
+        _emit_json(format_tool_result("search_x", query, result))
+    else:
+        _print_result(result)
+
+
 async def _handle_virustotal(
     target: str,
     timeout: int,
@@ -1092,6 +1147,14 @@ async def _async_main() -> None:
         )
     elif args.command == "shodan":
         await _handle_shodan(args.query, args.timeout, json_output=json_output)
+    elif args.command == "x":
+        await _handle_x(
+            args.query,
+            args.query_type,
+            args.limit,
+            args.timeout,
+            json_output=json_output,
+        )
     elif args.command == "virustotal":
         await _handle_virustotal(args.target, args.timeout, json_output=json_output)
     elif args.command == "censys":

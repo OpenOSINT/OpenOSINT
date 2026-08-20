@@ -2,12 +2,13 @@
 """
 OpenOSINT MCP Server — v2.23.0
 
-Exposes all 19 OSINT tool capabilities plus multi-target investigation
+Exposes OSINT tool capabilities plus multi-target investigation
 to MCP-compliant AI clients over standard I/O. Tools include:
 search_email, search_username, search_breach, search_whois, search_ip,
 search_domain, generate_dorks, search_paste, search_phone, search_shodan,
 search_virustotal, search_censys, search_ip2location, search_abuseipdb,
-search_github, search_dns, search_dorks_live, scrape_url, search_footprint.
+search_github, search_dns, search_dorks_live, scrape_url, search_footprint,
+search_x.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_footprint import run_footprint_osint
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
@@ -39,7 +41,7 @@ from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
-from openosint.tools.search_footprint import run_footprint_osint
+from openosint.tools.search_x import run_x_osint
 
 logging.basicConfig(level=logging.INFO, format="[MCP] %(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
@@ -167,6 +169,33 @@ async def list_tools() -> list[Tool]:
                 {
                     "type": "object",
                     "properties": {"query": {"type": "string"}},
+                    "required": ["query"],
+                }
+            ),
+        ),
+        Tool(
+            name="search_x",
+            description=(
+                "Search public X posts through Xquik. Returns authors, post text, URLs, "
+                "timestamps, and engagement. Requires XQUIK_API_KEY env var."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "query_type": {
+                            "type": "string",
+                            "enum": ["Latest", "Top"],
+                            "default": "Latest",
+                        },
+                        "limit": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 50,
+                            "default": 20,
+                        },
+                    },
                     "required": ["query"],
                 }
             ),
@@ -368,6 +397,15 @@ _HANDLERS: dict[str, tuple] = {
     ),
     "search_shodan": (
         lambda a: run_shodan_osint(a["query"], timeout_seconds=30),
+        lambda a: a["query"],
+    ),
+    "search_x": (
+        lambda a: run_x_osint(
+            a["query"],
+            timeout_seconds=30,
+            query_type=str(a.get("query_type", "Latest")),
+            limit=int(a.get("limit", 20)),
+        ),
         lambda a: a["query"],
     ),
     "search_virustotal": (

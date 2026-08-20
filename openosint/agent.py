@@ -24,6 +24,7 @@ from typing import Any
 
 import anthropic
 
+from openosint.pivot import investigate_graph_for_agent
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
@@ -33,6 +34,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_footprint import run_footprint_osint
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
@@ -42,8 +44,7 @@ from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
-from openosint.tools.search_footprint import run_footprint_osint
-from openosint.pivot import investigate_graph_for_agent
+from openosint.tools.search_x import run_x_osint
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +186,35 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "type": "string",
                     "description": "IP address for host lookup, or a Shodan search query.",
                 }
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "search_x",
+        "description": (
+            "Search public X posts through Xquik for social, event, or market intelligence. "
+            "Supports Latest or Top ordering and returns author, post, URL, and engagement data. "
+            "Requires XQUIK_API_KEY."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "X search query, keywords, post ID, or X status URL.",
+                },
+                "query_type": {
+                    "type": "string",
+                    "enum": ["Latest", "Top"],
+                    "description": "Sort by recency or engagement. Defaults to Latest.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 50,
+                    "description": "Maximum posts to return. Defaults to 20.",
+                },
             },
             "required": ["query"],
         },
@@ -395,6 +425,12 @@ _TOOL_MAP: dict[str, Any] = {
     "search_paste": lambda a: run_paste_osint(a["query"], timeout_seconds=15),
     "search_phone": lambda a: run_phone_osint(a["phone"], timeout_seconds=60),
     "search_shodan": lambda a: run_shodan_osint(a["query"], timeout_seconds=30),
+    "search_x": lambda a: run_x_osint(
+        a["query"],
+        timeout_seconds=30,
+        query_type=str(a.get("query_type", "Latest")),
+        limit=int(a.get("limit", 20)),
+    ),
     "search_virustotal": lambda a: run_virustotal_osint(a["target"], timeout_seconds=30),
     "search_censys": lambda a: run_censys_osint(a["target"], timeout_seconds=30),
     "search_ip2location": lambda a: run_ip2location_osint(a["ip"], timeout_seconds=30),
@@ -431,6 +467,7 @@ INVESTIGATION STRATEGY:
 - For IP reputation/abuse: use search_abuseipdb to get the abuseConfidenceScore — a score above 50% indicates a high-risk IP; combine with search_ip or search_shodan for full context.
 - For a domain or IP infrastructure: use search_censys for certificate history and port data.
 - For a Shodan query or banners: use search_shodan.
+- For public X posts, social signals, or event reactions: use search_x.
 - For live Google search results on a target: use search_dorks_live (requires BRIGHTDATA_API_KEY).
 - For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (requires BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
 - To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (requires BRIGHTDATA_API_KEY).
