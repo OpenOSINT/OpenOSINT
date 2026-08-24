@@ -7,6 +7,58 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [2.25.1] — 2026-08-24
+
+### Breaking
+- Client-supplied AI backend destinations (a request-supplied `openai_base_url`
+  or a non-default `ollama_host` sent to `POST /api/chat` or
+  `POST /api/openai/test`) are now **rejected by default** — see
+  **GHSA-q6cw-g86h-m2cq** below. The shipped web UI does not currently send
+  either field with a real value: its "OpenAI-compat" BYOK panel talks to
+  providers directly from the browser and never reaches these endpoints, so
+  this should not affect normal use of the bundled UI. If you have custom
+  client code (browser extension, direct API integration, or a modified
+  build) that relies on sending these fields to your own server, set
+  `OPENOSINT_ALLOW_CLIENT_BACKEND=1` there to keep it working.
+
+### Security
+- **[GHSA-q6cw-g86h-m2cq]** `POST /api/chat` and `POST /api/openai/test`
+  filled a missing `openai_api_key` from the server's `OPENAI_API_KEY`
+  environment variable even when the destination `openai_base_url` came from
+  the request body — a caller could point the base URL at an
+  attacker-controlled host and receive the server's own credential in the
+  `Authorization` header, along with the full conversation/tool-schema
+  payload (credential theft + SSRF, including against cloud metadata
+  endpoints). `/api/openai/test` additionally echoed the probe result back to
+  the caller, making it a non-blind SSRF oracle for internal port scanning.
+  Affects >= 2.19.0 (`openai_base_url`/`openai_api_key` request fields) and
+  >= 2.23.0 (`/api/openai/test`), not just >= 2.25.0 as originally reported.
+  - Client-supplied backend destinations are now off by default
+    (`OPENOSINT_ALLOW_CLIENT_BACKEND`, unset). With it unset, a
+    request-supplied `openai_base_url` or non-default `ollama_host` is
+    rejected outright and the credential/destination coupling never has a
+    chance to occur.
+  - When the flag is enabled, destinations resolving to link-local
+    (169.254.0.0/16, fe80::/10 — cloud metadata), multicast, IANA-reserved,
+    or unspecified addresses are always rejected; loopback and RFC1918 are
+    permitted (LAN Ollama / local llama.cpp use cases).
+    `OPENOSINT_ALLOWED_BASE_URLS` is an optional strict per-host allowlist
+    that overrides the IP checks and closes the DNS-rebinding TOCTOU window.
+  - The server's environment-sourced API key is never sent to a
+    client-supplied destination, under any circumstance — no fallback, ever.
+  - Every outbound HTTP client now disables redirect-following explicitly,
+    so a redirect from an allowed host cannot be used to reach a disallowed
+    one.
+  - A Sec-Fetch-Site / Origin browser guard (`OPENOSINT_ALLOWED_ORIGINS` for
+    reverse-proxy setups) blocks cross-origin browser requests when the flag
+    is enabled; curl/SDK/script callers, which send neither header, are
+    unaffected.
+  - Every rejection reachable from this path — flag disabled, malformed URL,
+    disallowed destination, allowlist mismatch, or a rejected browser
+    origin — returns an identical 403 response, so the response can't be
+    used to fingerprint whether `OPENOSINT_ALLOW_CLIENT_BACKEND` is enabled
+    on a given deployment.
+
 ## [2.25.0] — 2026-07-13
 
 ### Security
