@@ -16,11 +16,13 @@ Routes:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import os
 import re
 import secrets
 import shutil
+import socket
 import time
 from collections import deque as _deque
 from pathlib import Path
@@ -36,7 +38,7 @@ except ImportError:
     _httpx = None  # type: ignore
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -563,6 +565,144 @@ def _is_setup_complete() -> bool:
     return any(os.environ.get(k, "").strip() for k in _KNOWN_ENV_KEYS)
 
 
+# ---------------------------------------------------------------------------
+# Client-supplied AI backend guards (GHSA-q6cw-g86h-m2cq)
+#
+# GHSA-cqr4-hcfp-m6m4 made /api/setup loopback-only, but /api/chat and
+# /api/openai/test still accept openai_base_url + openai_api_key in the
+# request body. If a caller supplies a base_url they control and leaves
+# api_key blank, the old code filled api_key from os.environ — shipping the
+# *server's* credential to the *attacker's* host. The fix is structural: a
+# request-supplied destination and an environment-sourced credential must
+# never be used together (see chat() / openai_test() below, which apply
+# this to both endpoints identically). Everything here is gated behind
+# OPENOSINT_ALLOW_CLIENT_BACKEND (off by default) — with it unset, a
+# request-supplied base_url/host is rejected outright and the coupling
+# never has a chance to happen.
+# ---------------------------------------------------------------------------
+
+
+def _byo_backend_enabled() -> bool:
+    """OPENOSINT_ALLOW_CLIENT_BACKEND — off by default. Gates every request-
+    supplied chat backend destination (openai_base_url, ollama_host)."""
+    return os.environ.get("OPENOSINT_ALLOW_CLIENT_BACKEND", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _parse_csv_env(name: str) -> list[str]:
+    return [v.strip() for v in os.environ.get(name, "").split(",") if v.strip()]
+
+
+# Every rejection reachable from a client-supplied backend attempt — the
+# flag being off, a malformed URL, a disallowed destination IP class, an
+# unresolvable host, an OPENOSINT_ALLOWED_BASE_URLS mismatch, or a rejected
+# browser origin — must produce this exact status + body. If any of these
+# carried a distinct message, a prober could tell "the flag is off" apart
+# from "the flag is on but this particular request was rejected", which is
+# itself a leak of server configuration state (an oracle inside the oracle
+# fix). The cost is a less specific error for legitimate self-hosters
+# debugging their own setup — check server logs, not the HTTP response, to
+# see which of these actually fired.
+def _reject_client_backend() -> None:
+    raise HTTPException(403, "client-supplied backend rejected")
+
+
+async def _validate_outbound_base_url(url: str) -> str:
+    """Validate a client-supplied backend base URL before it is used for an
+    outbound request. Only ever called for request-supplied URLs — env-
+    configured defaults (OPENAI_BASE_URL, the localhost:8080/11434 fallbacks)
+    skip this entirely so they keep working unconditionally.
+
+    Policy:
+      * scheme must be http/https; no userinfo (user:pass@) in the URL.
+      * OPENOSINT_ALLOWED_BASE_URLS, if set, is a strict per-host allowlist
+        that overrides the IP checks below — an operator who has pinned
+        trusted hosts has already accepted the DNS-rebinding risk knowingly.
+      * Otherwise: link-local (169.254.0.0/16, fe80::/10 — cloud metadata,
+        no legitimate use), multicast, IANA-reserved, and unspecified
+        addresses are always rejected.
+      * Loopback and RFC1918 are otherwise permitted — this function is only
+        reached once OPENOSINT_ALLOW_CLIENT_BACKEND is set, and LAN Ollama /
+        local llama.cpp users enabling that flag are exactly who needs them.
+
+    Every failure path raises via _reject_client_backend() — see its
+    docstring for why the message must not vary by reason.
+
+    NOTE (TOCTOU): this resolves the hostname now, but the outbound HTTP
+    client resolves it again when it actually connects — a DNS-rebinding
+    attacker can swap the answer between the two lookups. Set
+    OPENOSINT_ALLOWED_BASE_URLS to close this window; it pins a hostname,
+    not a point-in-time IP.
+    """
+    parsed = _urlparse(url.strip())
+    if parsed.scheme not in ("http", "https"):
+        _reject_client_backend()
+    if not parsed.hostname:
+        _reject_client_backend()
+    if parsed.username or parsed.password:
+        _reject_client_backend()
+
+    allowlist = _parse_csv_env("OPENOSINT_ALLOWED_BASE_URLS")
+    if allowlist:
+        host = parsed.hostname.lower()
+        host_port = f"{host}:{parsed.port}" if parsed.port else host
+        allowed = {a.lower() for a in allowlist}
+        if host not in allowed and host_port not in allowed:
+            _reject_client_backend()
+        return url
+
+    try:
+        infos = await asyncio.to_thread(socket.getaddrinfo, parsed.hostname, None)
+    except socket.gaierror:
+        _reject_client_backend()
+
+    for _family, _type, _proto, _canon, sockaddr in infos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+            _reject_client_backend()
+
+    return url
+
+
+def _check_browser_origin(request: "Request") -> None:
+    """CSRF / DNS-rebinding guard for client-supplied-backend requests.
+
+    Only called when OPENOSINT_ALLOW_CLIENT_BACKEND is set — see callers.
+    This is NOT an authentication boundary: it only blocks a browser from
+    being tricked into calling this endpoint cross-origin. A direct network
+    attacker (no browser involved) is stopped by the credential/destination
+    decoupling in _validate_outbound_base_url(), not by this check.
+
+    curl, SDKs, and scripts send neither Sec-Fetch-Site nor Origin and are
+    waved through deliberately — they are not a CSRF vector, and turning
+    this into a general request allowlist would only break legitimate API
+    consumers without adding real protection.
+
+    Failures go through _reject_client_backend() too — this check only ever
+    runs when the flag is on, so a distinct message here would itself
+    confirm the flag is on to a cross-origin prober that never even sent a
+    valid base_url.
+    """
+    sec_fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if sec_fetch_site:
+        if sec_fetch_site not in ("same-origin", "none"):
+            _reject_client_backend()
+        return
+
+    origin = request.headers.get("origin", "").strip()
+    if origin:
+        request_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        allowed = {request_origin, *_parse_csv_env("OPENOSINT_ALLOWED_ORIGINS")}
+        if origin not in allowed:
+            _reject_client_backend()
+        return
+
+    # Neither header present: not a browser request (curl/SDK/script) — allow.
+
+
 def _get_ai_backend() -> tuple[str, str | None, bool | None]:
     """Return (backend_name, ollama_host, ollama_reachable)."""
     if os.environ.get("ANTHROPIC_API_KEY", "").strip():
@@ -598,12 +738,14 @@ async def _probe_openai_endpoint(base_url: str, api_key: str) -> dict:
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     try:
         if _httpx is not None:
-            async with _httpx.AsyncClient(timeout=2.5) as client:
+            async with _httpx.AsyncClient(timeout=2.5, follow_redirects=False) as client:
                 r = await client.get(f"{base}/models", headers=headers)
                 status = r.status_code
         else:
             raw = await asyncio.to_thread(
-                lambda: _requests.get(f"{base}/models", headers=headers, timeout=2.5)
+                lambda: _requests.get(
+                    f"{base}/models", headers=headers, timeout=2.5, allow_redirects=False
+                )
             )
             status = raw.status_code
     except Exception:
@@ -850,7 +992,7 @@ async def _stream_ollama(
                 "stream": False,
             }
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=120) as client:
+                async with _httpx.AsyncClient(timeout=120, follow_redirects=False) as client:
                     r = await client.post(f"{host}/api/chat", json=payload)
                 if r.status_code != 200:
                     yield {
@@ -863,7 +1005,9 @@ async def _stream_ollama(
                 # fallback: run blocking requests in a thread
                 _payload = payload  # capture for lambda
                 raw = await asyncio.to_thread(
-                    lambda: _requests.post(f"{host}/api/chat", json=_payload, timeout=120)
+                    lambda: _requests.post(
+                        f"{host}/api/chat", json=_payload, timeout=120, allow_redirects=False
+                    )
                 )
                 if raw.status_code != 200:
                     yield {
@@ -956,7 +1100,7 @@ async def _stream_openai(
         }
         try:
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=180) as client:
+                async with _httpx.AsyncClient(timeout=180, follow_redirects=False) as client:
                     r = await client.post(url, json=payload, headers=headers)
                 if r.status_code != 200:
                     yield {
@@ -968,7 +1112,9 @@ async def _stream_openai(
             else:
                 _payload = payload  # capture for lambda
                 raw = await asyncio.to_thread(
-                    lambda: _requests.post(url, json=_payload, headers=headers, timeout=180)
+                    lambda: _requests.post(
+                        url, json=_payload, headers=headers, timeout=180, allow_redirects=False
+                    )
                 )
                 if raw.status_code != 200:
                     yield {
@@ -1394,7 +1540,7 @@ def create_app() -> FastAPI:
         ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
         try:
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=1.5) as client:
+                async with _httpx.AsyncClient(timeout=1.5, follow_redirects=False) as client:
                     r = await client.get(f"{ollama_host}/api/tags")
                     reachable = r.status_code == 200
             else:
@@ -1419,9 +1565,23 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/openai/test")
-    async def openai_test(req: OpenAITestRequest):
-        base_url = (req.openai_base_url or os.environ.get("OPENAI_BASE_URL", "")).strip()
-        api_key = (req.openai_api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+    async def openai_test(req: OpenAITestRequest, request: Request):
+        # Same coupling bug as /api/chat (GHSA-q6cw-g86h-m2cq), and arguably
+        # worse here: this endpoint echoes the probe result back to the
+        # caller, making it a non-blind SSRF oracle for internal port
+        # scanning if the destination/credential split isn't enforced.
+        if _byo_backend_enabled():
+            _check_browser_origin(request)
+
+        if req.openai_base_url:
+            if not _byo_backend_enabled():
+                _reject_client_backend()
+            base_url = await _validate_outbound_base_url(req.openai_base_url)
+            api_key = (req.openai_api_key or "").strip()  # no os.environ fallback, ever
+        else:
+            base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
+            api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+
         if not base_url:
             return {"status": "ok", "reachable": False, "auth_ok": False, "status_code": None}
         probe = await _probe_openai_endpoint(base_url, api_key)
@@ -1432,7 +1592,7 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/chat")
-    async def chat(req: ChatRequest):
+    async def chat(req: ChatRequest, request: Request):
         if DEMO_MODE:
             async def _demo_block():
                 yield f'data: {json.dumps({"type": "error", "message": "Server-side LLM is disabled in demo mode — add your own API key in Settings."})}\n\n'
@@ -1442,6 +1602,9 @@ def create_app() -> FastAPI:
                 media_type="text/event-stream",
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
+
+        if _byo_backend_enabled():
+            _check_browser_origin(request)
 
         messages: list[dict] = []
         for h in req.history:
@@ -1453,17 +1616,38 @@ def create_app() -> FastAPI:
 
         backend = _select_chat_backend(req)
 
+        # Resolve backend-specific connection params up front (not inside the
+        # generator) so a validation failure returns a proper HTTP error
+        # instead of being swallowed as an SSE event after streaming started.
+        openai_base_url = ""
+        openai_api_key = ""
+        openai_model = ""
+        ollama_host = ""
+
+        if backend == "openai":
+            if req.openai_base_url:
+                if not _byo_backend_enabled():
+                    _reject_client_backend()
+                openai_base_url = await _validate_outbound_base_url(req.openai_base_url)
+                openai_api_key = (req.openai_api_key or "").strip()  # no os.environ fallback, ever
+            else:
+                openai_base_url = os.environ.get("OPENAI_BASE_URL", "http://localhost:8080/v1")
+                openai_api_key = os.environ.get("OPENAI_API_KEY", "")
+            openai_model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
+        elif backend == "ollama":
+            default_ollama = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+            if req.ollama_host and req.ollama_host.rstrip("/") != default_ollama.rstrip("/"):
+                if not _byo_backend_enabled():
+                    _reject_client_backend()
+                ollama_host = await _validate_outbound_base_url(req.ollama_host)
+            else:
+                ollama_host = default_ollama
+
         async def generate():
             if backend == "openai":
-                base_url = (
-                    req.openai_base_url
-                    or os.environ.get("OPENAI_BASE_URL", "http://localhost:8080/v1")
-                ).strip()
-                api_key = (req.openai_api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
-                model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
-                gen = _stream_openai(messages, base_url, api_key, model)
+                gen = _stream_openai(messages, openai_base_url, openai_api_key, openai_model)
             elif backend == "ollama":
-                gen = _stream_ollama(messages, req.ollama_host, req.ollama_model)
+                gen = _stream_ollama(messages, ollama_host, req.ollama_model)
             else:
                 gen = _stream_claude(messages)
 
