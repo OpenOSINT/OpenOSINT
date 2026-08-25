@@ -236,6 +236,17 @@ openosint [<b>-v</b>] [<b>--api-key</b> <u>key</u>]</pre>
     <p style="margin-top:6px;"><em>Interactive REPL and CLI</em></p>
   </div>
 </div>
+<div style="margin-bottom:14px;">
+  <p><b>Graph module</b> &mdash; provenance and human-reviewed deduplication</p>
+  <video autoplay loop muted playsinline preload="metadata"
+         style="max-width:100%; border:1px solid #333; display:block;">
+    <source src="assets/graph-demo.webm" type="video/webm">
+    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-demo.gif"
+         alt="Graph module demo (synthetic data): two observations of a fictional organization arrive from the openosint:github and openosint:whois datasets with per-statement provenance; run_crossref scores them 0.828 as a same_as candidate with a feature explanation; the candidate waits in the human review queue as 'unsure' and nothing auto-merges; a human accepts and canonical_for() returns one canonical entity; graph_export writes a .ftm file that ftm validate accepts with exit 0"
+         style="max-width:100%; display:block;">
+  </video>
+  <p style="margin-top:6px;"><em>Synthetic data only &mdash; every entity shown is fictional. Worked example: the entities are seeded at the statement layer, not produced by today's mappers &mdash; see <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/demo/README.md">demo/README.md</a>. Regenerate with <code>vhs demo/graph_demo.tape</code></em></p>
+</div>
 </div>
 
 <h2 id="architecture">ARCHITECTURE</h2>

@@ -407,6 +407,14 @@ same_as scoring, needs Python 3.11+), then use it via three MCP tools:
 `graph_export`, `graph_neighbors`, `graph_review_candidates`. See
 [docs/graph.md](docs/graph.md) for the full guide and a worked example.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-demo.gif"
+       alt="Graph module demo (synthetic data): two observations of a fictional organization land in the store from the openosint:github and openosint:whois datasets, each with run id and confidence; run_crossref scores the pair 0.828 and shows the name-match features that drove it; the candidate waits in the human review queue as 'unsure' with nothing auto-merged; a human accepts and canonical_for() returns one canonical entity; graph_export writes a .ftm file that ftm validate accepts with exit 0"
+       width="900" />
+  <p><em>Deterministic, synthetic-data demo — regenerate with <a href="demo/graph_demo.tape">demo/graph_demo.tape</a>.<br>
+  Worked example: the two entities are seeded at the statement layer, not produced by today's mappers — see <a href="demo/README.md">demo/README.md</a>.</em></p>
+</div>
+
 ---
 
 ## Interfaces
