@@ -54,6 +54,7 @@ def _format_whois_results(data: object, domain: str) -> str:
         "Updated": getattr(data, "updated_date", None),
         "Name Servers": getattr(data, "name_servers", None),
         "Emails": getattr(data, "emails", None),
+        "Name": getattr(data, "name", None),
         "Org": getattr(data, "org", None),
         "Country": getattr(data, "country", None),
     }

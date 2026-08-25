@@ -87,6 +87,9 @@ socks = [
     "PySocks>=1.7.1",
     "aiohttp-socks>=0.8.4",
 ]
+graph = [
+    "followthemoney>=4.10.0",
+]
 web = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
@@ -116,6 +119,7 @@ exclude = ["assets*", "docs*", "scripts*", "tests*"]
 [tool.setuptools.package-data]
 openosint = ["web/*.html", "web/**/*"]
 "openosint.playbooks" = ["recipes/*.yaml"]
+"openosint.graph" = ["data/*.json"]
 
 [tool.ruff]
 target-version = "py310"
