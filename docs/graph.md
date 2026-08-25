@@ -9,6 +9,28 @@ Entity Correlation Graph (`openosint/correlation.py`, `extractors.py`,
 subcommands, or agent tool loop changes unless you opt into the `graph` /
 `graph-dedup` extras and start writing to a `GraphStore`.
 
+## Data protection — read this before you write real data
+
+This is the first release where OpenOSINT persists personal data to disk.
+Before it, everything was transient.
+
+- The store holds real personal data on your own disk: names, emails,
+  organizational memberships, and probabilistic links between identities —
+  not just infrastructure facts.
+- **You, the operator, are the data controller for it** — not this project.
+  You decide what gets scanned, how long the store is kept, and who else
+  can read it.
+- `GraphStore.erase(entity_id, ...)` exists for exactly this reason: it
+  removes every statement about that entity (and any other entity's
+  statement that references it), its provenance, its bridge links, and its
+  resolution rows — physically, via SQLite's `secure_delete` plus a WAL
+  checkpoint and `VACUUM`, not just a soft delete. The tombstone it leaves
+  behind records only counts, never the erased id. It's slow — O(database
+  size), not O(erased rows) — so run it off the hot path.
+- A same_as suggestion is an unverified machine hypothesis until a human
+  accepts it. Nothing in this module ever auto-merges two entities.
+- The store is local-only. This project never transmits it anywhere.
+
 ## Why FtM, not a bespoke schema
 
 FollowTheMoney is a standard entity/relationship model used across the OSINT
