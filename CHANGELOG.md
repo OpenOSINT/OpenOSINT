@@ -9,6 +9,30 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.26.0] — 2026-08-25
+
+### Added
+- **Graph module (`openosint.graph`), an additive FollowTheMoney entity
+  graph** — turns scan results into FollowTheMoney (FtM) entities with
+  statement-level provenance, an append-only SQLite store, non-destructive
+  same_as deduplication, and a human review queue. It sits alongside the
+  existing Entity Correlation Graph without changing anything about it, and
+  is entirely opt-in behind two new extras. See
+  [docs/graph.md](docs/graph.md) for the full guide.
+  - `pip install "openosint[graph]"` (Python 3.10+) enables entity mapping,
+    the append-only store, and two new MCP tools: `graph_export` (streams
+    the graph as newline-delimited FtM entity JSON, with support for
+    excluding whole datasets — e.g. omitting all HaveIBeenPwned-derived
+    breach data) and `graph_neighbors` (traverses the graph from one entity
+    out to a given depth, with per-edge provenance).
+  - `pip install "openosint[graph-dedup]"` **requires Python 3.11+** — this
+    is nomenklatura's own requirement, not a choice made by this project;
+    `openosint` itself still supports Python 3.10+. It adds non-destructive
+    same_as candidate scoring and the third new MCP tool,
+    `graph_review_candidates`: nothing in this module ever auto-merges
+    entities — a human must explicitly accept or reject every suggested
+    match, and a rejected pair is never re-suggested.
+
 ### Fixed
 - **Breach findings never actually expanded an investigation.** The internal
   parser that turns `search_breach` (HaveIBeenPwned) results into pivotable
