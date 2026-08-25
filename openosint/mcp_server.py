@@ -313,6 +313,107 @@ async def list_tools() -> list[Tool]:
             ),
         ),
         Tool(
+            name="graph_export",
+            description=(
+                "Export the additive FollowTheMoney entity graph (openosint.graph) as "
+                "newline-delimited JSON, one FtM entity per line (.ftm-compatible). "
+                "Optionally exclude whole datasets, e.g. exclude_datasets=['openosint:hibp'] "
+                "to omit every breach-derived fact. Requires the 'graph' extra: "
+                "pip install 'openosint[graph]'."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {
+                        "exclude_datasets": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Dataset names to omit entirely, e.g. ['openosint:hibp'].",
+                        }
+                    },
+                }
+            ),
+        ),
+        Tool(
+            name="graph_neighbors",
+            description=(
+                "Traverse the FollowTheMoney entity graph from one entity id out to a given "
+                "depth, returning entities, edges, and per-edge provenance (collection "
+                "method, confidence, run id). Set cross_layer=true to also surface bridge "
+                "links into the raw infra correlation graph (IPs, domains, hashes). "
+                "Requires the 'graph' extra: pip install 'openosint[graph]'."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {
+                        "entity_id": {"type": "string"},
+                        "depth": {
+                            "type": "integer",
+                            "description": "Hops to traverse (default 1, capped at 5).",
+                        },
+                        "cross_layer": {
+                            "type": "boolean",
+                            "description": "Include bridge links into the raw infra graph.",
+                        },
+                    },
+                    "required": ["entity_id"],
+                }
+            ),
+        ),
+        Tool(
+            name="graph_review_candidates",
+            description=(
+                "Human review queue for suggested same_as entity matches produced by "
+                "graph-dedup cross-referencing. action='list' shows pending candidates "
+                "(score, identifying properties, human-readable match explanation), "
+                "filterable by schema/score range/dataset. action='decide' records a human "
+                "verdict on one pair: decision='accept' merges it (judgement='positive'), "
+                "decision='reject' permanently excludes it from future suggestions "
+                "(judgement='negative'). Nothing in this project ever auto-merges — only "
+                "this action can write judgement='positive'."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {
+                        "action": {"type": "string", "enum": ["list", "decide"]},
+                        "schema": {
+                            "type": "string",
+                            "enum": ["Person", "LegalEntity", "Organization", "UserAccount"],
+                            "description": "list filter: restrict to one FtM schema.",
+                        },
+                        "min_score": {
+                            "type": "number",
+                            "description": "list filter: minimum score.",
+                        },
+                        "max_score": {
+                            "type": "number",
+                            "description": "list filter: maximum score.",
+                        },
+                        "dataset": {
+                            "type": "string",
+                            "description": "list filter: either entity must carry a statement from this dataset.",
+                        },
+                        "entity_id": {
+                            "type": "string",
+                            "description": "decide: first entity of the pair.",
+                        },
+                        "canonical_id": {
+                            "type": "string",
+                            "description": "decide: second entity of the pair.",
+                        },
+                        "decision": {"type": "string", "enum": ["accept", "reject"]},
+                        "reviewer_id": {
+                            "type": "string",
+                            "description": "decide: reviewer identifier, recorded if given.",
+                        },
+                    },
+                    "required": ["action"],
+                }
+            ),
+        ),
+        Tool(
             name="investigate_multi",
             description=(
                 "Investigate multiple targets in parallel using the full OSINT tool chain. "
@@ -422,6 +523,14 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
     if name == "investigate_multi":
         return await _call_investigate_multi(arguments)
 
+    # Graph tools: dispatched separately (not via _HANDLERS) so that importing
+    # openosint.graph.mcp_tools — and therefore followthemoney — happens ONLY
+    # here, on first use of one of these three tools, never at module import
+    # time. That keeps every other, unrelated MCP tool working even when the
+    # `graph` extra is not installed.
+    if name in _GRAPH_TOOL_NAMES:
+        return await _call_graph_tool(name, arguments)
+
     try:
         if name not in _HANDLERS:
             raise ValueError(f"Unknown tool: '{name}'")
@@ -438,6 +547,61 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
         return CallToolResult(content=[TextContent(type="text", text=str(exc))], isError=True)
     except Exception as exc:
         logger.exception("Unhandled error in tool '%s'.", name)
+        return CallToolResult(
+            content=[TextContent(type="text", text=f"Internal error: {exc}")],
+            isError=True,
+        )
+
+
+_GRAPH_TOOL_NAMES = frozenset({"graph_export", "graph_neighbors", "graph_review_candidates"})
+
+
+async def _call_graph_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
+    should_use_json = bool(arguments.get("json_output", False))
+    try:
+        from openosint.graph.mcp_tools import (
+            run_graph_export,
+            run_graph_neighbors,
+            run_graph_review_candidates,
+        )
+
+        if name == "graph_export":
+            result = await run_graph_export(exclude_datasets=arguments.get("exclude_datasets"))
+            target = "graph-export"
+        elif name == "graph_neighbors":
+            result = await run_graph_neighbors(
+                arguments["entity_id"],
+                depth=int(arguments.get("depth", 1)),
+                cross_layer=bool(arguments.get("cross_layer", False)),
+            )
+            target = arguments["entity_id"]
+        else:
+            result = await run_graph_review_candidates(
+                arguments["action"],
+                schema=arguments.get("schema"),
+                min_score=arguments.get("min_score"),
+                max_score=arguments.get("max_score"),
+                dataset=arguments.get("dataset"),
+                entity_id=arguments.get("entity_id"),
+                canonical_id=arguments.get("canonical_id"),
+                decision=arguments.get("decision"),
+                reviewer_id=arguments.get("reviewer_id"),
+            )
+            target = arguments.get("entity_id", arguments["action"])
+
+        text = to_json(name, target, result) if should_use_json else result
+        return CallToolResult(content=[TextContent(type="text", text=text)], isError=False)
+    except ImportError as exc:
+        message = (
+            f"{name} requires the 'graph' extra (followthemoney), which is not installed in "
+            f"this environment. Install it with: pip install 'openosint[graph]' ({exc})"
+        )
+        return CallToolResult(content=[TextContent(type="text", text=message)], isError=True)
+    except (KeyError, ValueError) as exc:
+        logger.error("Validation error in graph tool '%s': %s", name, exc)
+        return CallToolResult(content=[TextContent(type="text", text=str(exc))], isError=True)
+    except Exception as exc:
+        logger.exception("Unhandled error in graph tool '%s'.", name)
         return CallToolResult(
             content=[TextContent(type="text", text=f"Internal error: {exc}")],
             isError=True,

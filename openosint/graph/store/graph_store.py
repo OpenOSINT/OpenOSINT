@@ -143,6 +143,27 @@ class GraphStore:
         ).fetchall()
         return [self._row_to_statement(r) for r in rows]
 
+    def get_all_statements(self, *, exclude_datasets: Iterable[str] = ()) -> Iterable[Statement]:
+        """Every statement in the store, entity-grouped, optionally skipping whole datasets.
+
+        A generator over the sqlite3 cursor, not a list — Phase 4's
+        graph_export streams entities out one at a time and should not need
+        to hold the whole store in memory to do it. exclude_datasets is
+        applied in SQL, before rows ever reach Python, so an excluded
+        dataset (e.g. "openosint:hibp") never gets fetched at all — this is
+        the mechanism that lets an export fully omit breach-derived facts.
+        """
+        exclude = list(exclude_datasets)
+        query = "SELECT * FROM statements"
+        params: list[str] = []
+        if exclude:
+            placeholders = ",".join("?" for _ in exclude)
+            query += f" WHERE dataset NOT IN ({placeholders})"
+            params.extend(exclude)
+        query += " ORDER BY entity_id, rowid"
+        for row in self._conn.execute(query, params):
+            yield self._row_to_statement(row)
+
     def get_provenance(self, statement_id: str) -> list[ProvenanceRecord]:
         """Every observation of *statement_id*, oldest first — the sidecar's full history."""
         rows = self._conn.execute(
@@ -240,6 +261,28 @@ class GraphStore:
             (entity_id, canonical_id, canonical_id, entity_id),
         ).fetchone()
         return row is not None
+
+    def pending_resolutions(self) -> list[Resolution]:
+        """Every pair whose LATEST resolution row is still judgement='unsure' — the human review queue.
+
+        Phase 4's graph_review_candidates lists exactly this. Once a human
+        decides a pair (judgement='positive' or 'negative'), that decision is
+        a NEWER row for the SAME pair (see module docstring on undirected-edge
+        semantics), so the pair drops out of this list immediately — and
+        has_resolution()'s "any row exists" check means run_crossref() never
+        re-suggests it either, so a rejected pair never comes back here on a
+        later crossref run.
+        """
+        rows = self._conn.execute("SELECT * FROM resolutions ORDER BY decided_at, id").fetchall()
+        latest_for_pair: dict[frozenset[str], sqlite3.Row] = {}
+        for r in rows:
+            pair = frozenset((r["entity_id"], r["canonical_id"]))
+            latest_for_pair[pair] = r  # later rows overwrite earlier in this dict
+        return [
+            self._row_to_resolution(r)
+            for r in latest_for_pair.values()
+            if r["judgement"] == "unsure"
+        ]
 
     def _active_pair_edges(self) -> dict[str, set[str]]:
         """Adjacency map of currently-active (latest-judgement='positive') resolution pairs.
