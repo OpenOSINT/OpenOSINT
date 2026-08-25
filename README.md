@@ -396,6 +396,19 @@ openosint footprint johndoe99
 
 ---
 
+## Graph module (optional)
+
+An additive [FollowTheMoney](https://followthemoney.tech/) entity graph —
+statement-level provenance, an append-only store, non-destructive same_as
+deduplication, and a human review queue — sits alongside the tools above
+without changing anything about them. Opt in with `pip install
+"openosint[graph]"` (Python 3.10+) or `"openosint[graph-dedup]"` (adds
+same_as scoring, needs Python 3.11+), then use it via three MCP tools:
+`graph_export`, `graph_neighbors`, `graph_review_candidates`. See
+[docs/graph.md](docs/graph.md) for the full guide and a worked example.
+
+---
+
 ## Interfaces
 
 ### Web UI
