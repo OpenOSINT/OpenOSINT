@@ -90,6 +90,9 @@ socks = [
 graph = [
     "followthemoney>=4.10.0",
 ]
+graph-dedup = [
+    "nomenklatura>=4.14.0; python_version>='3.11'",
+]
 web = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
