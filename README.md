@@ -23,6 +23,14 @@ mcp-name: io.github.OpenOSINT/openosint
 
 </div>
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
+       alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed independently by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel listing each statement with its dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field — matching values green, differing values amber — with the name-match feature explanation that produced the score; the reviewer clicks Accept and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
+       width="900" />
+  <p><em>Deterministic, synthetic-data demo — every entity shown is fictional; regenerate with <a href="demo/web_demo.py">demo/web_demo.py</a>.<br>
+  The entities are seeded at the statement layer, not produced by today's mappers — see <a href="demo/README.md">demo/README.md</a>.</em></p>
+</div>
+
 <!-- SPONSORS:START -->
 
 ### Featured Integrations
@@ -407,13 +415,10 @@ same_as scoring, needs Python 3.11+), then use it via three MCP tools:
 `graph_export`, `graph_neighbors`, `graph_review_candidates`. See
 [docs/graph.md](docs/graph.md) for the full guide and a worked example.
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-demo.gif"
-       alt="Graph module demo (synthetic data): two observations of a fictional organization land in the store from the openosint:github and openosint:whois datasets, each with run id and confidence; run_crossref scores the pair 0.828 and shows the name-match features that drove it; the candidate waits in the human review queue as 'unsure' with nothing auto-merged; a human accepts and canonical_for() returns one canonical entity; graph_export writes a .ftm file that ftm validate accepts with exit 0"
-       width="900" />
-  <p><em>Deterministic, synthetic-data demo — regenerate with <a href="demo/graph_demo.tape">demo/graph_demo.tape</a>.<br>
-  Worked example: the two entities are seeded at the statement layer, not produced by today's mappers — see <a href="demo/README.md">demo/README.md</a>.</em></p>
-</div>
+The same workflow is shown end to end — including the `.ftm` export that
+passes `ftm validate` — in the terminal demo in
+[docs/graph.md](docs/graph.md); the web UI walkthrough is the demo at the top
+of this README.
 
 ---
 

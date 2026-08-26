@@ -9,6 +9,14 @@ Entity Correlation Graph (`openosint/correlation.py`, `extractors.py`,
 subcommands, or agent tool loop changes unless you opt into the `graph` /
 `graph-dedup` extras and start writing to a `GraphStore`.
 
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-demo.gif"
+       alt="Graph module terminal demo (synthetic data): two observations of a fictional organization land in the store from the openosint:github and openosint:whois datasets, each with run id and confidence; run_crossref scores the pair 0.828 and shows the name-match features that drove it; the candidate waits in the human review queue as 'unsure' with nothing auto-merged; a human accepts and canonical_for() returns one canonical entity; graph_export writes a .ftm file that ftm validate accepts with exit 0"
+       width="900" />
+  <p><em>Deterministic, synthetic-data demo — every entity shown is fictional; regenerate with <a href="../demo/graph_demo.tape">demo/graph_demo.tape</a>.<br>
+  Worked example: the two entities are seeded at the statement layer, not produced by today's mappers — see <a href="../demo/README.md">demo/README.md</a>.</em></p>
+</div>
+
 ## Data protection — read this before you write real data
 
 This is the first release where OpenOSINT persists personal data to disk.

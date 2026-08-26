@@ -81,7 +81,8 @@ def cmd_seed() -> None:
                           ("website", "https://aurora-dynamics.example")])
     stmts_b = statements(ORG_B_ID, "openosint:whois",
                          [("name", "Aurora Dynamics Research B.V."),
-                          ("email", "registry@aurora-dynamics.example")])
+                          ("email", "registry@aurora-dynamics.example"),
+                          ("website", "https://aurora-dynamics.example")])
     provenance = [
         make_provenance(statement_id=s.id, run_id=RUN_GITHUB,
                         collection_method="map_github:company",
@@ -89,7 +90,10 @@ def cmd_seed() -> None:
         for s in stmts_a
     ] + [
         make_provenance(statement_id=s.id, run_id=RUN_WHOIS,
-                        collection_method="map_whois:name_org",
+                        # The website is the queried domain itself; the rest
+                        # comes off the registrant record.
+                        collection_method=("map_whois:domain" if s.prop == "website"
+                                           else "map_whois:name_org"),
                         extractor_confidence=0.80, collected_at=COLLECTED_AT)
         for s in stmts_b
     ]

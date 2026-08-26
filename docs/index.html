@@ -237,15 +237,15 @@ openosint [<b>-v</b>] [<b>--api-key</b> <u>key</u>]</pre>
   </div>
 </div>
 <div style="margin-bottom:14px;">
-  <p><b>Graph module</b> &mdash; provenance and human-reviewed deduplication</p>
+  <p><b>Graph module web UI</b> &mdash; provenance and human-reviewed deduplication</p>
   <video autoplay loop muted playsinline preload="metadata"
          style="max-width:100%; border:1px solid #333; display:block;">
-    <source src="assets/graph-demo.webm" type="video/webm">
-    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-demo.gif"
-         alt="Graph module demo (synthetic data): two observations of a fictional organization arrive from the openosint:github and openosint:whois datasets with per-statement provenance; run_crossref scores them 0.828 as a same_as candidate with a feature explanation; the candidate waits in the human review queue as 'unsure' and nothing auto-merges; a human accepts and canonical_for() returns one canonical entity; graph_export writes a .ftm file that ftm validate accepts with exit 0"
+    <source src="assets/graph-web-demo.webm" type="video/webm">
+    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
+         alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel with each statement's dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field with matching values green and differing values amber; the reviewer accepts and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
          style="max-width:100%; display:block;">
   </video>
-  <p style="margin-top:6px;"><em>Synthetic data only &mdash; every entity shown is fictional. Worked example: the entities are seeded at the statement layer, not produced by today's mappers &mdash; see <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/demo/README.md">demo/README.md</a>. Regenerate with <code>vhs demo/graph_demo.tape</code></em></p>
+  <p style="margin-top:6px;"><em>Synthetic data only &mdash; every entity shown is fictional. Worked example: the entities are seeded at the statement layer, not produced by today's mappers &mdash; see <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/demo/README.md">demo/README.md</a>. Regenerate with <code>python demo/web_demo.py</code>; the terminal walkthrough lives in <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/docs/graph.md">docs/graph.md</a></em></p>
 </div>
 </div>
 
