@@ -9,6 +9,28 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Local graph visualization in the web UI** — a new `/graph` explorer renders
+  the FollowTheMoney entity graph store (Cytoscape.js, vendored offline) with
+  node color/shape by schema, solid confirmed edges, dashed `same_as` candidate
+  edges labeled with their score, canonical-cluster grouping, and a node side
+  panel showing every statement with full provenance. Includes a **human review
+  queue** for `same_as` candidates: two entities aligned property-by-property
+  with provenance, the rule-based match score (labeled as such, not a
+  probability), and Accept / Reject / Skip / Undo — one pair at a time, no bulk
+  actions. New read-only, localhost-only endpoints (`/api/graph/subgraph`,
+  `/api/graph/entity`, `/api/graph/review/candidates`, `/api/graph/review/decide`)
+  read the local SQLite store only and make no outbound network calls.
+
+### Fixed
+- **The web UI loaded Cytoscape from a CDN, and one of those tags was already
+  broken in production.** `index.html` pulled `cytoscape` and `cytoscape-fcose`
+  from third-party CDNs; the `cytoscape-fcose` tag never actually worked (its
+  `cose-base`/`layout-base` dependencies were never loaded, so it silently fell
+  back to the built-in layout), and any CDN request leaks that the tool is
+  running to a third party. Cytoscape.js is now vendored into the repo and
+  served locally; the dead `cytoscape-fcose` CDN tag was removed.
+
 ## [2.26.0] — 2026-08-25
 
 ### Added

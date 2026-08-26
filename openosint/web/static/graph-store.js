@@ -232,14 +232,14 @@ function renderStmt(s) {
   </div>`;
 }
 
-// Phase C wires this to jump to the pair's review card. For now, surface the pair.
+// Clicking a dashed same_as edge jumps to that pair's review card.
 function onSameAsEdge(d) {
-  openSide(`<button class="close" onclick="document.getElementById('side').classList.remove('open')">✕</button>
-    <h2>same_as candidate</h2>
-    <span class="schema-chip" style="background:${CSS("--unsure")}">${esc(d.judgement || "unsure")}</span>
-    <div class="id">${esc(d.source)}<br>↕ ${d.scoreLabel}<br>${esc(d.target)}</div>
-    <p style="color:var(--muted);font-size:12px">The review queue UI (accept / reject) lands in the next phase; this edge will jump to its review card.</p>`);
-  window._pendingReviewPair = { entity_id: d.source, canonical_id: d.target, resolution_id: d.resolution_id };
+  if (d.judgement === "unsure") {
+    enterReview({ resolution_id: d.resolution_id, a: d.source, b: d.target });
+  } else {
+    // Already decided (accepted/rejected): no pending card to show.
+    showEntity(d.source);
+  }
 }
 
 // ---- helpers --------------------------------------------------------------
@@ -302,7 +302,293 @@ $("png").addEventListener("click", () => {
   a.download = "graph.png"; a.click();
 });
 
+// ===========================================================================
+// Review queue — human accept/reject of same_as candidates.
+// Every accept asserts two records are the same real entity. The UI is built
+// so that never feels automatic: one pair at a time, evidence side by side,
+// no bulk actions, and honest labeling of what the score is.
+// ===========================================================================
+
+const review = { queue: [], index: 0, busy: false, last: null };
+
+async function refreshReviewCount() {
+  try {
+    const r = await fetch("/api/graph/review/candidates");
+    if (!r.ok) return;
+    const data = await r.json();
+    $("reviewCount").textContent = data.candidates.length;
+  } catch (e) { /* leave stale count */ }
+}
+
+async function enterReview(focusPair) {
+  $("side").classList.remove("open");
+  $("review").classList.add("open");
+  $("rv-body").innerHTML = '<p class="rv-empty">Loading…</p>';
+  $("rv-foot").classList.remove("show");
+  let data;
+  try {
+    const r = await fetch("/api/graph/review/candidates");
+    if (r.status === 503) return renderReviewUnavailable();
+    if (!r.ok) { $("rv-body").innerHTML = `<p class="rv-empty">Error ${r.status}.</p>`; return; }
+    data = await r.json();
+  } catch (e) { $("rv-body").innerHTML = '<p class="rv-empty">Request failed.</p>'; return; }
+
+  review.queue = data.candidates;
+  $("reviewCount").textContent = review.queue.length;
+  review.index = 0;
+  if (focusPair) {
+    const i = review.queue.findIndex(
+      (c) => c.resolution_id === focusPair.resolution_id ||
+             pairEq(c, focusPair.a, focusPair.b));
+    if (i >= 0) review.index = i;
+  }
+  renderCard();
+}
+
+function pairEq(c, a, b) {
+  return (c.entity_id_a === a && c.entity_id_b === b) ||
+         (c.entity_id_a === b && c.entity_id_b === a);
+}
+
+function renderReviewUnavailable() {
+  $("rv-body").innerHTML =
+    "<div class='rv-empty'><h3>Graph module unavailable</h3><p>Install the optional extra: <code>pip install 'openosint[graph]'</code>.</p></div>";
+  $("rv-foot").classList.remove("show");
+}
+
+function renderEmptyQueue() {
+  $("rv-foot").classList.remove("show");
+  $("rv-body").innerHTML = `<div class="rv-empty">
+    <h3>No candidates pending</h3>
+    <p>Nothing is waiting for review. Same_as candidates appear here when a
+       cross-reference pass finds two entities that <em>might</em> be the same and
+       is not sure — they are never merged automatically.</p>
+    <p>They get created by running the dedup cross-reference over the graph store
+       (the <code>graph_dedup_crossref</code> path / MCP tool). Until then, this
+       queue stays empty.</p></div>`;
+}
+
+async function renderCard() {
+  if (review.index >= review.queue.length) return renderEmptyQueue();
+  const c = review.queue[review.index];
+  $("rv-pos").textContent = `${review.index + 1} of ${review.queue.length}`;
+
+  // Fetch both entities' full detail (statements + provenance) for the compare.
+  $("rv-body").innerHTML = '<p class="rv-empty">Loading pair…</p>';
+  let da, db;
+  try {
+    [da, db] = await Promise.all([fetchEntity(c.entity_id_a), fetchEntity(c.entity_id_b)]);
+  } catch (e) { $("rv-body").innerHTML = '<p class="rv-empty">Could not load entities.</p>'; return; }
+
+  const algo = c.algorithm_name ? `${esc(c.algorithm_name)}${c.algorithm_version ? " v" + esc(c.algorithm_version) : ""}` : "the dedup rules";
+  const scoreTxt = c.score != null ? Number(c.score).toFixed(2) : "?";
+  const html = `
+    <div class="score-row">
+      <span class="score">${scoreTxt}</span>
+      <span class="schema-chip" style="background:${schemaStyle(c.schema).color}">${esc(c.schema)}</span>
+    </div>
+    <div class="score-hint">Rule-based match score from ${algo} — <b>not</b> a probability.
+      It means the rules judged these fairly similar, not that they are ${Math.round((c.score||0)*100)}% likely the same.
+      You are asserting a real-world identity; decide on the evidence below.</div>
+    ${renderFeatures(c.explanation_text)}
+    ${renderCompare(da, db)}`;
+  $("rv-body").innerHTML = html;
+  $("rv-foot").classList.add("show");
+  setDecideDisabled(false);
+}
+
+async function fetchEntity(id) {
+  const r = await fetch("/api/graph/entity?entity_id=" + encodeURIComponent(id));
+  if (!r.ok) throw new Error("entity " + r.status);
+  return r.json();
+}
+
+// Turn the server's "name_literal=0.82 ('John Doe' vs 'Jon Doe'); ..." string
+// into readable rows. Never shows raw JSON. Falls back to the raw text.
+function renderFeatures(text) {
+  if (!text || text === "No feature explanation recorded.")
+    return `<div class="feat"><h4>Why suggested</h4><div class="frow"><span class="fname">No feature explanation recorded.</span></div></div>`;
+  const rows = text.split(";").map((part) => {
+    const m = part.trim().match(/^([\w.]+)\s*=\s*([\d.?]+)\s*(?:\((.*)\))?$/);
+    if (!m) return `<div class="frow"><span class="fname">${esc(part.trim())}</span></div>`;
+    const name = m[1].replace(/_/g, " ");
+    const score = m[2];
+    const vals = m[3] ? m[3].replace(/'/g, "").replace(/\s+vs\s+/, " ↔ ") : "";
+    return `<div class="frow"><span class="fname">${esc(name)}</span>
+      <span class="fval">${esc(vals)}</span><span class="fscore">${esc(score)}</span></div>`;
+  }).join("");
+  return `<div class="feat"><h4>Why suggested — which comparator fired</h4>${rows}</div>`;
+}
+
+// Prop -> [{value, dataset, method, conf}] from an entity detail payload.
+function sideProps(detail) {
+  const out = {};
+  for (const s of detail.statements) {
+    const top = (s.provenance || [])[0] || {};
+    (out[s.prop] ||= []).push({
+      value: s.value, dataset: s.dataset,
+      method: top.collection_method, conf: top.extractor_confidence,
+    });
+  }
+  return out;
+}
+
+const _PROP_ORDER = ["name", "username", "email", "domain", "phone", "country", "nationality"];
+
+function renderCompare(da, db) {
+  const pa = sideProps(da), pb = sideProps(db);
+  const props = Array.from(new Set([...Object.keys(pa), ...Object.keys(pb)]));
+  props.sort((x, y) => {
+    const ix = _PROP_ORDER.indexOf(x), iy = _PROP_ORDER.indexOf(y);
+    if (ix !== -1 || iy !== -1) return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy);
+    return x.localeCompare(y);
+  });
+
+  let grid = `<div class="cmp">
+    <div class="col-head">${esc(da.label)}<span class="cid">${esc(da.entity_id)}</span></div>
+    <div class="col-head">${esc(db.label)}<span class="cid">${esc(db.entity_id)}</span></div>`;
+  for (const prop of props) {
+    const av = pa[prop] || [], bv = pb[prop] || [];
+    const aset = new Set(av.map((x) => x.value)), bset = new Set(bv.map((x) => x.value));
+    grid += `<div class="prop-label">${esc(prop)}</div>`;
+    grid += cell(av, bset);
+    grid += cell(bv, aset);
+  }
+  grid += `</div>`;
+  return grid;
+}
+
+function cell(values, otherSet) {
+  if (!values.length) return `<div class="cell absent">—</div>`;
+  const inner = values.map((v) => {
+    const matched = otherSet.has(v.value);
+    const tag = matched ? '<span class="match-tag">match</span>' : '<span class="diff-tag">differs</span>';
+    const prov = `${esc(v.dataset || "")}${v.method ? " · " + esc(v.method) : ""}${v.conf != null ? " (" + Number(v.conf).toFixed(2) + ")" : ""}`;
+    return `${tag}<div>${esc(v.value)}</div><div class="prov">${prov}</div>`;
+  }).join('<hr style="border:none;border-top:1px dashed var(--border-50);margin:5px 0">');
+  const anyMatch = values.some((v) => otherSet.has(v.value));
+  const anyDiff = values.some((v) => !otherSet.has(v.value));
+  const cls = anyMatch && !anyDiff ? "match" : (anyDiff && !anyMatch ? "diff" : "");
+  return `<div class="cell ${cls}">${inner}</div>`;
+}
+
+function setDecideDisabled(state) {
+  review.busy = state;
+  for (const id of ["rv-accept", "rv-reject", "rv-skip"]) $(id).disabled = state;
+}
+
+async function decide(decision) {
+  if (review.busy || review.index >= review.queue.length) return;
+  const c = review.queue[review.index];
+  setDecideDisabled(true);              // guard 5: no double-fire during request
+  clearUndo();
+  let res;
+  try {
+    res = await postDecide(c.entity_id_a, c.entity_id_b, decision);
+  } catch (e) {
+    return showDecideError("Request failed — decision NOT recorded. Try again.");
+  }
+  if (!res.ok) {
+    return showDecideError(`Server error ${res.status} — decision NOT recorded.`);
+  }
+  // Only on confirmed success: drop from queue, refresh graph, offer undo, advance.
+  review.last = { a: c.entity_id_a, b: c.entity_id_b, decision };
+  review.queue.splice(review.index, 1);
+  $("reviewCount").textContent = review.queue.length;
+  setDecideDisabled(false);             // request done — clear busy so Undo can fire
+  await reloadGraphInPlace();
+  showUndo(decision);
+  renderCard();                         // stays on same index = next pending pair
+}
+
+async function postDecide(a, b, decision) {
+  const r = await fetch("/api/graph/review/decide", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ entity_id: a, canonical_id: b, decision }),
+  });
+  return { ok: r.ok, status: r.status };
+}
+
+function skip() {
+  if (review.busy) return;
+  clearUndo();
+  review.index += 1;                    // leave pending, move on
+  renderCard();
+}
+
+async function undo() {
+  if (!review.last || review.busy) return;
+  const { a, b, decision } = review.last;
+  // Revocation reuses the decide endpoint: append the opposite judgement (a new
+  // row, never a mutation) so an accidental merge is reversed / a reject undone.
+  const opposite = decision === "accept" ? "reject" : "accept";
+  const bar = $("rv-undo");
+  bar.querySelector("button").disabled = true;
+  let res;
+  try { res = await postDecide(a, b, opposite); }
+  catch (e) { bar.classList.add("err"); bar.querySelector(".msg").textContent = "Undo failed."; return; }
+  if (!res.ok) { bar.classList.add("err"); bar.querySelector(".msg").textContent = "Undo failed."; return; }
+  review.last = null;
+  await reloadGraphInPlace();
+  bar.innerHTML = `<span class="msg">Reversed — appended a ${opposite === "reject" ? "reject" : "accept"} row (nothing deleted).</span>`;
+  setTimeout(clearUndo, 4000);
+}
+
+function showUndo(decision) {
+  const bar = $("rv-undo");
+  bar.classList.remove("err");
+  bar.style.display = "flex";
+  bar.innerHTML = `<span class="msg">${decision === "accept" ? "Accepted ✓" : "Rejected"} — recorded.</span>
+    <button id="rv-undo-btn">Undo<span class="kbd">U</span></button>`;
+  $("rv-undo-btn").addEventListener("click", undo);
+}
+
+function clearUndo() { const b = $("rv-undo"); b.style.display = "none"; b.classList.remove("err"); b.innerHTML = ""; }
+
+function showDecideError(msg) {
+  const bar = $("rv-undo");
+  bar.style.display = "flex";
+  bar.classList.add("err");
+  bar.innerHTML = `<span class="msg">${esc(msg)}</span>`;
+  setDecideDisabled(false);             // re-enable so they can retry — do NOT advance
+}
+
+async function reloadGraphInPlace() {
+  if (cy && $("entity").value.trim()) { await load(); }
+}
+
+function exitReview() { $("review").classList.remove("open"); clearUndo(); }
+
+// Show the current pair's two entities in the graph, rooted at side A.
+function showPairInGraph(e) {
+  e && e.preventDefault();
+  if (review.index >= review.queue.length) return;
+  const c = review.queue[review.index];
+  $("entity").value = c.entity_id_a;
+  load();
+}
+
+$("reviewBtn").addEventListener("click", () => enterReview());
+$("rv-close").addEventListener("click", exitReview);
+$("rv-accept").addEventListener("click", () => decide("accept"));
+$("rv-reject").addEventListener("click", () => decide("reject"));
+$("rv-skip").addEventListener("click", skip);
+$("rv-showgraph").addEventListener("click", showPairInGraph);
+
+// Keyboard: only while the review panel is open and not typing in an input.
+document.addEventListener("keydown", (e) => {
+  if (!$("review").classList.contains("open")) return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test((e.target.tagName || ""))) return;
+  const k = e.key.toLowerCase();
+  if (k === "a") { e.preventDefault(); decide("accept"); }
+  else if (k === "r") { e.preventDefault(); decide("reject"); }
+  else if (k === "s") { e.preventDefault(); skip(); }
+  else if (k === "u") { e.preventDefault(); undo(); }
+  else if (k === "escape") exitReview();
+});
+
 drawLegend();
+refreshReviewCount();
 const initial = new URLSearchParams(location.search).get("entity_id");
 if (initial) { $("entity").value = initial; load(); }
 else $("empty").classList.add("show");
