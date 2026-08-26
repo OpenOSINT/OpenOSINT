@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OpenOSINT</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
+<!-- All assets are local — an OSINT tool must not announce its execution to CDNs.
+     See static/fonts/README.md and static/vendor/*/README.md for provenance. -->
+<link rel="stylesheet" href="/static/fonts/fonts.css">
+<link rel="stylesheet" href="/static/vendor/tailwindcss/tailwind.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   html, body { height: 100%; overflow: hidden; background-color: var(--bg); margin: 0; padding: 0; }
@@ -1448,7 +1448,7 @@ document.addEventListener('alpine:init', () => {
 </script>
 <script src="/static/config.js"></script>
 <script src="/static/vendor/cytoscape/cytoscape.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<script defer src="/static/vendor/alpinejs/alpine.min.js"></script>
 <script type="module">
   import { runAgentLoop } from '/static/agent-loop.js';
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';

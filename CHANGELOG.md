@@ -30,6 +30,16 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   back to the built-in layout), and any CDN request leaks that the tool is
   running to a third party. Cytoscape.js is now vendored into the repo and
   served locally; the dead `cytoscape-fcose` CDN tag was removed.
+- **The web UI no longer contacts any third-party CDN.** The remaining
+  runtime CDN dependencies — Alpine.js (jsdelivr), Tailwind
+  (`cdn.tailwindcss.com`, the browser JIT build Tailwind itself says is not
+  for production), and the Inter / JetBrains Mono fonts (Google Fonts, which
+  transmits the visitor's IP to Google on every page load) — are now served
+  locally: Alpine.js 3.14.1 is vendored, Tailwind 3.4.17 is a prebuilt CSS
+  file committed to the repo (regenerated with the standalone CLI, no Node
+  toolchain required), and the fonts are self-hosted woff2 files with their
+  SIL OFL 1.1 licenses recorded alongside. Loading the web UI now makes zero
+  external requests.
 
 ## [2.26.0] — 2026-08-25
 

@@ -30,6 +30,9 @@ Before it, everything was transient.
 - A same_as suggestion is an unverified machine hypothesis until a human
   accepts it. Nothing in this module ever auto-merges two entities.
 - The store is local-only. This project never transmits it anywhere.
+- The local web UI makes no external requests: every script, stylesheet, and
+  font it loads is served from the repo itself (vendored or self-hosted), so
+  opening it reveals nothing — not even an IP address — to any third party.
 
 ## Why FtM, not a bespoke schema
 
