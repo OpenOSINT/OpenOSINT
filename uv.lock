@@ -2616,7 +2616,7 @@ requires-dist = [
     { name = "followthemoney", marker = "extra == 'graph'", specifier = ">=4.10.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "itsdangerous", specifier = ">=2.1.0" },
-    { name = "mcp", specifier = ">=1.0.0" },
+    { name = "mcp", specifier = ">=1.0.0,<2" },
     { name = "nomenklatura", marker = "python_full_version >= '3.11' and extra == 'graph-dedup'", specifier = ">=4.14.0" },
     { name = "ollama", marker = "extra == 'all'", specifier = ">=0.3.0" },
     { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.3.0" },

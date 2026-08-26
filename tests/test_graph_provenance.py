@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
-
 import pytest
 
-from openosint.graph.provenance import make_provenance
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from datetime import datetime, timedelta, timezone  # noqa: E402
+
+from openosint.graph.provenance import make_provenance  # noqa: E402
 
 
 def _valid_kwargs(**overrides):

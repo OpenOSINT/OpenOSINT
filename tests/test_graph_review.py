@@ -9,20 +9,24 @@ need run_crossref (real Phase 3 scoring) and is guarded accordingly.
 
 from __future__ import annotations
 
-import json
-import sys
-from datetime import datetime, timezone
+import pytest
 
-from followthemoney.statement import Statement
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
 
-from openosint.graph.mapping import EmissionResult
-from openosint.graph.review import (
+import json  # noqa: E402
+import sys  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+from followthemoney.statement import Statement  # noqa: E402
+
+from openosint.graph.mapping import EmissionResult  # noqa: E402
+from openosint.graph.review import (  # noqa: E402
     PendingCandidate,
     decide_review_candidate,
     list_review_candidates,
 )
-from openosint.graph.store import GraphStore
-from openosint.graph.store.resolutions import make_resolution
+from openosint.graph.store import GraphStore  # noqa: E402
+from openosint.graph.store.resolutions import make_resolution  # noqa: E402
 
 _NOW = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc)
 _ISO = _NOW.isoformat()

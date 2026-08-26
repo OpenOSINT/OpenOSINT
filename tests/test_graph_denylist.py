@@ -3,7 +3,11 @@
 
 from __future__ import annotations
 
-from openosint.graph.denylist import is_privacy_masked
+import pytest
+
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from openosint.graph.denylist import is_privacy_masked  # noqa: E402
 
 
 class TestIsPrivacyMasked:

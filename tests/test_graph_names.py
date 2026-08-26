@@ -3,7 +3,11 @@
 
 from __future__ import annotations
 
-from openosint.graph.names import extract_github_name, extract_whois_registrant_name
+import pytest
+
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from openosint.graph.names import extract_github_name, extract_whois_registrant_name  # noqa: E402
 
 
 class TestExtractGithubName:

@@ -7,12 +7,16 @@ followthemoney (the `graph` extra), same as entity_proxy.py.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import pytest
 
-from openosint.correlation import EntityType, make_entity
-from openosint.graph.export import export_entities
-from openosint.graph.mapping import map_breach, map_github
-from openosint.graph.store import GraphStore
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from datetime import datetime, timezone  # noqa: E402
+
+from openosint.correlation import EntityType, make_entity  # noqa: E402
+from openosint.graph.export import export_entities  # noqa: E402
+from openosint.graph.mapping import map_breach, map_github  # noqa: E402
+from openosint.graph.store import GraphStore  # noqa: E402
 
 _NOW = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc)
 

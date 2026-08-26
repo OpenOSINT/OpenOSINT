@@ -18,18 +18,21 @@ same knob the MCP tools read — so the web and MCP paths hit the same store.
 
 from __future__ import annotations
 
-import json
-import sys
-from datetime import datetime, timezone
-
 import pytest
-import pytest_asyncio
-from followthemoney.statement import Statement
-from httpx import ASGITransport, AsyncClient
 
-from openosint.graph.mapping import EmissionResult
-from openosint.graph.store import GraphStore
-from openosint.graph.store.resolutions import make_resolution
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+import json  # noqa: E402
+import sys  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
+
+import pytest_asyncio  # noqa: E402
+from followthemoney.statement import Statement  # noqa: E402
+from httpx import ASGITransport, AsyncClient  # noqa: E402
+
+from openosint.graph.mapping import EmissionResult  # noqa: E402
+from openosint.graph.store import GraphStore  # noqa: E402
+from openosint.graph.store.resolutions import make_resolution  # noqa: E402
 
 _DATASET = "openosint:test"
 _OTHER_DATASET = "openosint:github"

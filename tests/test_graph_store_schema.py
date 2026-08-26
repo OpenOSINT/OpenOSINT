@@ -3,9 +3,13 @@
 
 from __future__ import annotations
 
-import sqlite3
+import pytest
 
-from openosint.graph.store import GraphStore
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+import sqlite3  # noqa: E402
+
+from openosint.graph.store import GraphStore  # noqa: E402
 
 
 class TestGraphStoreSetup:

@@ -3,10 +3,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import pytest
 
-from openosint.graph.store import GraphStore
-from openosint.graph.store.resolutions import make_resolution
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from datetime import datetime, timezone  # noqa: E402
+
+from openosint.graph.store import GraphStore  # noqa: E402
+from openosint.graph.store.resolutions import make_resolution  # noqa: E402
 
 _NOW = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc)
 _LATER = datetime(2026, 8, 26, 12, 0, 0, tzinfo=timezone.utc)

@@ -23,6 +23,14 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   read the local SQLite store only and make no outbound network calls.
 
 ### Fixed
+- **A fresh install got a broken MCP server — the `mcp` dependency is now
+  pinned to `>=1.0.0,<2`.** The previous requirement (`mcp>=1.0.0`) let a
+  clean install resolve mcp 2.x, whose breaking API changes (`Server.list_tools`
+  and `mcp.server.fastmcp` were removed) make `openosint.mcp_server` crash on
+  import. **This affects 2.26.0: a fresh `pip install openosint==2.26.0` today
+  installs a non-functional MCP server.** Existing environments that already
+  had mcp 1.x are unaffected. Upgrade to 2.27.0, or in an affected 2.26.0
+  environment run `pip install "mcp<2"`.
 - **The web UI loaded Cytoscape from a CDN, and one of those tags was already
   broken in production.** `index.html` pulled `cytoscape` and `cytoscape-fcose`
   from third-party CDNs; the `cytoscape-fcose` tag never actually worked (its

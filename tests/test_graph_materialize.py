@@ -9,10 +9,14 @@ records back into a `notes`-shaped string, the only place that string exists.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import pytest
 
-from openosint.graph.materialize import breach_notes_for_statement
-from openosint.graph.provenance import make_provenance
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from datetime import datetime, timezone  # noqa: E402
+
+from openosint.graph.materialize import breach_notes_for_statement  # noqa: E402
+from openosint.graph.provenance import make_provenance  # noqa: E402
 
 _NOW = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc)
 

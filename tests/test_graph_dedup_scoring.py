@@ -22,6 +22,8 @@ import pytest
 if sys.version_info < (3, 11):
     pytest.skip("requires Python >= 3.11 (graph-dedup extra)", allow_module_level=True)
 
+pytest.importorskip("nomenklatura", reason="requires the 'graph-dedup' extra")
+
 from followthemoney import model  # noqa: E402
 
 from openosint.graph.dedup.scoring import explanation_to_dict, score_pair  # noqa: E402

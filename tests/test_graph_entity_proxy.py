@@ -8,12 +8,15 @@ lives outside the nomenklatura-gated openosint.graph.dedup package.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 import pytest
-from followthemoney.statement import Statement
 
-from openosint.graph.entity_proxy import build_entity_proxy
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from datetime import datetime, timezone  # noqa: E402
+
+from followthemoney.statement import Statement  # noqa: E402
+
+from openosint.graph.entity_proxy import build_entity_proxy  # noqa: E402
 
 _NOW_ISO = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc).isoformat()
 

@@ -3,7 +3,11 @@
 
 from __future__ import annotations
 
-from openosint.graph.datasets import dataset_for_tool
+import pytest
+
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from openosint.graph.datasets import dataset_for_tool  # noqa: E402
 
 
 class TestDatasetForTool:

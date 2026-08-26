@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import pytest
 
-from openosint.graph.dedup_guard import MIN_PYTHON, check_python_version
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+
+from openosint.graph.dedup_guard import MIN_PYTHON, check_python_version  # noqa: E402
 
 
 class TestCheckPythonVersion:

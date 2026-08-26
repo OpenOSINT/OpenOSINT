@@ -10,6 +10,8 @@ import pytest
 if sys.version_info < (3, 11):
     pytest.skip("requires Python >= 3.11 (graph-dedup extra)", allow_module_level=True)
 
+pytest.importorskip("nomenklatura", reason="requires the 'graph-dedup' extra")
+
 from openosint.graph.dedup.candidates import (  # noqa: E402
     MATCHABLE_SCHEMAS,
     block_candidates,

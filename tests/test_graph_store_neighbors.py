@@ -3,13 +3,20 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import pytest
 
-from followthemoney.statement import Statement
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
 
-from openosint.graph.mapping import EmissionResult
-from openosint.graph.store import GraphStore
-from openosint.graph.store.neighbors import NeighborCandidate, rank_neighbors_for_truncation
+from datetime import datetime, timezone  # noqa: E402
+
+from followthemoney.statement import Statement  # noqa: E402
+
+from openosint.graph.mapping import EmissionResult  # noqa: E402
+from openosint.graph.store import GraphStore  # noqa: E402
+from openosint.graph.store.neighbors import (  # noqa: E402
+    NeighborCandidate,
+    rank_neighbors_for_truncation,
+)
 
 _DATASET = "openosint:test"
 _NOW_ISO = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc).isoformat()

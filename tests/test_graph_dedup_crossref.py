@@ -18,6 +18,8 @@ import pytest
 if sys.version_info < (3, 11):
     pytest.skip("requires Python >= 3.11 (graph-dedup extra)", allow_module_level=True)
 
+pytest.importorskip("nomenklatura", reason="requires the 'graph-dedup' extra")
+
 from datetime import datetime, timezone  # noqa: E402
 
 from openosint.correlation import EntityType, make_entity  # noqa: E402

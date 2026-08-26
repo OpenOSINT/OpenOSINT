@@ -3,11 +3,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import pytest
 
-from openosint.correlation import EntityType, make_entity
-from openosint.graph.identity import entity_id_for
-from openosint.graph.mapping import map_github
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+from datetime import datetime, timezone  # noqa: E402
+
+from openosint.correlation import EntityType, make_entity  # noqa: E402
+from openosint.graph.identity import entity_id_for  # noqa: E402
+from openosint.graph.mapping import map_github  # noqa: E402
 
 _SEED = make_entity(EntityType.USERNAME, "octocat", 1.0)
 _NOW = datetime(2026, 8, 25, 12, 0, 0, tzinfo=timezone.utc)

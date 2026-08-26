@@ -5,7 +5,10 @@ from __future__ import annotations
 
 import pytest
 
-from openosint.graph.identity import entity_id_for
+pytest.importorskip("followthemoney", reason="requires the 'graph' extra")
+
+
+from openosint.graph.identity import entity_id_for  # noqa: E402
 
 
 class TestEntityIdFor:
