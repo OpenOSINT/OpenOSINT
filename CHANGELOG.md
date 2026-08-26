@@ -7,7 +7,7 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [Unreleased]
+## [2.27.0] — 2026-08-26
 
 ### Added
 - **Local graph visualization in the web UI** — a new `/graph` explorer renders
