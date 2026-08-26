@@ -10,6 +10,7 @@ Phase 4) wrap calls in asyncio.to_thread(), the same pattern search_whois.py
 already uses for its own blocking call.
 """
 
+from openosint.graph.store.db_path import default_db_path
 from openosint.graph.store.graph_store import GraphStore
 from openosint.graph.store.neighbors import (
     NeighborCandidate,
@@ -25,6 +26,7 @@ __all__ = [
     "NeighborCandidate",
     "NeighborResult",
     "Resolution",
+    "default_db_path",
     "make_resolution",
     "rank_neighbors_for_truncation",
 ]

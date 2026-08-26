@@ -782,6 +782,32 @@ class OpenAITestRequest(BaseModel):
     openai_api_key: str = ""
 
 
+class GraphDecideRequest(BaseModel):
+    """Body for POST /api/graph/review/decide — a human verdict on one same_as pair."""
+
+    entity_id: str
+    canonical_id: str
+    decision: str  # "accept" | "reject"
+    reviewer_id: str | None = None
+
+
+# The graph routes read only the local SQLite graph store. This is the single
+# response every graph route returns when the optional `graph` extra
+# (followthemoney) isn't installed, so the rest of the web UI keeps working.
+def _graph_unavailable() -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "error",
+            "graph_available": False,
+            "message": (
+                "Graph features require the 'graph' extra. Install it with: "
+                "pip install 'openosint[graph]'"
+            ),
+        },
+        status_code=503,
+    )
+
+
 def _select_chat_backend(req: "ChatRequest") -> str:
     """Resolve which AI backend to use for a chat request: openai | ollama | claude."""
     has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
@@ -1730,6 +1756,144 @@ def create_app() -> FastAPI:
                 "X-Accel-Buffering": "no",
             },
         )
+
+    # ------------------------------------------------------------------
+    # Graph routes — read the LOCAL SQLite graph store only. No outbound
+    # network calls of any kind. followthemoney is imported lazily inside
+    # each handler (via openosint.graph.web_view / .review) so a missing
+    # `graph` extra degrades to 503 here and leaves every other route working.
+    # ------------------------------------------------------------------
+
+    @app.get("/api/graph/subgraph")
+    async def graph_subgraph(
+        entity_id: str,
+        depth: int = 1,
+        cross_layer: bool = False,
+        dataset: str | None = None,
+    ):
+        try:
+            from openosint.graph.web_view import (
+                build_subgraph,
+                is_valid_entity_id,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if not is_valid_entity_id(entity_id):
+            raise HTTPException(400, "invalid entity_id")
+        if depth < 0:
+            raise HTTPException(400, "depth must be >= 0")
+        if dataset is not None and not dataset.strip():
+            dataset = None
+
+        def _work() -> dict:
+            store = open_default_store()
+            try:
+                return build_subgraph(
+                    store,
+                    entity_id=entity_id,
+                    depth=depth,
+                    cross_layer=cross_layer,
+                    dataset=dataset,
+                )
+            finally:
+                store.close()
+
+        return await asyncio.to_thread(_work)
+
+    @app.get("/api/graph/review/candidates")
+    async def graph_review_candidates(
+        schema: str | None = None,
+        min_score: float | None = None,
+        max_score: float | None = None,
+        dataset: str | None = None,
+    ):
+        try:
+            from dataclasses import asdict
+
+            from openosint.graph.review import list_review_candidates
+            from openosint.graph.web_view import open_default_store
+        except ImportError:
+            return _graph_unavailable()
+
+        def _work() -> list[dict]:
+            store = open_default_store()
+            try:
+                candidates = list_review_candidates(
+                    store,
+                    schema=schema,
+                    min_score=min_score,
+                    max_score=max_score,
+                    dataset=dataset,
+                )
+                return [asdict(c) for c in candidates]
+            finally:
+                store.close()
+
+        return {"candidates": await asyncio.to_thread(_work)}
+
+    @app.post("/api/graph/review/decide")
+    async def graph_review_decide(req: GraphDecideRequest):
+        try:
+            from openosint.graph.review import decide_review_candidate
+            from openosint.graph.web_view import (
+                is_valid_entity_id,
+                latest_resolution_for_pair,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if req.decision not in ("accept", "reject"):
+            raise HTTPException(400, "decision must be 'accept' or 'reject'")
+        if not is_valid_entity_id(req.entity_id) or not is_valid_entity_id(req.canonical_id):
+            raise HTTPException(400, "invalid entity_id or canonical_id")
+        if req.entity_id == req.canonical_id:
+            raise HTTPException(400, "entity_id and canonical_id must differ")
+
+        judgement = "positive" if req.decision == "accept" else "negative"
+
+        def _work() -> dict:
+            from datetime import datetime, timezone
+
+            store = open_default_store()
+            try:
+                # Idempotent: if the pair's latest row already carries this
+                # judgement, a repeat click (or replay) appends nothing —
+                # return the existing resolution, keeping decision history clean.
+                existing = latest_resolution_for_pair(store, req.entity_id, req.canonical_id)
+                if existing is not None and existing.judgement == judgement:
+                    resolution_id = existing.id
+                    idempotent = True
+                else:
+                    resolution = decide_review_candidate(
+                        store,
+                        entity_id=req.entity_id,
+                        canonical_id=req.canonical_id,
+                        judgement=judgement,
+                        decided_at=datetime.now(timezone.utc),
+                        reviewer_id=req.reviewer_id,
+                    )
+                    resolution_id = resolution.id
+                    idempotent = False
+
+                canonical = store.canonical_for(req.entity_id)
+                return {
+                    "status": "ok",
+                    "resolution_id": resolution_id,
+                    "idempotent": idempotent,
+                    "judgement": judgement,
+                    "decision": req.decision,
+                    "entity_id": req.entity_id,
+                    "canonical_id": req.canonical_id,
+                    "canonical": canonical,
+                    "cluster": store.members_of_canonical(canonical),
+                }
+            finally:
+                store.close()
+
+        return await asyncio.to_thread(_work)
 
     # ------------------------------------------------------------------
     # Static mounts — docs, then catch-all for frontend

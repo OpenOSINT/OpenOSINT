@@ -26,16 +26,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
 from datetime import datetime, timezone
-from pathlib import Path
 
-
-def _default_db_path() -> Path:
-    override = os.environ.get("OPENOSINT_GRAPH_DB")
-    path = Path(override) if override else Path.home() / ".openosint" / "graph.db"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
+# Leaf module — imports only os/pathlib, never followthemoney — so importing it
+# here does not violate this module's "no heavy imports at top level" contract.
+from openosint.graph.store.db_path import default_db_path
 
 
 async def run_graph_export(*, exclude_datasets: list[str] | None = None) -> str:
@@ -45,7 +40,7 @@ async def run_graph_export(*, exclude_datasets: list[str] | None = None) -> str:
         from openosint.graph.export import export_entities
         from openosint.graph.store import GraphStore
 
-        store = GraphStore(_default_db_path())
+        store = GraphStore(default_db_path())
         try:
             lines = [
                 json.dumps(entity, sort_keys=True)
@@ -66,7 +61,7 @@ async def run_graph_neighbors(entity_id: str, *, depth: int = 1, cross_layer: bo
     def _work() -> str:
         from openosint.graph.store import GraphStore
 
-        store = GraphStore(_default_db_path())
+        store = GraphStore(default_db_path())
         try:
             result = store.neighbors(entity_id, depth=depth, cross_layer=cross_layer)
             if not result.entities:
@@ -141,7 +136,7 @@ async def run_graph_review_candidates(
         from openosint.graph.review import decide_review_candidate, list_review_candidates
         from openosint.graph.store import GraphStore
 
-        store = GraphStore(_default_db_path())
+        store = GraphStore(default_db_path())
         try:
             if action == "list":
                 candidates = list_review_candidates(
