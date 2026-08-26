@@ -282,3 +282,50 @@ def build_subgraph(
             "empty": total == 0,
         },
     }
+
+
+def entity_detail(store: GraphStore, entity_id: str) -> dict | None:
+    """Every statement about *entity_id* with its full provenance, for the side panel.
+
+    Returns None when the entity has no statements (unknown or erased). Each
+    statement carries dataset/origin (from the Statement) and its provenance
+    records (collection_method, extractor_confidence, run_id, collected_at) so
+    the panel shows how each fact was learned and how sure the extractor was.
+    """
+    statements = store.get_statements_by_entity(entity_id)
+    if not statements:
+        return None
+
+    stmt_views = []
+    for stmt in statements:
+        provenance = [
+            {
+                "run_id": rec.run_id,
+                "collection_method": rec.collection_method,
+                "extractor_confidence": rec.extractor_confidence,
+                "collected_at": rec.collected_at.isoformat(),
+                "breach_name": rec.breach_name,
+            }
+            for rec in store.get_provenance(stmt.id)
+        ]
+        stmt_views.append(
+            {
+                "prop": stmt.prop,
+                "value": stmt.value,
+                "schema": stmt.schema,
+                "dataset": stmt.dataset,
+                "origin": stmt.origin,
+                "provenance": provenance,
+            }
+        )
+
+    canonical = store.canonical_for(entity_id)
+    return {
+        "entity_id": entity_id,
+        "schema": statements[0].schema,
+        "label": _display_name(statements, entity_id[:10]),
+        "canonical_id": canonical,
+        "cluster": store.members_of_canonical(canonical),
+        "datasets": sorted({s.dataset for s in statements}),
+        "statements": stmt_views,
+    }

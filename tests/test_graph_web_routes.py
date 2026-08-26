@@ -246,6 +246,48 @@ class TestSubgraph:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/graph/entity  (node side-panel detail)
+# ---------------------------------------------------------------------------
+
+
+class TestEntityDetail:
+    async def test_returns_statements_with_provenance(self, client, graph_db):
+        from openosint.graph.provenance import make_provenance
+
+        store = GraphStore(graph_db)
+        stmt = _stmt("person-1", "name", "Person", "John Doe", dataset=_OTHER_DATASET)
+        prov = make_provenance(
+            statement_id=stmt.id,
+            run_id="run-1",
+            collection_method="search_github",
+            extractor_confidence=0.85,
+            collected_at=_NOW,
+        )
+        store.append(EmissionResult(statements=(stmt,), provenance=(prov,), bridge_links=()))
+        store.close()
+
+        resp = await client.get("/api/graph/entity", params={"entity_id": "person-1"})
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["schema"] == "Person"
+        assert body["label"] == "John Doe"
+        s0 = body["statements"][0]
+        assert s0["prop"] == "name"
+        assert s0["dataset"] == _OTHER_DATASET
+        p0 = s0["provenance"][0]
+        assert p0["collection_method"] == "search_github"
+        assert p0["extractor_confidence"] == 0.85
+
+    async def test_unknown_entity_is_404(self, client, graph_db):
+        resp = await client.get("/api/graph/entity", params={"entity_id": "nope-nope"})
+        assert resp.status_code == 404
+
+    async def test_invalid_entity_id_is_400(self, client, graph_db):
+        resp = await client.get("/api/graph/entity", params={"entity_id": "bad id!!"})
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
 # GET /api/graph/review/candidates
 # ---------------------------------------------------------------------------
 

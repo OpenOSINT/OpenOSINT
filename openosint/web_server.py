@@ -1802,6 +1802,32 @@ def create_app() -> FastAPI:
 
         return await asyncio.to_thread(_work)
 
+    @app.get("/api/graph/entity")
+    async def graph_entity(entity_id: str):
+        try:
+            from openosint.graph.web_view import (
+                entity_detail,
+                is_valid_entity_id,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if not is_valid_entity_id(entity_id):
+            raise HTTPException(400, "invalid entity_id")
+
+        def _work() -> dict | None:
+            store = open_default_store()
+            try:
+                return entity_detail(store, entity_id)
+            finally:
+                store.close()
+
+        detail = await asyncio.to_thread(_work)
+        if detail is None:
+            raise HTTPException(404, "entity not found")
+        return detail
+
     @app.get("/api/graph/review/candidates")
     async def graph_review_candidates(
         schema: str | None = None,
@@ -1894,6 +1920,13 @@ def create_app() -> FastAPI:
                 store.close()
 
         return await asyncio.to_thread(_work)
+
+    @app.get("/graph", include_in_schema=False)
+    async def graph_page():
+        page = _WEB_DIR / "graph.html"
+        if page.exists():
+            return HTMLResponse(page.read_text())
+        return HTMLResponse("<h1>graph.html not found</h1>", status_code=404)
 
     # ------------------------------------------------------------------
     # Static mounts — docs, then catch-all for frontend
