@@ -16,11 +16,13 @@ Routes:
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import json
 import os
 import re
 import secrets
 import shutil
+import socket
 import time
 from collections import deque as _deque
 from pathlib import Path
@@ -36,7 +38,7 @@ except ImportError:
     _httpx = None  # type: ignore
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -563,6 +565,144 @@ def _is_setup_complete() -> bool:
     return any(os.environ.get(k, "").strip() for k in _KNOWN_ENV_KEYS)
 
 
+# ---------------------------------------------------------------------------
+# Client-supplied AI backend guards (GHSA-q6cw-g86h-m2cq)
+#
+# GHSA-cqr4-hcfp-m6m4 made /api/setup loopback-only, but /api/chat and
+# /api/openai/test still accept openai_base_url + openai_api_key in the
+# request body. If a caller supplies a base_url they control and leaves
+# api_key blank, the old code filled api_key from os.environ — shipping the
+# *server's* credential to the *attacker's* host. The fix is structural: a
+# request-supplied destination and an environment-sourced credential must
+# never be used together (see chat() / openai_test() below, which apply
+# this to both endpoints identically). Everything here is gated behind
+# OPENOSINT_ALLOW_CLIENT_BACKEND (off by default) — with it unset, a
+# request-supplied base_url/host is rejected outright and the coupling
+# never has a chance to happen.
+# ---------------------------------------------------------------------------
+
+
+def _byo_backend_enabled() -> bool:
+    """OPENOSINT_ALLOW_CLIENT_BACKEND — off by default. Gates every request-
+    supplied chat backend destination (openai_base_url, ollama_host)."""
+    return os.environ.get("OPENOSINT_ALLOW_CLIENT_BACKEND", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _parse_csv_env(name: str) -> list[str]:
+    return [v.strip() for v in os.environ.get(name, "").split(",") if v.strip()]
+
+
+# Every rejection reachable from a client-supplied backend attempt — the
+# flag being off, a malformed URL, a disallowed destination IP class, an
+# unresolvable host, an OPENOSINT_ALLOWED_BASE_URLS mismatch, or a rejected
+# browser origin — must produce this exact status + body. If any of these
+# carried a distinct message, a prober could tell "the flag is off" apart
+# from "the flag is on but this particular request was rejected", which is
+# itself a leak of server configuration state (an oracle inside the oracle
+# fix). The cost is a less specific error for legitimate self-hosters
+# debugging their own setup — check server logs, not the HTTP response, to
+# see which of these actually fired.
+def _reject_client_backend() -> None:
+    raise HTTPException(403, "client-supplied backend rejected")
+
+
+async def _validate_outbound_base_url(url: str) -> str:
+    """Validate a client-supplied backend base URL before it is used for an
+    outbound request. Only ever called for request-supplied URLs — env-
+    configured defaults (OPENAI_BASE_URL, the localhost:8080/11434 fallbacks)
+    skip this entirely so they keep working unconditionally.
+
+    Policy:
+      * scheme must be http/https; no userinfo (user:pass@) in the URL.
+      * OPENOSINT_ALLOWED_BASE_URLS, if set, is a strict per-host allowlist
+        that overrides the IP checks below — an operator who has pinned
+        trusted hosts has already accepted the DNS-rebinding risk knowingly.
+      * Otherwise: link-local (169.254.0.0/16, fe80::/10 — cloud metadata,
+        no legitimate use), multicast, IANA-reserved, and unspecified
+        addresses are always rejected.
+      * Loopback and RFC1918 are otherwise permitted — this function is only
+        reached once OPENOSINT_ALLOW_CLIENT_BACKEND is set, and LAN Ollama /
+        local llama.cpp users enabling that flag are exactly who needs them.
+
+    Every failure path raises via _reject_client_backend() — see its
+    docstring for why the message must not vary by reason.
+
+    NOTE (TOCTOU): this resolves the hostname now, but the outbound HTTP
+    client resolves it again when it actually connects — a DNS-rebinding
+    attacker can swap the answer between the two lookups. Set
+    OPENOSINT_ALLOWED_BASE_URLS to close this window; it pins a hostname,
+    not a point-in-time IP.
+    """
+    parsed = _urlparse(url.strip())
+    if parsed.scheme not in ("http", "https"):
+        _reject_client_backend()
+    if not parsed.hostname:
+        _reject_client_backend()
+    if parsed.username or parsed.password:
+        _reject_client_backend()
+
+    allowlist = _parse_csv_env("OPENOSINT_ALLOWED_BASE_URLS")
+    if allowlist:
+        host = parsed.hostname.lower()
+        host_port = f"{host}:{parsed.port}" if parsed.port else host
+        allowed = {a.lower() for a in allowlist}
+        if host not in allowed and host_port not in allowed:
+            _reject_client_backend()
+        return url
+
+    try:
+        infos = await asyncio.to_thread(socket.getaddrinfo, parsed.hostname, None)
+    except socket.gaierror:
+        _reject_client_backend()
+
+    for _family, _type, _proto, _canon, sockaddr in infos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+            _reject_client_backend()
+
+    return url
+
+
+def _check_browser_origin(request: "Request") -> None:
+    """CSRF / DNS-rebinding guard for client-supplied-backend requests.
+
+    Only called when OPENOSINT_ALLOW_CLIENT_BACKEND is set — see callers.
+    This is NOT an authentication boundary: it only blocks a browser from
+    being tricked into calling this endpoint cross-origin. A direct network
+    attacker (no browser involved) is stopped by the credential/destination
+    decoupling in _validate_outbound_base_url(), not by this check.
+
+    curl, SDKs, and scripts send neither Sec-Fetch-Site nor Origin and are
+    waved through deliberately — they are not a CSRF vector, and turning
+    this into a general request allowlist would only break legitimate API
+    consumers without adding real protection.
+
+    Failures go through _reject_client_backend() too — this check only ever
+    runs when the flag is on, so a distinct message here would itself
+    confirm the flag is on to a cross-origin prober that never even sent a
+    valid base_url.
+    """
+    sec_fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if sec_fetch_site:
+        if sec_fetch_site not in ("same-origin", "none"):
+            _reject_client_backend()
+        return
+
+    origin = request.headers.get("origin", "").strip()
+    if origin:
+        request_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        allowed = {request_origin, *_parse_csv_env("OPENOSINT_ALLOWED_ORIGINS")}
+        if origin not in allowed:
+            _reject_client_backend()
+        return
+
+    # Neither header present: not a browser request (curl/SDK/script) — allow.
+
+
 def _get_ai_backend() -> tuple[str, str | None, bool | None]:
     """Return (backend_name, ollama_host, ollama_reachable)."""
     if os.environ.get("ANTHROPIC_API_KEY", "").strip():
@@ -598,12 +738,14 @@ async def _probe_openai_endpoint(base_url: str, api_key: str) -> dict:
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     try:
         if _httpx is not None:
-            async with _httpx.AsyncClient(timeout=2.5) as client:
+            async with _httpx.AsyncClient(timeout=2.5, follow_redirects=False) as client:
                 r = await client.get(f"{base}/models", headers=headers)
                 status = r.status_code
         else:
             raw = await asyncio.to_thread(
-                lambda: _requests.get(f"{base}/models", headers=headers, timeout=2.5)
+                lambda: _requests.get(
+                    f"{base}/models", headers=headers, timeout=2.5, allow_redirects=False
+                )
             )
             status = raw.status_code
     except Exception:
@@ -638,6 +780,32 @@ class OpenAITestRequest(BaseModel):
 
     openai_base_url: str = ""
     openai_api_key: str = ""
+
+
+class GraphDecideRequest(BaseModel):
+    """Body for POST /api/graph/review/decide — a human verdict on one same_as pair."""
+
+    entity_id: str
+    canonical_id: str
+    decision: str  # "accept" | "reject"
+    reviewer_id: str | None = None
+
+
+# The graph routes read only the local SQLite graph store. This is the single
+# response every graph route returns when the optional `graph` extra
+# (followthemoney) isn't installed, so the rest of the web UI keeps working.
+def _graph_unavailable() -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "error",
+            "graph_available": False,
+            "message": (
+                "Graph features require the 'graph' extra. Install it with: "
+                "pip install 'openosint[graph]'"
+            ),
+        },
+        status_code=503,
+    )
 
 
 def _select_chat_backend(req: "ChatRequest") -> str:
@@ -850,7 +1018,7 @@ async def _stream_ollama(
                 "stream": False,
             }
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=120) as client:
+                async with _httpx.AsyncClient(timeout=120, follow_redirects=False) as client:
                     r = await client.post(f"{host}/api/chat", json=payload)
                 if r.status_code != 200:
                     yield {
@@ -863,7 +1031,9 @@ async def _stream_ollama(
                 # fallback: run blocking requests in a thread
                 _payload = payload  # capture for lambda
                 raw = await asyncio.to_thread(
-                    lambda: _requests.post(f"{host}/api/chat", json=_payload, timeout=120)
+                    lambda: _requests.post(
+                        f"{host}/api/chat", json=_payload, timeout=120, allow_redirects=False
+                    )
                 )
                 if raw.status_code != 200:
                     yield {
@@ -956,7 +1126,7 @@ async def _stream_openai(
         }
         try:
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=180) as client:
+                async with _httpx.AsyncClient(timeout=180, follow_redirects=False) as client:
                     r = await client.post(url, json=payload, headers=headers)
                 if r.status_code != 200:
                     yield {
@@ -968,7 +1138,9 @@ async def _stream_openai(
             else:
                 _payload = payload  # capture for lambda
                 raw = await asyncio.to_thread(
-                    lambda: _requests.post(url, json=_payload, headers=headers, timeout=180)
+                    lambda: _requests.post(
+                        url, json=_payload, headers=headers, timeout=180, allow_redirects=False
+                    )
                 )
                 if raw.status_code != 200:
                     yield {
@@ -1394,7 +1566,7 @@ def create_app() -> FastAPI:
         ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
         try:
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=1.5) as client:
+                async with _httpx.AsyncClient(timeout=1.5, follow_redirects=False) as client:
                     r = await client.get(f"{ollama_host}/api/tags")
                     reachable = r.status_code == 200
             else:
@@ -1419,9 +1591,23 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/openai/test")
-    async def openai_test(req: OpenAITestRequest):
-        base_url = (req.openai_base_url or os.environ.get("OPENAI_BASE_URL", "")).strip()
-        api_key = (req.openai_api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+    async def openai_test(req: OpenAITestRequest, request: Request):
+        # Same coupling bug as /api/chat (GHSA-q6cw-g86h-m2cq), and arguably
+        # worse here: this endpoint echoes the probe result back to the
+        # caller, making it a non-blind SSRF oracle for internal port
+        # scanning if the destination/credential split isn't enforced.
+        if _byo_backend_enabled():
+            _check_browser_origin(request)
+
+        if req.openai_base_url:
+            if not _byo_backend_enabled():
+                _reject_client_backend()
+            base_url = await _validate_outbound_base_url(req.openai_base_url)
+            api_key = (req.openai_api_key or "").strip()  # no os.environ fallback, ever
+        else:
+            base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
+            api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+
         if not base_url:
             return {"status": "ok", "reachable": False, "auth_ok": False, "status_code": None}
         probe = await _probe_openai_endpoint(base_url, api_key)
@@ -1432,7 +1618,7 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/chat")
-    async def chat(req: ChatRequest):
+    async def chat(req: ChatRequest, request: Request):
         if DEMO_MODE:
             async def _demo_block():
                 yield f'data: {json.dumps({"type": "error", "message": "Server-side LLM is disabled in demo mode — add your own API key in Settings."})}\n\n'
@@ -1442,6 +1628,9 @@ def create_app() -> FastAPI:
                 media_type="text/event-stream",
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
+
+        if _byo_backend_enabled():
+            _check_browser_origin(request)
 
         messages: list[dict] = []
         for h in req.history:
@@ -1453,17 +1642,38 @@ def create_app() -> FastAPI:
 
         backend = _select_chat_backend(req)
 
+        # Resolve backend-specific connection params up front (not inside the
+        # generator) so a validation failure returns a proper HTTP error
+        # instead of being swallowed as an SSE event after streaming started.
+        openai_base_url = ""
+        openai_api_key = ""
+        openai_model = ""
+        ollama_host = ""
+
+        if backend == "openai":
+            if req.openai_base_url:
+                if not _byo_backend_enabled():
+                    _reject_client_backend()
+                openai_base_url = await _validate_outbound_base_url(req.openai_base_url)
+                openai_api_key = (req.openai_api_key or "").strip()  # no os.environ fallback, ever
+            else:
+                openai_base_url = os.environ.get("OPENAI_BASE_URL", "http://localhost:8080/v1")
+                openai_api_key = os.environ.get("OPENAI_API_KEY", "")
+            openai_model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
+        elif backend == "ollama":
+            default_ollama = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+            if req.ollama_host and req.ollama_host.rstrip("/") != default_ollama.rstrip("/"):
+                if not _byo_backend_enabled():
+                    _reject_client_backend()
+                ollama_host = await _validate_outbound_base_url(req.ollama_host)
+            else:
+                ollama_host = default_ollama
+
         async def generate():
             if backend == "openai":
-                base_url = (
-                    req.openai_base_url
-                    or os.environ.get("OPENAI_BASE_URL", "http://localhost:8080/v1")
-                ).strip()
-                api_key = (req.openai_api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
-                model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
-                gen = _stream_openai(messages, base_url, api_key, model)
+                gen = _stream_openai(messages, openai_base_url, openai_api_key, openai_model)
             elif backend == "ollama":
-                gen = _stream_ollama(messages, req.ollama_host, req.ollama_model)
+                gen = _stream_ollama(messages, ollama_host, req.ollama_model)
             else:
                 gen = _stream_claude(messages)
 
@@ -1546,6 +1756,177 @@ def create_app() -> FastAPI:
                 "X-Accel-Buffering": "no",
             },
         )
+
+    # ------------------------------------------------------------------
+    # Graph routes — read the LOCAL SQLite graph store only. No outbound
+    # network calls of any kind. followthemoney is imported lazily inside
+    # each handler (via openosint.graph.web_view / .review) so a missing
+    # `graph` extra degrades to 503 here and leaves every other route working.
+    # ------------------------------------------------------------------
+
+    @app.get("/api/graph/subgraph")
+    async def graph_subgraph(
+        entity_id: str,
+        depth: int = 1,
+        cross_layer: bool = False,
+        dataset: str | None = None,
+    ):
+        try:
+            from openosint.graph.web_view import (
+                build_subgraph,
+                is_valid_entity_id,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if not is_valid_entity_id(entity_id):
+            raise HTTPException(400, "invalid entity_id")
+        if depth < 0:
+            raise HTTPException(400, "depth must be >= 0")
+        if dataset is not None and not dataset.strip():
+            dataset = None
+
+        def _work() -> dict:
+            store = open_default_store()
+            try:
+                return build_subgraph(
+                    store,
+                    entity_id=entity_id,
+                    depth=depth,
+                    cross_layer=cross_layer,
+                    dataset=dataset,
+                )
+            finally:
+                store.close()
+
+        return await asyncio.to_thread(_work)
+
+    @app.get("/api/graph/entity")
+    async def graph_entity(entity_id: str):
+        try:
+            from openosint.graph.web_view import (
+                entity_detail,
+                is_valid_entity_id,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if not is_valid_entity_id(entity_id):
+            raise HTTPException(400, "invalid entity_id")
+
+        def _work() -> dict | None:
+            store = open_default_store()
+            try:
+                return entity_detail(store, entity_id)
+            finally:
+                store.close()
+
+        detail = await asyncio.to_thread(_work)
+        if detail is None:
+            raise HTTPException(404, "entity not found")
+        return detail
+
+    @app.get("/api/graph/review/candidates")
+    async def graph_review_candidates(
+        schema: str | None = None,
+        min_score: float | None = None,
+        max_score: float | None = None,
+        dataset: str | None = None,
+    ):
+        try:
+            from dataclasses import asdict
+
+            from openosint.graph.review import list_review_candidates
+            from openosint.graph.web_view import open_default_store
+        except ImportError:
+            return _graph_unavailable()
+
+        def _work() -> list[dict]:
+            store = open_default_store()
+            try:
+                candidates = list_review_candidates(
+                    store,
+                    schema=schema,
+                    min_score=min_score,
+                    max_score=max_score,
+                    dataset=dataset,
+                )
+                return [asdict(c) for c in candidates]
+            finally:
+                store.close()
+
+        return {"candidates": await asyncio.to_thread(_work)}
+
+    @app.post("/api/graph/review/decide")
+    async def graph_review_decide(req: GraphDecideRequest):
+        try:
+            from openosint.graph.review import decide_review_candidate
+            from openosint.graph.web_view import (
+                is_valid_entity_id,
+                latest_resolution_for_pair,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if req.decision not in ("accept", "reject"):
+            raise HTTPException(400, "decision must be 'accept' or 'reject'")
+        if not is_valid_entity_id(req.entity_id) or not is_valid_entity_id(req.canonical_id):
+            raise HTTPException(400, "invalid entity_id or canonical_id")
+        if req.entity_id == req.canonical_id:
+            raise HTTPException(400, "entity_id and canonical_id must differ")
+
+        judgement = "positive" if req.decision == "accept" else "negative"
+
+        def _work() -> dict:
+            from datetime import datetime, timezone
+
+            store = open_default_store()
+            try:
+                # Idempotent: if the pair's latest row already carries this
+                # judgement, a repeat click (or replay) appends nothing —
+                # return the existing resolution, keeping decision history clean.
+                existing = latest_resolution_for_pair(store, req.entity_id, req.canonical_id)
+                if existing is not None and existing.judgement == judgement:
+                    resolution_id = existing.id
+                    idempotent = True
+                else:
+                    resolution = decide_review_candidate(
+                        store,
+                        entity_id=req.entity_id,
+                        canonical_id=req.canonical_id,
+                        judgement=judgement,
+                        decided_at=datetime.now(timezone.utc),
+                        reviewer_id=req.reviewer_id,
+                    )
+                    resolution_id = resolution.id
+                    idempotent = False
+
+                canonical = store.canonical_for(req.entity_id)
+                return {
+                    "status": "ok",
+                    "resolution_id": resolution_id,
+                    "idempotent": idempotent,
+                    "judgement": judgement,
+                    "decision": req.decision,
+                    "entity_id": req.entity_id,
+                    "canonical_id": req.canonical_id,
+                    "canonical": canonical,
+                    "cluster": store.members_of_canonical(canonical),
+                }
+            finally:
+                store.close()
+
+        return await asyncio.to_thread(_work)
+
+    @app.get("/graph", include_in_schema=False)
+    async def graph_page():
+        page = _WEB_DIR / "graph.html"
+        if page.exists():
+            return HTMLResponse(page.read_text())
+        return HTMLResponse("<h1>graph.html not found</h1>", status_code=404)
 
     # ------------------------------------------------------------------
     # Static mounts — docs, then catch-all for frontend

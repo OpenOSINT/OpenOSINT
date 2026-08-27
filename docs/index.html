@@ -236,6 +236,17 @@ openosint [<b>-v</b>] [<b>--api-key</b> <u>key</u>]</pre>
     <p style="margin-top:6px;"><em>Interactive REPL and CLI</em></p>
   </div>
 </div>
+<div style="margin-bottom:14px;">
+  <p><b>Graph module web UI</b> &mdash; provenance and human-reviewed deduplication</p>
+  <video autoplay loop muted playsinline preload="metadata"
+         style="max-width:100%; border:1px solid #333; display:block;">
+    <source src="assets/graph-web-demo.webm" type="video/webm">
+    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
+         alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel with each statement's dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field with matching values green and differing values amber; the reviewer accepts and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
+         style="max-width:100%; display:block;">
+  </video>
+  <p style="margin-top:6px;"><em>Synthetic data only &mdash; every entity shown is fictional. Worked example: the entities are seeded at the statement layer, not produced by today's mappers &mdash; see <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/demo/README.md">demo/README.md</a>. Regenerate with <code>python demo/web_demo.py</code>; the terminal walkthrough lives in <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/docs/graph.md">docs/graph.md</a></em></p>
+</div>
 </div>
 
 <h2 id="architecture">ARCHITECTURE</h2>
@@ -627,8 +638,8 @@ $ pip install -e .</pre>
 <div id="footer">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OpenOSINT 2.25.0</td>
-<td class="mhead-c">July 2026</td>
+<td class="mhead-l">OpenOSINT 2.27.0</td>
+<td class="mhead-c">August 2026</td>
 <td class="mhead-r">OPENOSINT(1)</td>
 </tr>
 </table>

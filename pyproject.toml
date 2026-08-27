@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openosint"
-version = "2.25.0"
+version = "2.27.0"
 description = "AI-powered OSINT agent, MCP server, and CLI. Interactive REPL + 19 tools. Anthropic Claude or local Ollama. For authorized security research use only."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -30,7 +30,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "mcp>=1.0.0",
+    "mcp>=1.0.0,<2",
     "anthropic>=0.40.0",
     "requests>=2.31.0",
     "python-whois>=0.9.0",
@@ -87,6 +87,12 @@ socks = [
     "PySocks>=1.7.1",
     "aiohttp-socks>=0.8.4",
 ]
+graph = [
+    "followthemoney>=4.10.0",
+]
+graph-dedup = [
+    "nomenklatura>=4.14.0; python_version>='3.11'",
+]
 web = [
     "fastapi>=0.110.0",
     "uvicorn[standard]>=0.29.0",
@@ -116,6 +122,7 @@ exclude = ["assets*", "docs*", "scripts*", "tests*"]
 [tool.setuptools.package-data]
 openosint = ["web/*.html", "web/**/*"]
 "openosint.playbooks" = ["recipes/*.yaml"]
+"openosint.graph" = ["data/*.json"]
 
 [tool.ruff]
 target-version = "py310"

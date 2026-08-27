@@ -14,7 +14,20 @@ ROOT = Path(__file__).parent.parent
 # investigate_multi is an MCP-only batch-orchestration wrapper around
 # multi_target.py, not a catalog data-source tool — agent.py doesn't expose
 # it either, and it isn't listed in the README/tools-page catalog.
-_NON_CATALOG_TOOLS = {"investigate_multi"}
+#
+# graph_export / graph_neighbors / graph_review_candidates are the additive,
+# `graph`-extra-gated openosint.graph subsystem's MCP tools (Phase 4) —
+# scoped by design as MCP-only (see openosint/graph/__init__.py: "additive,
+# sits alongside the existing Entity Correlation Graph... without modifying
+# it"). They are not part of the "N investigation tools" README/docs count,
+# which CLAUDE.md scopes explicitly to openosint/tools/ — and agent.py's
+# natural-language tool loop deliberately does not expose them either.
+_NON_CATALOG_TOOLS = {
+    "investigate_multi",
+    "graph_export",
+    "graph_neighbors",
+    "graph_review_candidates",
+}
 
 _TOOL_COUNT_RE = re.compile(
     r"(\d+)\+?\s*(?:intelligence[- ]gathering |intelligence |investigation |modular |OpenOSINT )*tools?\b",
@@ -80,7 +93,9 @@ def test_every_tool_count_claim_matches_registered_tools():
         text = re.sub(r"<[^>]+>", " ", raw) if path.suffix == ".html" else raw
         for match in _TOOL_COUNT_RE.finditer(text):
             if int(match.group(1)) != expected:
-                mismatches.append(f"{path.relative_to(ROOT)}: {match.group(0)!r} (expected {expected})")
+                mismatches.append(
+                    f"{path.relative_to(ROOT)}: {match.group(0)!r} (expected {expected})"
+                )
     assert not mismatches, "stale tool-count claim(s) found:\n" + "\n".join(mismatches)
 
 
@@ -132,7 +147,7 @@ def test_gumroad_links_share_base_url_and_offer_code_per_product():
 _PRICE_PATTERNS = {
     "Prompt Pack": [
         re.compile(
-            r'<h4>(?:AI OSINT )?Prompt Pack(?:\s*<span[^>]*>[^<]*</span>)?</h4>\s*'
+            r"<h4>(?:AI OSINT )?Prompt Pack(?:\s*<span[^>]*>[^<]*</span>)?</h4>\s*"
             r'<div class="price">\$(\d+(?:\.\d{2})?)</div>',
             re.IGNORECASE,
         ),
@@ -141,7 +156,7 @@ _PRICE_PATTERNS = {
     ],
     "Complete Kit": [
         re.compile(
-            r'<h4>(?:AI OSINT )?Complete Kit(?:\s*<span[^>]*>[^<]*</span>)?</h4>\s*'
+            r"<h4>(?:AI OSINT )?Complete Kit(?:\s*<span[^>]*>[^<]*</span>)?</h4>\s*"
             r'<div class="price">\$(\d+(?:\.\d{2})?)</div>',
             re.IGNORECASE,
         ),
@@ -195,8 +210,12 @@ def test_no_hallucination_framing_in_cta_copy():
         raw = path.read_text(encoding="utf-8")
         for match in _GUMROAD_LINK_RE.finditer(raw):
             boundaries = [b.start() for b in _CTA_BOUNDARY_RE.finditer(raw, 0, match.start())]
-            window_start = boundaries[-1] if boundaries else max(0, match.start() - _CTA_LOOKBACK_CHARS)
+            window_start = (
+                boundaries[-1] if boundaries else max(0, match.start() - _CTA_LOOKBACK_CHARS)
+            )
             window = raw[window_start : match.start()]
             if _HALLUCINATION_RE.search(window):
-                violations.append(f"{path.relative_to(ROOT)}: hallucination framing near {match.group(0)!r}")
+                violations.append(
+                    f"{path.relative_to(ROOT)}: hallucination framing near {match.group(0)!r}"
+                )
     assert not violations, "hallucination framing found in paid CTA copy:\n" + "\n".join(violations)
