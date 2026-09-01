@@ -136,7 +136,7 @@ class TestSearchFootprintEntityDetection:
 
             result = await run_footprint_osint("user@example.com", max_queries=1)
 
-        assert "type: email" in result
+        assert result["target_type"] == "email"
 
     async def test_output_shows_detected_entity_type_username(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -147,7 +147,7 @@ class TestSearchFootprintEntityDetection:
 
             result = await run_footprint_osint("johndoe99", max_queries=1)
 
-        assert "type: username" in result
+        assert result["target_type"] == "username"
 
     async def test_full_name_detected_as_person(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -158,7 +158,7 @@ class TestSearchFootprintEntityDetection:
 
             result = await run_footprint_osint("John Doe", max_queries=1)
 
-        assert "type: person" in result
+        assert result["target_type"] == "person"
 
 
 # ---------------------------------------------------------------------------
@@ -176,8 +176,7 @@ class TestSearchFootprintResults:
 
             result = await run_footprint_osint("john doe", max_queries=1)
 
-        assert "John Doe — LinkedIn" in result
-        assert "linkedin.com/in/johndoe" in result
+        assert any("linkedin.com/in/johndoe" in url for url in result["discovered_urls"])
 
     async def test_deduplicates_urls_across_queries(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -188,12 +187,7 @@ class TestSearchFootprintResults:
 
             result = await run_footprint_osint("john doe", max_queries=2)
 
-        # linkedin.com/in/johndoe should appear only once in graph lines
-        if "── Discovered URLs" in result:
-            graph_section = result.split("── Discovered URLs")[1]
-        else:
-            graph_section = result
-        assert graph_section.count("https://linkedin.com/in/johndoe") == 1
+        assert result["discovered_urls"].count("https://linkedin.com/in/johndoe") == 1
 
     async def test_no_organic_shows_placeholder(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -204,7 +198,7 @@ class TestSearchFootprintResults:
 
             result = await run_footprint_osint("john doe", max_queries=1)
 
-        assert "no organic results" in result
+        assert result["discovered_urls"] == []
 
     async def test_request_uses_format_raw_and_parsed_light(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -321,8 +315,8 @@ class TestSearchFootprintGraphLines:
 
             result = await run_footprint_osint("john doe", max_queries=1)
 
-        assert "[Footprint] URL: https://linkedin.com/in/johndoe" in result
-        assert "[Footprint] URL: https://github.com/johndoe" in result
+        assert "https://linkedin.com/in/johndoe" in result["discovered_urls"]
+        assert "https://github.com/johndoe" in result["discovered_urls"]
 
     async def test_domain_lines_emitted(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -333,8 +327,8 @@ class TestSearchFootprintGraphLines:
 
             result = await run_footprint_osint("john doe", max_queries=1)
 
-        assert "[Footprint] Domain: linkedin.com" in result
-        assert "[Footprint] Domain: github.com" in result
+        assert "linkedin.com" in result["seen_domains"]
+        assert "github.com" in result["seen_domains"]
 
     async def test_no_graph_lines_when_no_results(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "k")
@@ -345,7 +339,7 @@ class TestSearchFootprintGraphLines:
 
             result = await run_footprint_osint("john doe", max_queries=1)
 
-        assert "[Footprint] URL:" not in result
+        assert result["discovered_urls"] == []
 
 
 # ---------------------------------------------------------------------------

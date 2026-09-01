@@ -13,6 +13,11 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+import pytest
+
+@pytest.fixture(autouse=True)
+def mock_shutil_which(monkeypatch):
+    monkeypatch.setattr("shutil.which", lambda b: f"/usr/bin/{b}")
 
 
 # ---------------------------------------------------------------------------

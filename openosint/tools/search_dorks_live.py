@@ -101,7 +101,7 @@ async def run_dorks_live_osint(
     timeout_seconds: int = _DEFAULT_TIMEOUT,
     *,
     api_keys: dict[str, str] | None = None,
-) -> str:
+) -> list[dict] | str:
     """
     Execute Google dork queries for *target* via the Bright Data SERP API.
 
@@ -114,8 +114,8 @@ async def run_dorks_live_osint(
 
     Returns
     -------
-    str
-        Formatted results or descriptive error message.
+    list[dict] | str
+        Structured JSON results or descriptive error message.
     """
     _k = api_keys or {}
     api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ.get("BRIGHTDATA_API_KEY", "")
@@ -133,38 +133,36 @@ async def run_dorks_live_osint(
     dorks = _DORK_TEMPLATES[:max_dorks]
     logger.info("Starting live dork search for '%s' (%d dorks)", target, len(dorks))
 
-    lines = [f"Bright Data live dork search for '{target}' ({len(dorks)} queries):\n"]
     error_count = 0
+    structured_results = []
 
     for template in dorks:
         query = template.format(target=target)
         google_url = _build_google_url(query)
-        lines.append(f"[+] Dork: {query}")
+        
+        query_data = {
+            "query": query,
+            "results": [],
+            "error": None
+        }
+
         try:
             data = await asyncio.to_thread(
                 _fetch_serp, google_url, api_key, zone, timeout_seconds
             )
             results = _extract_organic(data)
             if results:
-                for r in results:
-                    lines.append(f"    Title:   {r['title']}")
-                    lines.append(f"    URL:     {r['url']}")
-                    if r["snippet"]:
-                        lines.append(f"    Snippet: {r['snippet'][:200]}")
-                    lines.append("")
-            else:
-                lines.append("    (no organic results)")
-                lines.append("")
+                query_data["results"] = results
         except OSINTError as exc:
             error_count += 1
             logger.warning("SERP dork failed: %s", exc)
-            lines.append(f"    (error: {exc})")
-            lines.append("")
+            query_data["error"] = str(exc)
         except Exception as exc:
             error_count += 1
             logger.exception("Unexpected error during live dork execution.")
-            lines.append(f"    (internal error: {exc})")
-            lines.append("")
+            query_data["error"] = f"internal error: {exc}"
+            
+        structured_results.append(query_data)
 
     if error_count == len(dorks):
         return (
@@ -173,4 +171,4 @@ async def run_dorks_live_osint(
         )
 
     logger.info("Live dork search complete for: %s", target)
-    return "\n".join(lines)
+    return structured_results
