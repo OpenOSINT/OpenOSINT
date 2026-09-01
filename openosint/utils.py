@@ -102,3 +102,26 @@ def _kill_process(process: asyncio.subprocess.Process | None) -> None:
         process.kill()
     except ProcessLookupError:
         pass
+
+
+def get_ssl_context() -> "ssl.SSLContext":
+    """Return an SSL context suitable for aiohttp on this host.
+
+    aiohttp's default context rejects servers that transmit their own root in
+    the chain — including api.github.com and crt.sh, which fail with
+    "self-signed certificate in certificate chain" / "unable to get local
+    issuer certificate" even though the root is present in certifi. The
+    requests-based tools are unaffected, so this only matters for the aiohttp
+    callers.
+
+    VERIFY_X509_PARTIAL_CHAIN lets OpenSSL treat any trusted cert in the chain
+    as an anchor rather than demanding a complete path to a self-signed root it
+    already knows, which is what curl and httpx effectively do.
+    """
+    import ssl
+
+    import certifi
+
+    context = ssl.create_default_context(cafile=certifi.where())
+    context.verify_flags |= ssl.VERIFY_X509_PARTIAL_CHAIN
+    return context

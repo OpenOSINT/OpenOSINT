@@ -17,6 +17,7 @@ import re
 import aiohttp
 
 from openosint.proxy import get_aiohttp_connector, get_aiohttp_proxy
+from openosint.utils import get_ssl_context
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +63,11 @@ async def _fetch_abuseipdb_data(ip: str, api_key: str, timeout: int) -> dict:
         timeout=timeout_cfg, connector=get_aiohttp_connector()
     ) as session:
         async with session.get(
-            _API_URL, headers=headers, params=params, proxy=get_aiohttp_proxy()
+            _API_URL,
+            headers=headers,
+            params=params,
+            proxy=get_aiohttp_proxy(),
+            ssl=get_ssl_context(),
         ) as resp:
             _raise_for_status(resp.status)
             return await resp.json()
