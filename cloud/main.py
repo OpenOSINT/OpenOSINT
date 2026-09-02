@@ -24,6 +24,16 @@ logging.basicConfig(
     level=logging.INFO, format="[%(levelname)s] %(name)s: %(message)s", force=True
 )  # force: FastMCP's __init__ (imported above) installs a width-cropping RichHandler first
 
+# openosint.tools.* loggers are shared with the CLI/MCP/web UI and interpolate
+# the raw query target directly into their messages by design, for local
+# debugging. Cloud must never emit that. None of those modules set their own
+# level, so they inherit this ancestor's — silencing it here keeps them quiet
+# without touching the shared modules. Cloud's own request logging (see
+# cloud/routes/enrich.py, cloud/routes/mcp_gateway.py) never includes a
+# target or a provider response body — see .claude/LEGAL_CONTEXT.md §4.1 and
+# legal/INCIDENT-NOTES.md.
+logging.getLogger("openosint.tools").setLevel(logging.CRITICAL + 1)
+
 
 @asynccontextmanager
 async def _lifespan(app: FastAPI):

@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import json
+import logging
 import os
 import re
 import secrets
@@ -81,11 +82,162 @@ load_dotenv()
 # ---------------------------------------------------------------------------
 
 # When True: no DB writes, no analytics.  api_keys are never logged regardless.
-DEMO_MODE: bool = os.getenv("OPENOSINT_DEMO_MODE", "").lower() in ("1", "true", "yes")
+#
+# DEMO_MODE is a network-exposure invariant, not an opt-in flag: whether a
+# locally-held provider key (an operator's, or a self-hoster's own) may be
+# used to serve a request depends on whether this process is reachable from
+# anywhere but the machine it's running on — not on whether anyone remembered
+# to set an env var. A self-hosted install bound to loopback with keys in its
+# own .env is normal operation and gets no restriction, env var or not. A
+# process bound to any other interface — including one we can't identify as
+# loopback — never uses a locally-held key to serve a request; callers supply
+# their own, or the tool is unavailable. See .claude/LEGAL_CONTEXT.md §8 and
+# legal/INCIDENT-NOTES.md for why this replaced an env-var-only gate.
+_SAFE_BIND_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    """True only for an exact, known loopback address.
+
+    None (bind address undeterminable — e.g. `create_app()` invoked directly
+    as a uvicorn --factory target, bypassing serve_async()/run_server()) or
+    anything else, including "0.0.0.0" or a real interface IP, is NOT
+    loopback. Ambiguity fails closed to "not loopback" — see module note above.
+    """
+    return host is not None and host.strip() in _SAFE_BIND_HOSTS
+
+
+def _env_forces_demo_mode() -> bool:
+    """OPENOSINT_DEMO_MODE can only ADD restriction, never remove it.
+
+    A non-loopback bind is always restricted regardless of this var — that
+    safety no longer depends on anyone setting it. A recognized true-ish
+    value forces restriction even on loopback (e.g. to rehearse demo
+    behavior locally). Anything else — unset, malformed, or an explicit
+    false-ish value — adds no restriction of its own.
+    """
+    return os.getenv("OPENOSINT_DEMO_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _compute_demo_mode(host: str | None) -> bool:
+    """The network-exposure invariant described above, as a pure function of
+    the bind address (plus the tighten-only env override)."""
+    return (not _is_loopback_host(host)) or _env_forces_demo_mode()
+
+
+# Set for real by create_app(host=...) before routes are built; None here
+# means "undetermined" until then, which _compute_demo_mode treats as
+# not-loopback (restricted) — see _is_loopback_host.
+DEMO_MODE: bool = _compute_demo_mode(None)
 
 # Trust CF-Connecting-IP / X-Forwarded-For for rate limiting only when
 # explicitly enabled — prevents IP spoofing in local dev.
 TRUSTED_PROXY: bool = os.getenv("TRUSTED_PROXY", "").lower() in ("1", "true", "yes")
+
+# Deliberately NOT the same flag as TRUSTED_PROXY above. TRUSTED_PROXY only
+# changes which IP string gets attributed to a request for rate-limit
+# bucketing — a wrong value there means someone's rate limit resets a bit
+# early or late. This flag gates whether a locally-held provider key may be
+# used at all, the same invariant DEMO_MODE enforces for bind address. Those
+# are different stakes: an operator who set TRUSTED_PROXY=true purely to get
+# correct rate-limit IPs never consented to that also unlocking credentialed
+# access for anyone the proxy relays, so it gets its own explicit opt-in.
+# See the README's deployment-guidance section.
+OPENOSINT_TRUSTED_PROXY: bool = os.getenv("OPENOSINT_TRUSTED_PROXY", "").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+
+# Headers whose mere presence means "a proxy sits in front of this
+# connection" — GHSA-cqr4-hcfp-m6m4's exact concern, extended from
+# /api/setup (_is_loopback_request above) to every credentialed-tool and
+# chat gate. Content is never trusted for identity (see
+# _get_client_ip's TRUSTED_PROXY-gated use for that); only presence is used
+# here, to decide whether a loopback bind can still be assumed private.
+_FORWARDING_HEADER_NAMES: tuple[str, ...] = (
+    "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "forwarded", "cf-connecting-ip",
+)
+
+_FORWARDED_PARAM_RE = re.compile(r'(proto|host)="?([^;,"\s]+)"?', re.IGNORECASE)
+
+
+def _request_carries_forwarding_signals(request: "Request") -> bool:
+    """True if this request looks like it was relayed by a reverse proxy.
+
+    A loopback bind means the OS only accepted this TCP connection from the
+    same machine — but an on-host or sidecar proxy relaying a public request
+    looks identical at that layer. Any of these headers is the signal that
+    distinguishes "actually private" from "looks private because nothing
+    terminates in front of it but a proxy that does." X-Forwarded-Host is
+    the "proxy-set host that differs from the bind" case specifically — a
+    proxy typically rewrites the raw Host header to its own upstream target
+    and preserves the original request's host in this header instead, so
+    the raw Host header itself is not a reliable signal (a test harness or
+    a client's own choice of hostname varies it for reasons having nothing
+    to do with proxying) and is deliberately not checked here.
+    """
+    headers = request.headers
+    return any(headers.get(name) for name in _FORWARDING_HEADER_NAMES)
+
+
+def _forwarding_headers_look_inconsistent(request: "Request") -> bool:
+    """True if a forwarding header disagrees with itself — more than one
+    distinct scheme/host value where a single trusted hop would add exactly
+    one. This is checked regardless of OPENOSINT_TRUSTED_PROXY: declaring
+    trust in a proxy is not the same as trusting headers that contradict
+    each other, and a forwarding header may only ever add restriction,
+    never remove it.
+    """
+    for header_name in ("x-forwarded-proto", "x-forwarded-host"):
+        values = {v.strip().lower() for v in request.headers.get(header_name, "").split(",") if v.strip()}
+        if len(values) > 1:
+            return True
+    forwarded = request.headers.get("forwarded", "")
+    if forwarded:
+        by_param: dict[str, set[str]] = {}
+        for param, value in _FORWARDED_PARAM_RE.findall(forwarded):
+            by_param.setdefault(param.lower(), set()).add(value.lower())
+        if any(len(values) > 1 for values in by_param.values()):
+            return True
+    return False
+
+
+_proxy_warning_emitted = False
+
+
+def _request_restriction(request: "Request") -> tuple[bool, str]:
+    """Whether THIS request must be treated as demo-restricted, and why.
+
+    DEMO_MODE (bind address, computed once at startup) is the static floor —
+    never loosened here. On top of it: a loopback bind can still be reached
+    through an on-host reverse proxy, so a request carrying forwarding
+    signals is treated as public unless OPENOSINT_TRUSTED_PROXY is declared,
+    and internally inconsistent forwarding headers are treated as public
+    even then. The reason is returned so the caller sees why, rather than a
+    silent, unexplained restriction.
+    """
+    if DEMO_MODE:
+        return True, "this instance is not bound to loopback"
+    if _forwarding_headers_look_inconsistent(request):
+        return True, "forwarding headers on this request are internally inconsistent"
+    if _request_carries_forwarding_signals(request):
+        global _proxy_warning_emitted
+        if not OPENOSINT_TRUSTED_PROXY:
+            if not _proxy_warning_emitted:
+                _proxy_warning_emitted = True
+                logging.getLogger(__name__).warning(
+                    "Bound to loopback but received a request carrying proxy-forwarding "
+                    "headers, with no OPENOSINT_TRUSTED_PROXY declared. If this instance is "
+                    "served through a reverse proxy, it is reachable by others even though "
+                    "it looks private from here — see the README's deployment-guidance "
+                    "section before setting OPENOSINT_TRUSTED_PROXY=true."
+                )
+            return True, (
+                "this request arrived carrying proxy-forwarding headers, but no trusted-proxy "
+                "configuration is declared (set OPENOSINT_TRUSTED_PROXY=true only if this "
+                "instance is deliberately served through a reverse proxy — see the README)"
+            )
+    return False, ""
+
 
 _RAW_ORIGINS: str = os.getenv(
     "DEMO_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000"
@@ -486,6 +638,17 @@ _RUNNERS: dict[str, object] = {
     "search_footprint": lambda v, t, keys=None: run_footprint_osint(
         v, timeout_seconds=t, api_keys=keys
     ),
+}
+
+# Tools that run keyless (requires_env is empty — the catalog correctly says
+# no key is required) but whose implementation still does
+# `api_key or os.environ.get(ENV_VAR)` internally as an optional rate-limit
+# boost. In demo mode this can't be gated by requires_env alone, or an
+# operator key set on the server (now or in the future) would silently reach
+# an anonymous caller's request. See run_tool()/stream_tool() demo-mode checks.
+_OPTIONAL_OPERATOR_KEY_ENV: dict[str, str] = {
+    "search_ip": "IPINFO_TOKEN",
+    "search_github": "GITHUB_TOKEN",
 }
 
 # Claude tool schemas (one string "input" param per tool)
@@ -1347,7 +1510,15 @@ async def _demo_chat_stream(message: str) -> AsyncIterator[dict]:
 # ---------------------------------------------------------------------------
 
 
-def create_app() -> FastAPI:
+def create_app(host: str | None = None) -> FastAPI:
+    """Build the FastAPI app. `host` is the address this process will be
+    bound to, if known — it decides the DEMO_MODE network-exposure invariant
+    (see the module note near DEMO_MODE's definition). Leave it unset only
+    when the bind address genuinely isn't known yet; that fails closed to
+    restricted, not open."""
+    global DEMO_MODE
+    DEMO_MODE = _compute_demo_mode(host)
+
     app = FastAPI(
         title="OpenOSINT",
         version=_VERSION,
@@ -1368,12 +1539,15 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.get("/api/health")
-    async def health():
+    async def health(request: Request):
         ai_backend, ollama_host, ollama_reachable = _get_ai_backend()
+        restricted, restriction_reason = _request_restriction(request)
         return {
             "status": "ok",
             "version": _VERSION,
             "demo_mode": DEMO_MODE,
+            "restricted": restricted,
+            "restriction_reason": restriction_reason or None,
             "setup_complete": _is_setup_complete(),
             "ai_backend": ai_backend,
             "ollama_host": ollama_host,
@@ -1461,17 +1635,60 @@ def create_app() -> FastAPI:
                     status_code=429,
                 )
 
-        # Check that ALL required keys are present (request body or env)
+        restricted, restriction_reason = _request_restriction(request)
+
+        # Breach data is never served from the operator's own key, BYOK or not —
+        # this is a hard block with no flag, since the public-demo concern is
+        # not just HIBP's ToS but the operator acting as controller for a
+        # breach lookup on a non-consenting third party. See .claude/LEGAL_CONTEXT.md.
+        if restricted and tool_name == "search_breach":
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "output": "Breach-data lookups are disabled: " + restriction_reason,
+                    "tool": tool_name,
+                    "elapsed": 0,
+                },
+                status_code=403,
+            )
+
+        # Check that ALL required keys are present.
+        # When restricted, the operator's own env var never counts — only a
+        # caller-supplied key (BYOK) can satisfy a credentialed tool, so a
+        # publicly-reachable instance can never run a lookup on a locally-held key.
         meta = next((m for m in _TOOL_CATALOG if m["name"] == tool_name), None)
         if meta:
-            required_keys: list[str] = meta.get("requires_env", [])
             supplied: dict[str, str] = req.api_keys or {}
-            missing = [
-                k for k in required_keys
-                if not supplied.get(k) and not os.environ.get(k, "").strip()
-            ]
+            if restricted:
+                # search_ip/search_github work keyless (requires_env is empty
+                # for both — the token only raises rate limits), but their
+                # tool modules do `api_key or os.environ.get(...)` internally,
+                # so a locally-held key would still leak through if we only
+                # checked requires_env here. Gate them the same as a hard
+                # requirement when restricted.
+                demo_required_keys = set(meta.get("requires_env", []))
+                optional_key = _OPTIONAL_OPERATOR_KEY_ENV.get(tool_name)
+                if optional_key:
+                    demo_required_keys.add(optional_key)
+                missing = [k for k in sorted(demo_required_keys) if not supplied.get(k)]
+            else:
+                required_keys: list[str] = meta.get("requires_env", [])
+                missing = [
+                    k for k in required_keys
+                    if not supplied.get(k) and not os.environ.get(k, "").strip()
+                ]
             if missing:
                 how_to_get = {k: meta.get("env_hints", {}).get(k, "") for k in missing}
+                error_message = (
+                    f"API key required — {restriction_reason}, so a locally-held key "
+                    "cannot be used for this lookup. Pass your own key in the api_keys "
+                    "field, or self-host with your own .env."
+                    if restricted
+                    else (
+                        "API key required — pass it in the api_keys field "
+                        "or set the corresponding environment variable"
+                    )
+                )
                 return JSONResponse(
                     {
                         "status": "error",
@@ -1479,10 +1696,7 @@ def create_app() -> FastAPI:
                         "missing_keys": missing,
                         "how_to_get": how_to_get,
                         "tool": tool_name,
-                        "error": (
-                            "API key required — pass it in the api_keys field "
-                            "or set the corresponding environment variable"
-                        ),
+                        "error": error_message,
                         "elapsed": 0,
                     }
                 )
@@ -1513,6 +1727,33 @@ def create_app() -> FastAPI:
                 yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
 
             return EventSourceResponse(_err(), ping=15)
+
+        # This endpoint has no BYOK parameter — it always falls back to a
+        # locally-held env-var key. When restricted that must never happen,
+        # so every credentialed tool (and breach unconditionally) is blocked
+        # here outright rather than gated. Use POST /api/tools/{tool}/run with
+        # a caller-supplied key instead.
+        restricted, restriction_reason = _request_restriction(request)
+        _meta = next((m for m in _TOOL_CATALOG if m["name"] == tool_name), None)
+        _needs_operator_key = bool(
+            (_meta and _meta.get("requires_env")) or tool_name in _OPTIONAL_OPERATOR_KEY_ENV
+        )
+        if restricted and (tool_name == "search_breach" or _needs_operator_key):
+
+            async def _blocked() -> AsyncIterator[dict]:
+                msg = (
+                    f"Breach-data lookups are disabled: {restriction_reason}."
+                    if tool_name == "search_breach"
+                    else (
+                        f"This tool requires an API key ({restriction_reason}, so a "
+                        "locally-held key cannot be used). Use POST /api/tools/{tool}/run "
+                        "with your own key, or self-host with your own .env."
+                    )
+                )
+                yield {"data": json.dumps({"line": msg, "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_blocked(), ping=15)
 
         async def event_gen() -> AsyncIterator[dict]:
             yield {
@@ -1619,9 +1860,11 @@ def create_app() -> FastAPI:
 
     @app.post("/api/chat")
     async def chat(req: ChatRequest, request: Request):
-        if DEMO_MODE:
+        restricted, restriction_reason = _request_restriction(request)
+        if restricted:
             async def _demo_block():
-                yield f'data: {json.dumps({"type": "error", "message": "Server-side LLM is disabled in demo mode — add your own API key in Settings."})}\n\n'
+                message = f"Server-side LLM is disabled ({restriction_reason}) — add your own API key in Settings."
+                yield f'data: {json.dumps({"type": "error", "message": message})}\n\n'
                 yield f'data: {json.dumps({"type": "done"})}\n\n'
             return StreamingResponse(
                 _demo_block(),
@@ -1962,9 +2205,6 @@ def create_app() -> FastAPI:
 # ---------------------------------------------------------------------------
 
 
-_SAFE_BIND_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "localhost", "::1"})
-
-
 def _require_safe_bind(host: str, allow_remote: bool) -> None:
     """Refuse to bind to a non-loopback interface without an explicit opt-in.
 
@@ -1990,7 +2230,7 @@ async def serve_async(host: str = "127.0.0.1", port: int = 8080, allow_remote: b
     """Run uvicorn within an already-running asyncio event loop."""
     _require_safe_bind(host, allow_remote)
     load_dotenv()
-    app = create_app()
+    app = create_app(host=host)
     _print_banner(host, port)
     config = uvicorn.Config(app, host=host, port=port, log_level="warning", loop="none")
     server = uvicorn.Server(config)
@@ -2001,7 +2241,7 @@ def run_server(host: str = "127.0.0.1", port: int = 8080, allow_remote: bool = F
     """Standalone blocking entry point."""
     _require_safe_bind(host, allow_remote)
     load_dotenv()
-    app = create_app()
+    app = create_app(host=host)
     _print_banner(host, port)
     uvicorn.run(app, host=host, port=port, log_level="warning")
 
@@ -2011,4 +2251,10 @@ def _print_banner(host: str, port: int) -> None:
     print(f"[*] OpenOSINT {_VERSION} web server")
     print(f"[*] App  → http://{display}:{port}/")
     print(f"[*] Docs → http://{display}:{port}/docs/")
+    if _is_loopback_host(host) and not OPENOSINT_TRUSTED_PROXY:
+        print(
+            "[*] Bound to loopback. If you put a reverse proxy in front of this, "
+            "set OPENOSINT_TRUSTED_PROXY=true — otherwise credentialed tools and "
+            "chat will refuse proxied requests. See the README before doing so."
+        )
     print("[*] Press Ctrl+C to stop.")

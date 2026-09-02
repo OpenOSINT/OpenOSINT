@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sub-processors — OpenOSINT Cloud</title>
-<meta name="description" content="OpenOSINT Cloud sub-processor list. Third-party services used to deliver the OpenOSINT Cloud API.">
+<title>Sub-processors — OpenOSINT</title>
+<meta name="description" content="OpenOSINT sub-processor list for OpenOSINT Cloud and the public demo — who receives query content, result content, or credentials, and whether the key is operator-held or your own.">
 <link rel="canonical" href="https://openosint.tech/subprocessors/">
-<meta property="og:title" content="Sub-processors — OpenOSINT Cloud">
+<meta property="og:title" content="Sub-processors — OpenOSINT">
 <meta property="og:url" content="https://openosint.tech/subprocessors/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OpenOSINT">
@@ -16,7 +16,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "name": "Sub-processors — OpenOSINT Cloud",
+  "name": "Sub-processors — OpenOSINT",
   "url": "https://openosint.tech/subprocessors/",
   "isPartOf": { "@type": "WebSite", "url": "https://openosint.tech" }
 }
@@ -38,9 +38,9 @@
 <div id="masthead">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OPENOSINT CLOUD</td>
+<td class="mhead-l">OPENOSINT</td>
 <td class="mhead-c">Sub-processors</td>
-<td class="mhead-r">2026-06-13</td>
+<td class="mhead-r">2026-08-30</td>
 </tr>
 </table>
 </div>
@@ -49,57 +49,125 @@
 
 <h2 id="intro">SUB-PROCESSORS</h2>
 <div class="indent">
-<p>OpenOSINT Cloud uses the following third-party sub-processors to deliver the Service. This list is referenced in our <a href="/privacy/">Privacy Policy</a> (&sect;5). Last updated: 2026-06-13.</p>
-<p>For BYOK (bring-your-own-key) data sources, the data providers are chosen by the customer and are not listed here; you are bound by your chosen provider&rsquo;s own terms.</p>
+<p>This page covers the two surfaces the operator directly hosts and controls: <b>OpenOSINT Cloud</b> (the paid API) and the <b>public demo</b> at this site. It lists every external party that receives query content, result content, credentials, or personal data when you use either surface, built directly from the deployed code and infrastructure configuration rather than from a general description of the product. This list is referenced in our <a href="/privacy/">Privacy Policy</a> (&sect;5). Last updated: 2026-08-30.</p>
+<p>If you self-host OpenOSINT (the open-source CLI, MCP server, or local web UI) with your own API keys, this page does not apply to that use — you are the controller for that processing, and your relationship with whichever providers you configure is your own. See our <a href="/privacy/">Privacy Policy</a> (&sect;3).</p>
 </div>
 
-<h2 id="list">PROCESSOR LIST</h2>
+<h2 id="operator-keyed">OPERATOR-ENGAGED SUB-PROCESSORS</h2>
 <div class="indent">
+<p>These parties act on the operator's own account or key, to provide OpenOSINT Cloud and/or the public demo as a service. They are true sub-processors of the operator.</p>
 <table>
 <tr>
   <th>Sub-processor</th>
-  <th>Purpose</th>
+  <th>Surface</th>
+  <th>What it receives</th>
   <th>Location</th>
   <th>Transfer mechanism</th>
 </tr>
 <tr>
   <td><b>Gumroad</b></td>
-  <td>Payment processing / Merchant of Record for digital products (AI OSINT Prompt Pack, Operator's Playbook, Setup Sprint). Handles billing, invoicing, and international VAT on behalf of the operator. OpenOSINT Cloud access is invite-only and does not use a payment processor.</td>
+  <td>Digital-product purchases (AI OSINT Prompt Pack, Operator's Playbook, Setup Sprint)</td>
+  <td>Payment details, order data (email, product purchased). Acts as Merchant of Record; the operator never sees full card details. OpenOSINT Cloud access itself is invite-only and does not go through a payment processor.</td>
   <td>USA</td>
   <td>Standard Contractual Clauses (SCCs)</td>
 </tr>
 <tr>
   <td><b>Heroku (Salesforce)</b></td>
-  <td>Cloud hosting and infrastructure. The OpenOSINT Cloud API runs on Heroku dynos; Heroku Postgres stores account and usage data.</td>
+  <td>OpenOSINT Cloud only</td>
+  <td>Hosts the Cloud API and its Postgres database: account records, credit balances, and encrypted BYOK credentials. Does not receive query/target content — the Cloud API returns tool results to the caller without persisting them (see <code>cloud/routes/enrich.py</code>).</td>
   <td>USA</td>
   <td>Standard Contractual Clauses (SCCs)</td>
 </tr>
 <tr>
+  <td><b>DigitalOcean</b></td>
+  <td>Public demo only</td>
+  <td>Hosts the demo web application. Receives every HTTP request to the demo, including visitor IP addresses and the input to every tool run there — including the keyless tools (WHOIS, DNS, domain enumeration, email/username enumeration, etc.), which remain fully interactive in demo mode. Was not previously disclosed on this page.</td>
+  <td>USA (and wherever the region is provisioned)</td>
+  <td>Standard Contractual Clauses (SCCs)</td>
+</tr>
+<tr>
   <td><b>IP2Location</b></td>
-  <td>OSINT data provider for IP geolocation, ISP, proxy detection, and threat intelligence lookups via the <code>search_ip2location</code> tool.</td>
+  <td>OpenOSINT Cloud only</td>
+  <td>IP address submitted to <code>search_ip2location</code>. This is a sponsored, platform-tier lookup by design — the operator's own key is used for every Cloud customer, not BYOK (see <code>cloud/key_sources.py</code>). On the public demo, this tool now requires your own key; the operator's key cannot be used there.</td>
   <td>Malaysia / USA</td>
+  <td>Standard Contractual Clauses (SCCs)</td>
+</tr>
+<tr>
+  <td><b>GitHub</b> (OAuth login)</td>
+  <td>OpenOSINT Cloud dashboard only</td>
+  <td>Used as a sign-in identity provider for the Cloud dashboard: receives the OAuth authorization request and returns your GitHub user ID and (if public) email address. Not the same relationship as the <code>search_github</code> OSINT tool — see the BYOK table below for that.</td>
+  <td>USA</td>
+  <td>Standard Contractual Clauses (SCCs)</td>
+</tr>
+<tr>
+  <td><b>Google</b> (OAuth login)</td>
+  <td>OpenOSINT Cloud dashboard only</td>
+  <td>Used as a sign-in identity provider for the Cloud dashboard: receives the OAuth authorization request and returns your Google account subject ID and email address.</td>
+  <td>USA</td>
   <td>Standard Contractual Clauses (SCCs)</td>
 </tr>
 </table>
 </div>
 
+<h2 id="not-used">NOT USED TO PROCESS YOUR QUERY OR PERSONAL DATA</h2>
+<div class="indent">
+<p>These providers do not receive data from OpenOSINT Cloud or the public demo, even though the underlying open-source project supports them for self-hosted use. Each surface is verified and stated independently below — a fact about one is not assumed to hold for the other.</p>
+<table>
+<tr>
+  <th>Provider</th>
+  <th>OpenOSINT Cloud</th>
+  <th>Public demo</th>
+</tr>
+<tr>
+  <td><b>Anthropic (Claude)</b></td>
+  <td>Not used. The Cloud API has no chat or AI feature at all — it is a tool-only REST/MCP gateway (<code>cloud/tools.py</code>, <code>cloud/routes/mcp_gateway.py</code>); nothing in <code>cloud/</code> references Anthropic.</td>
+  <td>Not used. The demo's chat endpoint is disabled unconditionally in demo mode, regardless of whether the operator's own key or a visitor-supplied key would be used.</td>
+</tr>
+<tr>
+  <td>Any OpenAI-compatible endpoint</td>
+  <td>Not used — same basis as Anthropic above: no chat feature exists in the Cloud API codebase.</td>
+  <td>Not used. Blocked by the same unconditional chat-endpoint disable as Anthropic above, including a visitor-supplied alternate backend.</td>
+</tr>
+<tr>
+  <td><b>HaveIBeenPwned</b></td>
+  <td>Not used. <code>search_breach</code> is deliberately excluded from both the Cloud API's tool list and its MCP gateway's tool registrations — it is not wired in, not a missing key.</td>
+  <td>Not used. <code>search_breach</code> is blocked unconditionally in demo mode — not just a missing key — because the operator does not want to be the entity making a breach lookup available to an anonymous visitor on a non-consenting third party, regardless of whose API key would be used.</td>
+</tr>
+</table>
+<p>If you self-host OpenOSINT (CLI, MCP server, or local web UI) with your own key for any of these, that processing is between you and the provider — see the scope note at the top of this page.</p>
+</div>
+
 <h2 id="byok">BYOK DATA SOURCES</h2>
 <div class="indent">
-<p>When you supply your own API keys (BYOK) to use additional data sources (e.g. Shodan, VirusTotal, HaveIBeenPwned, Censys, AbuseIPDB), those providers process your queries directly under your account and their own terms. OpenOSINT Cloud transmits your key to the provider only to fulfil the lookup you request; we do not store query results beyond the response window.</p>
+<p>For these tools, OpenOSINT Cloud and the public demo require <i>your own</i> API key or account — the operator's key is never used, and the provider processes your query directly under your account and their own terms:</p>
+<ul>
+<li><b>ipinfo.io</b> — <code>search_ip</code> (IP geolocation)</li>
+<li><b>VirusTotal</b> — <code>search_virustotal</code></li>
+<li><b>Censys</b> — <code>search_censys</code> (compound API ID + secret)</li>
+<li><b>AbuseIPDB</b> — <code>search_abuseipdb</code></li>
+<li><b>Shodan</b> — <code>search_shodan</code>. Not currently reachable via OpenOSINT Cloud at all (excluded from the Cloud API's v1 allow-list). On the public demo it requires your own key. The code is written to support an operator-held key for this tool in the future (see <code>cloud/key_sources.py</code>) — if that changes, this entry will move to the table above.</li>
+<li><b>GitHub</b> — the <code>search_github</code> OSINT tool (distinct from the OAuth login above) works unauthenticated against GitHub's public API; a personal token only raises the rate limit and is never the operator's own.</li>
+<li><b>Bright Data</b> — <code>search_dorks_live</code>, <code>scrape_url</code>, <code>search_footprint</code>. The operator has a referral relationship with Bright Data (a signup-commission link is shared in project documentation) but does not hold or use its own Bright Data key on either OpenOSINT Cloud or the public demo — every request runs on your key.</li>
+</ul>
+</div>
+
+<h2 id="keyless">KEYLESS THIRD-PARTY QUERIES</h2>
+<div class="indent">
+<p>A few tools query third-party services directly, without any API key at all, as an inherent part of what the lookup does — for example, checking whether an email or username is registered on a given platform (<code>search_email</code>, <code>search_username</code>), reading a domain's public WHOIS record (<code>search_whois</code>), resolving DNS/subdomains (<code>search_dns</code>, <code>search_domain</code>), or searching public paste dumps (<code>search_paste</code>). These can reach dozens to hundreds of third-party sites and registries per request. The operator has no account, key, or ongoing relationship with any of them — no more than a browser has one with every site it's pointed at — so they are not listed individually here.</p>
 </div>
 
 <h2 id="changes">CHANGES</h2>
 <div class="indent">
-<p>We will update this page when sub-processors are added or removed. Material changes will also be communicated via the <a href="/privacy/">Privacy Policy</a> update mechanism. Contact <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a> with questions.</p>
+<p>This page was rewritten on 2026-08-30 after an internal accuracy review found it named a hosting provider (Heroku) the public demo does not run on, classified Shodan as a customer-supplied (BYOK) source when the code configures it as an operator-held key, and omitted Anthropic and DigitalOcean entirely. We will update this page when sub-processors are added or removed. Material changes will also be communicated via the <a href="/privacy/">Privacy Policy</a> update mechanism. Contact <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a> with questions.</p>
 </div>
 
 <hr>
 <div id="footer">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OpenOSINT Cloud</td>
+<td class="mhead-l">OpenOSINT</td>
 <td class="mhead-c">Sub-processors</td>
-<td class="mhead-r">2026-06-13</td>
+<td class="mhead-r">2026-08-30</td>
 </tr>
 </table>
 </div>

@@ -464,13 +464,16 @@ class TestSearchFootprintWebRegistration:
 
 @pytest_asyncio.fixture
 async def http_client():
-    from openosint.web_server import create_app, _RATE_STORE
+    """Loopback client: simulates a self-hosted instance bound to 127.0.0.1,
+    which is normal operation with no restriction — see
+    TestDemoModeFailsClosed for the network-exposure invariant itself."""
+    import openosint.web_server as ws
 
-    _RATE_STORE.clear()
-    app = create_app()
+    ws._RATE_STORE.clear()
+    app = ws.create_app(host="127.0.0.1")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
-    _RATE_STORE.clear()
+    ws._RATE_STORE.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -751,12 +754,13 @@ class TestDemoMode:
     """OPENOSINT_DEMO_MODE=true: /api/health exposes flag; /api/chat is blocked server-side."""
 
     @pytest_asyncio.fixture
-    async def demo_client(self, monkeypatch):
+    async def demo_client(self):
+        """Simulates a process bound to 0.0.0.0 — a non-loopback bind, which
+        is what actually drives DEMO_MODE now (see TestDemoModeFailsClosed)."""
         import openosint.web_server as ws
-        monkeypatch.setattr(ws, "DEMO_MODE", True)
         from openosint.web_server import _RATE_STORE
         _RATE_STORE.clear()
-        app = ws.create_app()
+        app = ws.create_app(host="0.0.0.0")
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
             yield c
         _RATE_STORE.clear()
@@ -766,7 +770,9 @@ class TestDemoMode:
         assert resp.status_code == 200
         assert resp.json()["demo_mode"] is True
 
-    async def test_health_demo_mode_false_by_default(self, http_client):
+    async def test_health_demo_mode_false_when_explicitly_disabled(self, http_client):
+        """http_client pins DEMO_MODE False (see fixture) — this is NOT the
+        real default; see TestDemoModeFailsClosed for the fail-closed default."""
         resp = await http_client.get("/api/health")
         assert resp.status_code == 200
         assert resp.json()["demo_mode"] is False
@@ -790,8 +796,283 @@ class TestDemoMode:
         assert len(called) == 0, "_select_chat_backend must not be called in demo mode"
         body = resp.text
         assert '"type": "error"' in body
-        assert "demo mode" in body.lower()
+        assert "not bound to loopback" in body.lower()
         assert '"type": "done"' in body
+
+    # -- Exposure A: no operator-keyed lookup may run for an anonymous demo caller --
+
+    async def test_credentialed_tool_blocked_on_operator_key_in_demo_mode(
+        self, demo_client, monkeypatch
+    ):
+        """A credentialed tool must not fall back to the operator's own env-var
+        key while demo mode is active — the runner must never even be called."""
+        monkeypatch.setenv("IPINFO_TOKEN", "operator-secret-token")
+        called = []
+
+        async def fake_ip(ip, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_ip_osint", new=fake_ip):
+            resp = await demo_client.post("/api/run/search_ip", json={"input": "8.8.8.8"})
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body.get("key_required") is True
+        assert "IPINFO_TOKEN" in body.get("missing_keys", [])
+        assert called == [], "operator's key must never reach the tool runner in demo mode"
+
+    async def test_credentialed_tool_runs_with_visitor_supplied_key_in_demo_mode(
+        self, demo_client, monkeypatch
+    ):
+        """BYOK still works in demo mode — only the operator's own key is blocked."""
+        monkeypatch.delenv("IPINFO_TOKEN", raising=False)
+        received = []
+
+        async def fake_ip(ip, timeout_seconds=30, *, api_key=None):
+            received.append(api_key)
+            return "ok"
+
+        with patch("openosint.web_server.run_ip_osint", new=fake_ip):
+            resp = await demo_client.post(
+                "/api/run/search_ip",
+                json={"input": "8.8.8.8", "api_keys": {"IPINFO_TOKEN": "visitor-own-key"}},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+        assert received == ["visitor-own-key"]
+
+    async def test_breach_lookup_blocked_in_demo_mode_even_with_visitor_key(
+        self, demo_client, monkeypatch
+    ):
+        """Breach/HIBP is off in demo mode unconditionally — BYOK does not
+        reopen it, because the data-controller concern isn't about whose key
+        is used. No flag exists to turn this back on; it's a hard block."""
+        monkeypatch.setenv("HIBP_API_KEY", "operator-secret-token")
+        called = []
+
+        async def fake_breach(email, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_breach_osint", new=fake_breach):
+            resp = await demo_client.post(
+                "/api/run/search_breach",
+                json={
+                    "input": "target@example.com",
+                    "api_keys": {"HIBP_API_KEY": "visitor-own-key"},
+                },
+            )
+
+        assert resp.status_code == 403
+        assert called == [], "breach lookups must never run in demo mode, BYOK or not"
+
+    async def test_stream_endpoint_blocked_for_credentialed_tool_in_demo_mode(
+        self, demo_client, monkeypatch
+    ):
+        """/api/stream/{tool} has no BYOK parameter at all, so in demo mode it
+        must refuse credentialed tools outright rather than silently falling
+        back to the operator's key."""
+        monkeypatch.setenv("SHODAN_API_KEY", "operator-secret-token")
+        called = []
+
+        async def fake_shodan(query, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_shodan_osint", new=fake_shodan):
+            async with demo_client.stream(
+                "GET", "/api/stream/search_shodan", params={"input": "8.8.8.8"}
+            ) as resp:
+                assert resp.status_code == 200
+                body = b"".join([chunk async for chunk in resp.aiter_bytes()]).decode()
+
+        assert called == [], "operator's key must never reach the tool runner in demo mode"
+        assert "disabled" in body.lower() or "api key" in body.lower()
+
+    async def test_keyless_tool_still_works_in_demo_mode(self, demo_client):
+        """Tools with no operator credential (search_dns, search_domain, etc.)
+        are unaffected by demo mode — Exposure A is about operator-held keys."""
+
+        async def fake_dns(domain, timeout_seconds=15):
+            return "ok"
+
+        with patch("openosint.web_server.run_dns_osint", new=fake_dns):
+            resp = await demo_client.post("/api/run/search_dns", json={"input": "example.com"})
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+
+
+class TestDemoModeFailsClosed:
+    """DEMO_MODE is a network-exposure invariant: driven by bind address, with
+    OPENOSINT_DEMO_MODE only able to tighten it further, never loosen it. A
+    self-hosted install bound to loopback must never be punished for an unset
+    env var — that was the bug this replaced."""
+
+    # -- bind address is the primary signal --
+
+    def test_loopback_ipv4_is_not_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("127.0.0.1") is False
+
+    def test_localhost_is_not_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("localhost") is False
+
+    def test_loopback_ipv6_is_not_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("::1") is False
+
+    def test_wildcard_bind_is_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("0.0.0.0") is True
+
+    def test_explicit_external_address_is_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("203.0.113.5") is True
+
+    def test_undeterminable_bind_fails_closed_to_restricted(self, monkeypatch):
+        """create_app() called with no host (e.g. a raw uvicorn --factory
+        target bypassing serve_async()/run_server()) must not default open."""
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode(None) is True
+
+    # -- OPENOSINT_DEMO_MODE can only tighten, never loosen --
+
+    def test_env_var_forces_restriction_even_on_loopback(self, monkeypatch):
+        monkeypatch.setenv("OPENOSINT_DEMO_MODE", "true")
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("127.0.0.1") is True
+
+    def test_env_var_cannot_loosen_a_public_bind(self, monkeypatch):
+        monkeypatch.setenv("OPENOSINT_DEMO_MODE", "false")
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("0.0.0.0") is True
+
+    def test_malformed_env_var_adds_no_restriction_of_its_own(self, monkeypatch):
+        """Safety no longer depends on this var's parsing — a garbage value
+        on a loopback bind stays unrestricted; the bind address is what
+        fails closed, not this variable (see test_undeterminable_bind_..)."""
+        monkeypatch.setenv("OPENOSINT_DEMO_MODE", "yes please")
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("127.0.0.1") is False
+
+    # -- create_app(host=...) actually applies the computation --
+
+    def test_create_app_sets_demo_mode_from_host(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        ws.create_app(host="127.0.0.1")
+        assert ws.DEMO_MODE is False
+        ws.create_app(host="0.0.0.0")
+        assert ws.DEMO_MODE is True
+
+
+class TestProxyExposureInvariant:
+    """A loopback bind behind an on-host reverse proxy is publicly reachable
+    even though nothing at the TCP layer distinguishes it from a direct local
+    connection — GHSA-cqr4-hcfp-m6m4's exact concern, extended from
+    /api/setup to every credentialed-tool and chat gate. See
+    _request_restriction() and .claude/LEGAL_CONTEXT.md §8."""
+
+    @pytest_asyncio.fixture
+    async def loopback_client(self, monkeypatch):
+        import openosint.web_server as ws
+        monkeypatch.delenv("OPENOSINT_TRUSTED_PROXY", raising=False)
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        ws._RATE_STORE.clear()
+        app = ws.create_app(host="127.0.0.1")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            yield c
+        ws._RATE_STORE.clear()
+
+    async def test_direct_loopback_is_not_restricted(self, loopback_client):
+        resp = await loopback_client.get("/api/health")
+        body = resp.json()
+        assert body["restricted"] is False
+        assert body["restriction_reason"] is None
+
+    async def test_loopback_behind_undeclared_proxy_is_restricted(self, loopback_client):
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-For": "203.0.113.9"}
+        )
+        body = resp.json()
+        assert body["restricted"] is True
+        assert "trusted-proxy" in body["restriction_reason"]
+
+    async def test_loopback_behind_declared_trusted_proxy_is_not_restricted(
+        self, loopback_client, monkeypatch
+    ):
+        monkeypatch.setattr("openosint.web_server.OPENOSINT_TRUSTED_PROXY", True)
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-For": "203.0.113.9"}
+        )
+        body = resp.json()
+        assert body["restricted"] is False
+
+    async def test_conflicting_forwarded_proto_restricted_even_with_declared_trust(
+        self, loopback_client, monkeypatch
+    ):
+        """Trust in the proxy doesn't extend to trusting headers that
+        disagree with themselves — that's still treated as spoofing."""
+        monkeypatch.setattr("openosint.web_server.OPENOSINT_TRUSTED_PROXY", True)
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-Proto": "https, http"}
+        )
+        body = resp.json()
+        assert body["restricted"] is True
+        assert "inconsistent" in body["restriction_reason"]
+
+    async def test_conflicting_forwarded_host_restricted(self, loopback_client):
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-Host": "a.example.com, b.example.com"}
+        )
+        assert resp.json()["restricted"] is True
+
+    async def test_credentialed_tool_blocked_behind_undeclared_proxy(
+        self, loopback_client, monkeypatch
+    ):
+        """Prove the invariant actually gates tool access, not just /api/health's
+        reporting: a locally-held key must not reach the runner."""
+        monkeypatch.setenv("IPINFO_TOKEN", "locally-held-token")
+        called = []
+
+        async def fake_ip(ip, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_ip_osint", new=fake_ip):
+            resp = await loopback_client.post(
+                "/api/run/search_ip",
+                json={"input": "8.8.8.8"},
+                headers={"X-Forwarded-For": "203.0.113.9"},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json().get("key_required") is True
+        assert called == [], "locally-held key must never reach the tool runner"
+
+    async def test_startup_warning_logged_once_for_undeclared_proxy(
+        self, loopback_client, monkeypatch, caplog
+    ):
+        import logging as _logging
+        import openosint.web_server as ws
+
+        monkeypatch.setattr(ws, "_proxy_warning_emitted", False)
+        with caplog.at_level(_logging.WARNING):
+            await loopback_client.get("/api/health", headers={"X-Forwarded-For": "203.0.113.9"})
+            await loopback_client.get("/api/health", headers={"X-Forwarded-For": "203.0.113.9"})
+
+        warnings = [r for r in caplog.records if "OPENOSINT_TRUSTED_PROXY" in r.getMessage()]
+        assert len(warnings) == 1, "the warning must fire once, not on every request"
 
 
 class TestCreateAppFactoryRoutes:
@@ -817,13 +1098,12 @@ class TestCreateAppFactoryRoutes:
         resp = await factory_client.get("/static/config.js")
         assert resp.status_code == 200
 
-    async def test_health_demo_mode_flag(self, monkeypatch):
+    async def test_health_demo_mode_flag(self):
         import openosint.web_server as ws
         from openosint.web_server import _RATE_STORE
 
-        monkeypatch.setattr(ws, "DEMO_MODE", True)
         _RATE_STORE.clear()
-        app = ws.create_app()
+        app = ws.create_app(host="0.0.0.0")
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
             resp = await c.get("/api/health")
         assert resp.status_code == 200

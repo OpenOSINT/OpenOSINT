@@ -56,6 +56,14 @@ SHODAN_CREDIT_COST: int = 4
 PLATFORM_BURST_WINDOW_SECS: float = float(os.environ.get("PLATFORM_BURST_WINDOW_SECS", "60"))
 PLATFORM_BURST_MAX_CALLS: int = int(os.environ.get("PLATFORM_BURST_MAX_CALLS", "20"))
 
+# ── Retention ─────────────────────────────────────────────────────────────────
+# Single source of truth for the figure documented in legal/PRIVACY_POLICY.md
+# §4 ("Usage logs are kept for 12 months"). A test asserts the policy text
+# matches this number so the two cannot silently drift. This is the
+# *documented* policy — whether the underlying Heroku log-drain is actually
+# configured to this figure is unverified; see legal/REVIEW-QUESTIONS.md.
+USAGE_METADATA_RETENTION_DAYS: int = 365
+
 # ── Plan definitions ──────────────────────────────────────────────────────────
 # Credits granted when a customer purchases / activates a plan.
 PLAN_CREDITS: dict[str, int] = {

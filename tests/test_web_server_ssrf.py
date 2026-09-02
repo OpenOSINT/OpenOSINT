@@ -42,9 +42,11 @@ def _mock_requests_response(status_code: int = 200, body: dict | None = None) ->
 
 @pytest_asyncio.fixture
 async def client():
-    from openosint.web_server import create_app
+    """Loopback bind: these tests exercise chat-backend/SSRF behavior, not
+    demo-mode gating (see test_web_server.py::TestDemoMode for that)."""
+    import openosint.web_server as ws
 
-    app = create_app()
+    app = ws.create_app(host="127.0.0.1")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
 

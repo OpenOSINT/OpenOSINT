@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Privacy Policy — OpenOSINT Cloud</title>
-<meta name="description" content="OpenOSINT Cloud Privacy Policy. GDPR-compliant data processing disclosure. Effective 2026-06-13.">
+<title>Privacy Policy — OpenOSINT</title>
+<meta name="description" content="OpenOSINT Privacy Policy, organized by surface: public demo, Cloud API, and self-hosted use. GDPR-compliant data processing disclosure. Effective 2026-08-30.">
 <link rel="canonical" href="https://openosint.tech/privacy/">
-<meta property="og:title" content="Privacy Policy — OpenOSINT Cloud">
+<meta property="og:title" content="Privacy Policy — OpenOSINT">
 <meta property="og:url" content="https://openosint.tech/privacy/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OpenOSINT">
@@ -16,7 +16,7 @@
 {
   "@context": "https://schema.org",
   "@type": "WebPage",
-  "name": "Privacy Policy — OpenOSINT Cloud",
+  "name": "Privacy Policy — OpenOSINT",
   "url": "https://openosint.tech/privacy/",
   "isPartOf": { "@type": "WebSite", "url": "https://openosint.tech" }
 }
@@ -38,9 +38,9 @@
 <div id="masthead">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OPENOSINT CLOUD</td>
+<td class="mhead-l">OPENOSINT</td>
 <td class="mhead-c">Privacy Policy</td>
-<td class="mhead-r">2026-06-13</td>
+<td class="mhead-r">2026-08-30</td>
 </tr>
 </table>
 </div>
@@ -49,63 +49,52 @@
 
 <h2 id="intro">PRIVACY POLICY</h2>
 <div class="indent">
-<p><b>Effective date:</b> 2026-06-13</p>
-<p><b>Data controller:</b> Tommaso Bertocchi, contact <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a>.</p>
-<p>This policy explains how we process personal data when you use <b>OpenOSINT Cloud</b> (the &ldquo;Service&rdquo;).</p>
+<p><b>Effective date:</b> 2026-08-30</p>
+<p><b>Data controller (where stated below):</b> Tommaso Bertocchi, contact <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a>.</p>
+<p>OpenOSINT is offered through several distinct surfaces, and our role is not the same on all of them. This policy is organized by surface for that reason &mdash; read the section for the surface you actually use; do not assume a fact from one section holds on another.</p>
 </div>
 
-<h2 id="data">1. DATA WE PROCESS</h2>
+<h2 id="demo">1. PUBLIC DEMO (DEMO.OPENOSINT.TECH)</h2>
 <div class="indent">
-<ul>
-<li><b>Account data:</b> for OpenOSINT Cloud, your email address via GitHub/Google OAuth login. Cloud access is invite-only and provisioned manually &mdash; we do not collect or process payment card data for it ourselves. If you purchase the AI OSINT Prompt Pack, Operator&rsquo;s Playbook, or Setup Sprint, payment is processed by <b>Gumroad</b> (acting as Merchant of Record for those digital products); we receive limited order data (email, product purchased) from Gumroad and never see full card details.</li>
-<li><b>Credentials you store (BYOK):</b> API keys you add for third-party providers. These are <b>encrypted at rest</b> and used only to perform the lookups you request.</li>
-<li><b>Usage data:</b> API requests, timestamps, credit balances, and limited technical logs (e.g. request metadata) for operating, securing, and metering the Service.</li>
-<li><b>Query inputs/outputs:</b> the targets you submit and the results returned. We aim to minimize retention of query content; see &sect;4.</li>
-</ul>
+<p>This surface has its own, separate <b>Terms of Use</b> and <b>Privacy &amp; Cookie Notice</b> at <a href="/demo/terms/">openosint.tech/demo/terms</a> and <a href="/demo/privacy/">openosint.tech/demo/privacy</a>. Those documents control for the demo; this section is a summary, not a substitute. In short: the demo is Bring Your Own Key. When you supply your own key, we use it only to fulfil the lookup you request, directly with the provider you chose &mdash; we do not use an operator-held key on your behalf, and your key is stored in your browser session only, never on our servers. Breach-data lookups are disabled on the demo outright, regardless of key source.</p>
 </div>
 
 <h2 id="cookies">2. COOKIES AND TRACKING</h2>
 <div class="indent">
-<p>This website (<b>openosint.tech</b>) sets <b>no cookies</b> and loads <b>no analytics, advertising, or fingerprinting scripts</b>. There is no Google Analytics, Google Tag Manager, Meta pixel, Hotjar, or any other third-party tracker on any page.</p>
-<p>No cookie consent banner is shown because none is required &mdash; there are no non-essential cookies or trackers to consent to. If that changes, this policy and the site will be updated before any tracking is introduced.</p>
+<p>This website (openosint.tech) sets no cookies and loads no analytics, advertising, or fingerprinting scripts. There is no Google Analytics, Google Tag Manager, Meta pixel, Hotjar, or any other third-party tracker on any page. No cookie consent banner is shown because none is required &mdash; there are no non-essential cookies or trackers to consent to. If that changes, this policy and the site will be updated before any tracking is introduced.</p>
 </div>
 
-<h2 id="legal-bases">3. PURPOSES AND LEGAL BASES (GDPR ART. 6)</h2>
+<h2 id="cloud">3. OPENOSINT CLOUD API</h2>
 <div class="indent">
-<table>
-<tr><th>Purpose</th><th>Legal basis</th></tr>
-<tr><td>Providing the Service and processing payments</td><td>Performance of a contract</td></tr>
-<tr><td>Security, abuse prevention, and metering</td><td>Legitimate interests</td></tr>
-<tr><td>Legal and tax compliance</td><td>Legal obligation</td></tr>
-</table>
+<p>For OpenOSINT Cloud, we are the processor for the lookups you run, and a data recipient for account sign-in.</p>
+<p><b>Data we process:</b></p>
+<ul>
+<li><b>Account data:</b> your email address via GitHub/Google OAuth login. Cloud access is invite-only and provisioned manually &mdash; we do not collect or process payment card data ourselves. If you purchase the AI OSINT Prompt Pack, Operator&rsquo;s Playbook, or Setup Sprint, payment is processed by <b>Gumroad</b> (acting as Merchant of Record for those digital products); we receive limited order data (email, product purchased) from Gumroad and never see full card details.</li>
+<li><b>Credentials you store (BYOK):</b> API keys you add for tenant-source tools. These are <b>encrypted at rest</b> and used only to perform the lookups you request.</li>
+<li><b>Query inputs/outputs:</b> the target you submit and the result returned. These are not written to our database &mdash; see <code>cloud/routes/enrich.py</code> &mdash; and are not present in our application logs either: Cloud&rsquo;s logging is limited to a redacted customer identifier, the tool name, request timing, and an outcome status (ok / error / timeout), never the target or a provider&rsquo;s response body.</li>
+</ul>
+<p><b>Purposes and legal bases (GDPR Art. 6):</b> providing the Service and processing payments &mdash; performance of a contract; security, abuse prevention, and metering &mdash; legitimate interests; legal and tax compliance &mdash; legal obligation.</p>
+<p><b>Data about third parties in queries:</b> a result may include personal data about a third party. For that data <b>you are the data controller</b>, responsible for your lawful basis and for honoring data-subject rights. We process it on your behalf transiently to return the result to you.</p>
+<p><b>Recipients:</b> <b>Gumroad</b> (digital-product payments), <b>Heroku</b> (Cloud API hosting and its Postgres database), <b>IP2Location</b> (a sponsored lookup where we do hold and use our own key on your behalf &mdash; the one exception to the BYOK model above), and <b>GitHub</b>/<b>Google</b> (OAuth identity providers for dashboard sign-in only, not query content). A current, detailed list &mdash; including the public demo, which this policy does not otherwise cover &mdash; is available at <a href="/subprocessors/">openosint.tech/subprocessors</a>. Where data is transferred outside the EEA, we rely on appropriate safeguards such as Standard Contractual Clauses.</p>
+<p><b>Retention:</b> account and billing records are kept as required for legal/tax purposes. Usage metadata &mdash; the redacted identifier, tool name, timing, and status described above &mdash; is retained for 365 days (12 months) and then deleted or anonymized; this figure is pinned in code at <code>cloud/config.py:USAGE_METADATA_RETENTION_DAYS</code> specifically so it cannot silently drift from what this policy states. <b>Open item:</b> whether the underlying Heroku log-drain for this application is actually configured to this figure has not been verified against this repository &mdash; it is an account-level setting outside version control. Stored BYOK credentials are deleted when you remove them or close your account.</p>
 </div>
 
-<h2 id="third-party-data">4. DATA ABOUT THIRD PARTIES IN QUERIES</h2>
+<h2 id="self-hosted">4. LOCAL WEB UI, CLI, AND MCP SERVER (SELF-HOSTED)</h2>
 <div class="indent">
-<p>Results may include personal data about third parties. For such data <b>you are the data controller</b> and are responsible for your lawful basis and for honoring data-subject rights. We process it on your behalf transiently to return the result.</p>
+<p>When you run OpenOSINT yourself &mdash; the web UI on your own machine or network, the command-line interface, or the MCP server connected to an assistant like Claude Desktop &mdash; <b>you are the controller</b>, not us. We do not operate that instance, and nothing from your use of it is transmitted to us or processed by us. Any provider you configure with your own key (an AI backend, a data source) is a relationship between you and that provider under their terms, not ours.</p>
 </div>
 
-<h2 id="retention">5. RETENTION</h2>
+<h2 id="rights">5. YOUR RIGHTS</h2>
 <div class="indent">
-<p>We retain account and billing records as required for legal/tax purposes. Usage logs are kept for <b>12 months</b> and then deleted or anonymized. Stored credentials are deleted when you remove them or close your account.</p>
+<p>Under the GDPR you have rights of access, rectification, erasure, restriction, portability, and objection with respect to data we process as described in Section 3. To exercise them, contact <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a>. You may lodge a complaint with your supervisory authority &mdash; in Italy, the <b>Garante per la protezione dei dati personali</b>.</p>
 </div>
 
-<h2 id="subprocessors">6. SUB-PROCESSORS</h2>
-<div class="indent">
-<p>We use: <b>Gumroad</b> (payments / Merchant of Record for digital products), <b>Heroku</b> (hosting/infrastructure, USA), <b>IP2Location</b> and other OSINT data providers for lookups. A current list is available at <a href="/subprocessors/">openosint.tech/subprocessors</a>. Where data is transferred outside the EEA (e.g. US providers), we rely on appropriate safeguards such as Standard Contractual Clauses.</p>
-</div>
-
-<h2 id="rights">7. YOUR RIGHTS</h2>
-<div class="indent">
-<p>Under the GDPR you have rights of access, rectification, erasure, restriction, portability, and objection. To exercise them, contact <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a>. You may lodge a complaint with your supervisory authority &mdash; in Italy, the <b>Garante per la protezione dei dati personali</b>.</p>
-</div>
-
-<h2 id="security">8. SECURITY</h2>
+<h2 id="security">6. SECURITY</h2>
 <div class="indent">
 <p>We apply reasonable technical and organizational measures, including encryption at rest for stored credentials and TLS in transit. No system is perfectly secure.</p>
 </div>
 
-<h2 id="changes">9. CHANGES</h2>
+<h2 id="changes">7. CHANGES</h2>
 <div class="indent">
 <p>We may update this policy; material changes will be posted at <a href="/privacy/">openosint.tech/privacy</a> with a revised effective date.</p>
 </div>
@@ -114,9 +103,9 @@
 <div id="footer">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OpenOSINT Cloud</td>
+<td class="mhead-l">OpenOSINT</td>
 <td class="mhead-c">Privacy Policy</td>
-<td class="mhead-r">2026-06-13</td>
+<td class="mhead-r">2026-08-30</td>
 </tr>
 </table>
 </div>

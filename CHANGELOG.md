@@ -7,6 +7,38 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
+## [Unreleased]
+
+### Changed — BREAKING
+- **Web UI: locally-held provider keys are now gated by bind address, not an
+  env var.** Previously, whether a request could use a key from your `.env`
+  depended on `OPENOSINT_DEMO_MODE`, which defaulted to off — meaning a
+  server bound to a non-loopback interface used your keys for any caller
+  unless you remembered to set that variable. It's now a network-exposure
+  invariant: bound to `127.0.0.1`/`localhost`, keys work as before, no
+  change needed. Bound to anything else (`--host 0.0.0.0` with
+  `--allow-remote`, or an undeterminable bind address) — your keys are
+  never used to serve a request; callers must supply their own, and
+  `search_breach` is disabled outright regardless of key source.
+  `OPENOSINT_DEMO_MODE` still exists but can now only add restriction, never
+  remove it. **If you were exposing the web UI on your LAN and relying on
+  your own `.env` keys with no other authentication in front of it, that no
+  longer works** — see the README's Web UI section.
+- **Cloud API: request logs no longer contain the target you queried.**
+  `cloud/main.py`'s INFO-level root logger was letting every tool module's
+  free-text log line (built for CLI/MCP debugging, and including the raw
+  target) through. Cloud logging is now limited to a redacted customer
+  identifier, tool name, elapsed time, and outcome status.
+- **Web UI: a loopback bind behind a reverse proxy is no longer silently
+  trusted.** A request carrying proxy-forwarding headers
+  (`X-Forwarded-For`/`-Proto`/`-Host`, `Forwarded`, `CF-Connecting-IP`) is
+  now treated the same as a non-loopback bind — local keys withheld, breach
+  blocked — unless the new `OPENOSINT_TRUSTED_PROXY=true` is set. This is a
+  separate variable from `TRUSTED_PROXY` (rate-limit IP attribution only,
+  a lower-stakes setting some self-hosters already have on) — see the
+  README before setting it, including the note that doing so makes you the
+  controller for anyone the proxy relays to this instance.
+
 ## [2.27.0] — 2026-08-26
 
 ### Added

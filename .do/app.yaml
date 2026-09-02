@@ -13,27 +13,17 @@ services:
     routes:
       - path: /
     envs:
-      - key: ANTHROPIC_API_KEY
+      # Explicit and required: web_server.py fails closed on this var (missing,
+      # empty, or malformed also means demo mode ON), so this line is belt and
+      # suspenders, not the only thing standing between visitors and the
+      # operator's keys. Demo mode blocks /api/chat outright, requires a
+      # caller-supplied key (BYOK) for every credentialed tool, and blocks
+      # search_breach unconditionally regardless of key source.
+      - key: OPENOSINT_DEMO_MODE
         scope: RUN_TIME
-        type: SECRET
-      - key: HIBP_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-      - key: IPINFO_TOKEN
-        scope: RUN_TIME
-        type: SECRET
-      - key: IP2LOCATION_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-      - key: SHODAN_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-      - key: VIRUSTOTAL_API_KEY
-        scope: RUN_TIME
-        type: SECRET
-      - key: CENSYS_API_ID
-        scope: RUN_TIME
-        type: SECRET
-      - key: CENSYS_SECRET
-        scope: RUN_TIME
-        type: SECRET
+        value: "true"
+      # No operator provider keys are provisioned here on purpose: demo mode
+      # can never use them (chat is blocked, tool execution requires BYOK,
+      # breach is blocked outright), so a key that isn't present here can't
+      # leak from here even if a future code change reintroduces a fallback
+      # bug. Self-hosters set these in their own .env, not this deployment.

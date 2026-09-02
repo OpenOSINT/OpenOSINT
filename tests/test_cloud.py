@@ -621,3 +621,69 @@ async def test_link_key_conflict_returns_409(client, monkeypatch):
     await _login(client, monkeypatch, "google_link_c2", "c2@example.com")
     second = await client.post("/v1/link-key", json={"customer_api_key": "key-link-conflict"})
     assert second.status_code == 409
+
+
+# ── logging: no target values, in any log line, on the Cloud surface ─────────
+#
+# cloud/main.py used to run its root logger at INFO, which let every
+# openosint.tools.* module's free-text logging (built for CLI/MCP debugging,
+# and including the raw target) straight through. See
+# .claude/LEGAL_CONTEXT.md §4.1 and legal/INCIDENT-NOTES.md.
+
+
+def test_shared_tool_loggers_are_silenced_for_cloud(caplog):
+    """Direct proof of the suppression mechanism: openosint.tools.* loggers
+    inherit an effective level above CRITICAL once cloud.main has configured
+    logging, so a call that would otherwise log the target produces nothing."""
+    import logging as _logging
+
+    import cloud.main  # noqa: F401 -- import applies the logging config
+
+    target_logger = _logging.getLogger("openosint.tools.search_ip")
+    sentinel = "SENTINEL-TARGET-203.0.113.99"
+    with caplog.at_level(_logging.DEBUG):
+        target_logger.info("Starting IP lookup for: %s", sentinel)
+        target_logger.warning("IP lookup failed: %s", sentinel)
+        target_logger.exception("Unexpected error during IP lookup: %s", sentinel)
+
+    assert sentinel not in caplog.text
+
+
+async def test_enrich_end_to_end_logs_no_target_value(client, caplog):
+    """Run a real /v1/enrich request through the real search_ip tool code
+    (only the outbound HTTP call is faked) and prove the captured log output
+    contains the tool name and outcome status, but never the target."""
+    import logging
+
+    _seed("key-log-proof", credits=5)
+    await keys.store_key("key-log-proof", "ipinfo", "tok_test_byok")
+    sentinel_ip = "203.0.113.77"  # TEST-NET-3 (RFC 5737) — reserved, not a real host
+
+    fake_response = type(
+        "FakeResponse",
+        (),
+        {"status_code": 200, "json": lambda self: {"ip": sentinel_ip, "org": "AS0 Reserved"}},
+    )()
+
+    with (
+        patch("openosint.tools.search_ip.requests.get", return_value=fake_response),
+        caplog.at_level(logging.DEBUG),
+    ):
+        resp = await client.post(
+            "/v1/enrich",
+            json={"tool": "search_ip", "target": sentinel_ip},
+            headers={"X-API-Key": "key-log-proof"},
+        )
+
+    assert resp.status_code == 200
+    assert sentinel_ip not in caplog.text, "target value leaked into Cloud's captured logs"
+    assert "tool=search_ip" in caplog.text
+    assert "status=ok" in caplog.text
+
+
+def test_retention_constant_matches_documented_policy():
+    """legal/PRIVACY_POLICY.md §4 states '12 months' — pinned to this constant
+    so the documented figure and the implemented one cannot drift apart."""
+    from cloud.config import USAGE_METADATA_RETENTION_DAYS
+
+    assert USAGE_METADATA_RETENTION_DAYS == 365

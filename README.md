@@ -455,6 +455,41 @@ openosint web
 # Settings -> OpenAI API
 ```
 
+> **Breaking change (v2.28+): key usage now follows bind address, not an env var.**
+> Bound to `127.0.0.1`/`localhost` (the default) — no change: keys in your `.env`
+> work as before. Bound to any other interface (`--host 0.0.0.0`, which already
+> requires `--allow-remote`) — the web UI never uses a key from your environment
+> to serve a request; every caller must supply their own, and breach lookups
+> (`search_breach`) are disabled outright. This applies **regardless of any env
+> var**, including `OPENOSINT_DEMO_MODE`, which can only add restriction, never
+> remove it. If you were exposing the web UI on a LAN with your own keys and no
+> per-caller auth in front of it, that access pattern no longer works.
+>
+> **Running behind a reverse proxy?** A loopback bind (`127.0.0.1`) only means
+> the OS accepted the connection from this machine — it says nothing about
+> who can reach it if something in front (nginx, Caddy, a Docker/K8s sidecar,
+> a tunnel) forwards requests to it from elsewhere. By default, a request that
+> carries proxy-forwarding headers (`X-Forwarded-For`, `X-Forwarded-Proto`,
+> `X-Forwarded-Host`, `Forwarded`, `CF-Connecting-IP`) is treated exactly like
+> a non-loopback bind: your local keys are never used, breach lookups are
+> blocked, and the caller is told why. **If you deliberately serve this
+> through a reverse proxy and want it to behave like a normal local
+> instance for requests relayed by that proxy, set `OPENOSINT_TRUSTED_PROXY=true`.**
+> This is a separate variable from the existing `TRUSTED_PROXY` (which only
+> affects which IP a rate-limit bucket is attributed to — a low-stakes,
+> already-loosely-scoped setting some self-hosters already have on).
+> Reusing that flag here would have silently upgraded an existing
+> rate-limit-only configuration into one that also permits credentialed
+> access, without asking. `OPENOSINT_TRUSTED_PROXY` gets its own explicit
+> opt-in for that reason. Setting it does **not** blindly trust the
+> forwarded headers' content — internally inconsistent values (e.g. two
+> disagreeing `X-Forwarded-Proto` values on one request) are still treated
+> as public regardless. **Setting `OPENOSINT_TRUSTED_PROXY=true` means you
+> are choosing to serve credentialed lookups to whoever your reverse proxy
+> relays to this instance — you are the controller for their queries, the
+> same way OpenOSINT Cloud is for its customers. Put real authentication in
+> front of it if "whoever the proxy relays" is broader than you intend.**
+
 ### Interactive REPL
 
 Run `openosint` with no arguments to start the AI-powered REPL:

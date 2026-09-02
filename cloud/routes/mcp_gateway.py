@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from contextvars import ContextVar
 
 from mcp.server.fastmcp import FastMCP
@@ -22,6 +23,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from cloud import db, rate_limit, tools
 from cloud.config import TOOL_TIMEOUT_SECONDS
 from cloud.key_sources import get_credit_cost, is_platform_pool_tool, resolve_key
+from cloud.routes.enrich import _log_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -76,15 +78,19 @@ async def _run_mcp_tool(tool_name: str, target: str) -> str:
     if customer.credits < cost:
         return _credits_error(customer.plan)
 
+    start = time.monotonic()
     try:
         result = await asyncio.wait_for(
             tools.dispatch(tool_name, target.strip(), api_key=upstream_key),
             timeout=float(TOOL_TIMEOUT_SECONDS),
         )
     except asyncio.TimeoutError:
+        _log_outcome(tool_name, customer.api_key, "timeout", time.monotonic() - start)
         return f"Error: Tool '{tool_name}' timed out after {TOOL_TIMEOUT_SECONDS}s."
     except ValueError as exc:
+        _log_outcome(tool_name, customer.api_key, "error", time.monotonic() - start)
         return f"Error: {exc}"
+    elapsed = time.monotonic() - start
 
     lines: list[str] = result.get("results", [])
     first_line = lines[0] if lines else (result.get("error") or "")
@@ -94,7 +100,11 @@ async def _run_mcp_tool(tool_name: str, target: str) -> str:
         new_credits = await db.decrement_credits(customer.api_key, cost)
         if new_credits is None:
             # Race condition: concurrent request drained the last credit
+            _log_outcome(tool_name, customer.api_key, "credits_exhausted", elapsed)
             return _credits_error(customer.plan)
+        _log_outcome(tool_name, customer.api_key, "ok", elapsed)
+    else:
+        _log_outcome(tool_name, customer.api_key, "upstream_error", elapsed)
 
     return "\n".join(lines) if lines else (result.get("error") or "No results.")
 
