@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 import time
 
@@ -28,6 +29,20 @@ logger = logging.getLogger(__name__)
 
 _GDELT_URL = "https://api.gdeltproject.org/api/v2/geo/geo"
 _DEFAULT_TIMEOUT = 15
+_CONNECT_TIMEOUT_SECONDS = 5  # fail fast on a dead/hanging endpoint; read keeps the full budget
+
+# GDELT GEO 2.0 is public, keyless, and not per-IP rate-limited — routing it
+# through the shared upstream proxy (OPENOSINT_PROXY_URL) is a pure failure
+# point and cost with no benefit, unlike credentialed/target-facing tools
+# that use the proxy for good reason. Bypass it here by default; opt back in
+# per-deployment with OPENOSINT_GDELT_USE_PROXY=1 if you have a reason to.
+_GDELT_PROXY_OPT_IN_ENV_VAR = "OPENOSINT_GDELT_USE_PROXY"
+
+
+def _gdelt_proxies() -> dict[str, str] | None:
+    if os.environ.get(_GDELT_PROXY_OPT_IN_ENV_VAR, "").strip().lower() in ("1", "true", "yes"):
+        return get_requests_proxies()
+    return None
 _MIN_TIMESPAN = 15
 _MAX_TIMESPAN = 1440
 _DEFAULT_TIMESPAN = 60
@@ -101,12 +116,22 @@ def _fetch_gdelt_data(query: str, timespan: int, maxpoints: int, timeout_seconds
         "maxpoints": maxpoints,
     }
     try:
+        # A single flat timeout applies to BOTH connect and read, so a host
+        # that completes the TCP handshake but hangs mid-TLS (observed with
+        # GDELT during an outage) blocks for the full read budget. Splitting
+        # them means a genuinely dead/hanging endpoint fails fast — the live
+        # demo gets a clean error instead of a 15s+ spinner — while a slow
+        # but reachable one still gets the full timeout_seconds to respond.
         response = requests.get(
             _GDELT_URL,
             params=params,
-            timeout=timeout_seconds,
-            proxies=get_requests_proxies(),
+            timeout=(_CONNECT_TIMEOUT_SECONDS, timeout_seconds),
+            proxies=_gdelt_proxies(),
         )
+    except requests.ConnectTimeout as exc:
+        raise OSINTError(
+            f"GDELT GEO API did not respond within {_CONNECT_TIMEOUT_SECONDS}s — endpoint appears down."
+        ) from exc
     except requests.Timeout as exc:
         raise OSINTError(f"GDELT GEO API timed out after {timeout_seconds}s.") from exc
     except requests.RequestException as exc:

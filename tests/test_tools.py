@@ -415,6 +415,45 @@ class TestSearchGdeltGeoUpstreamError:
         assert "Scan error" in result
         assert "timed out" in result.lower()
 
+    async def test_uses_short_connect_timeout_not_full_read_budget(self):
+        """A single flat timeout applies to both connect and read — a host
+        that hangs mid-TLS (GDELT during an outage) would otherwise block
+        for the full read budget instead of failing fast."""
+        from openosint.tools.search_gdelt_geo import (
+            _CONNECT_TIMEOUT_SECONDS,
+            run_gdelt_geo_osint,
+        )
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: _gdelt_fc([])
+
+        with patch(
+            "openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response
+        ) as mock_get:
+            await run_gdelt_geo_osint("query-connect-timeout-check", timeout_seconds=15)
+
+        assert mock_get.call_args.kwargs["timeout"] == (_CONNECT_TIMEOUT_SECONDS, 15)
+        assert _CONNECT_TIMEOUT_SECONDS < 15
+
+    async def test_connect_timeout_fails_fast_with_clear_message(self):
+        """A hang-at-connect (ConnectTimeout, a Timeout subclass) must not be
+        reported as a generic read timeout — the message should make clear
+        the endpoint itself is unreachable, not just slow."""
+        import requests
+
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        with patch(
+            "openosint.tools.search_gdelt_geo.requests.get",
+            side_effect=requests.ConnectTimeout("connect timed out"),
+        ):
+            result = await run_gdelt_geo_osint("query", timeout_seconds=15)
+
+        assert "Scan error" in result
+        assert "appears down" in result.lower()
+        assert "15s" not in result  # must not claim the full read budget elapsed
+
 
 class TestSearchGdeltGeoBboxFilter:
     def test_filters_features_outside_bbox(self):
@@ -435,6 +474,83 @@ class TestSearchGdeltGeoBboxFilter:
 
         fc = _gdelt_fc([_gdelt_feature(30.52, 50.45)])
         assert _filter_by_bbox(fc, None) == fc
+
+
+class TestSearchGdeltGeoProxyBypass:
+    """GDELT is public/keyless/not per-IP rate-limited — it must not route
+    through OPENOSINT_PROXY_URL by default, even when one is configured for
+    every other tool. See openosint/tools/search_gdelt_geo.py's
+    _gdelt_proxies() and _GDELT_PROXY_OPT_IN_ENV_VAR."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_proxy_state(self, monkeypatch):
+        from openosint import proxy
+
+        proxy.set_cli_proxy_url(None)
+        monkeypatch.delenv(proxy._ENV_VAR, raising=False)
+        yield
+        proxy.set_cli_proxy_url(None)
+
+    async def test_no_proxy_kwarg_even_when_configured(self, monkeypatch):
+        from openosint import proxy
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        monkeypatch.setenv(proxy._ENV_VAR, "http://proxyhost:8080")
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: _gdelt_fc([])
+
+        with patch(
+            "openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response
+        ) as mock_get:
+            await run_gdelt_geo_osint("query-proxy-bypass", timeout_seconds=5)
+
+        assert mock_get.call_args.kwargs["proxies"] is None
+
+    async def test_opt_in_env_var_restores_proxy(self, monkeypatch):
+        from openosint import proxy
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        monkeypatch.setenv(proxy._ENV_VAR, "http://proxyhost:8080")
+        monkeypatch.setenv("OPENOSINT_GDELT_USE_PROXY", "1")
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: _gdelt_fc([])
+
+        # A query string distinct from other tests in this module — GDELT
+        # results are process-cached by (query, timespan, maxpoints), and a
+        # repeat of another test's query would be served from cache instead
+        # of hitting requests.get at all.
+        with patch(
+            "openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response
+        ) as mock_get:
+            await run_gdelt_geo_osint("query-proxy-optin", timeout_seconds=5)
+
+        assert mock_get.call_args.kwargs["proxies"] == {
+            "http": "http://proxyhost:8080",
+            "https": "http://proxyhost:8080",
+        }
+
+    async def test_other_tool_still_uses_configured_proxy(self, monkeypatch):
+        """search_ip stands in for every other proxied tool — the shared
+        default in openosint/proxy.py must be untouched by the GDELT change."""
+        from openosint import proxy
+        from openosint.tools.search_ip import run_ip_osint
+
+        monkeypatch.setenv(proxy._ENV_VAR, "http://proxyhost:8080")
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: {"ip": "8.8.8.8"}
+
+        with patch(
+            "openosint.tools.search_ip.requests.get", return_value=mock_response
+        ) as mock_get:
+            await run_ip_osint("8.8.8.8", timeout_seconds=5)
+
+        assert mock_get.call_args.kwargs["proxies"] == {
+            "http": "http://proxyhost:8080",
+            "https": "http://proxyhost:8080",
+        }
 
 
 # ---------------------------------------------------------------------------

@@ -1617,14 +1617,14 @@ document.addEventListener('alpine:init', () => {
   import { runAgentLoop } from '/static/agent-loop.js';
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';
   import { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox } from '/static/graph-renderer.js';
-  import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable } from '/static/globe-renderer.js';
+  import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo } from '/static/globe-renderer.js';
   import { extractGeoFeatures } from '/static/geo-extractor.js';
   import { safeHttpUrl } from '/static/url-safety.js';
   window._runAgentLoop    = runAgentLoop;
   window._makeTargetNode  = makeTargetNode;
   window._extractEntities = extractEntities;
   window._graphFns        = { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox };
-  window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable };
+  window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo };
   window._geoFns          = { extractGeoFeatures };
   window._urlSafety       = { safeHttpUrl };
   window._agentLoopReady  = true;

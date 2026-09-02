@@ -27,6 +27,7 @@ const MAPLIBRE_JS = '/static/vendor/maplibre/maplibre-gl.min.js';
 const MAPLIBRE_CSS = '/static/vendor/maplibre/maplibre-gl.min.css';
 
 let _map = null;
+let _hasRendered = false;
 let _loadPromise = null;
 let _boxSelectCallback = null;
 let _pointClickCallback = null;
@@ -186,6 +187,7 @@ export async function initGlobe(containerEl) {
     _wireBoxSelect();
     _wirePointClicks();
     _wireTileFailureTracking();
+    _map.on('render', () => { _hasRendered = true; });
   };
   if (_map.loaded()) onMapReady();
   else _map.on('load', onMapReady);
@@ -245,6 +247,59 @@ export function onPointClick(cb) {
  * points must stay usable even when the basemap can't load. */
 export function onBasemapUnavailable(cb) {
   _basemapUnavailableCallback = cb;
+}
+
+// ---------------------------------------------------------------------------
+// Debug / e2e helpers — narrow, purpose-built accessors used by
+// scripts/record-demo to confirm real WebGL paint, move the camera, and
+// locate a point to click. None of these hand back the MapLibre instance
+// itself — each does exactly the one thing the recorder needs. Not used by
+// the app UI itself.
+// ---------------------------------------------------------------------------
+
+/** True once the map has both finished its initial load AND painted at
+ * least one frame — the two conditions a recorder needs before it can
+ * trust the canvas isn't still black or SwiftShader-stalled. */
+export function isGlobeReady() {
+  return !!(_map && _map.loaded() && _hasRendered);
+}
+
+/** Current feature counts held in each source (independent of what's rendered). */
+export function getFeatureCounts() {
+  return { news: _newsFC.features.length, findings: _findingsFC.features.length };
+}
+
+/** All raw gdelt-news features currently loaded (not just the ones on screen). */
+export function getNewsFeatures() {
+  return _newsFC.features;
+}
+
+/** All raw agent-findings features currently loaded (not just the ones on screen). */
+export function getFindingsFeatures() {
+  return _findingsFC.features;
+}
+
+/** First rendered point on the given layer, with its container-relative
+ * pixel position (mirrors graph-renderer's getNodeRenderedBBox), or null if
+ * none is currently rendered. layerId defaults to the unclustered GDELT
+ * news layer; pass 'agent-findings-points' for the other data layer. */
+export function pickRenderedPoint(layerId = 'gdelt-news-points') {
+  if (!_map) return null;
+  const features = _map.queryRenderedFeatures(undefined, { layers: [layerId] });
+  if (!features.length) return null;
+  const [lon, lat] = features[0].geometry.coordinates;
+  const { x, y } = _map.project([lon, lat]);
+  return { lon, lat, x, y };
+}
+
+/** Eases the camera to a target and resolves once the move settles. Never
+ * hands back the Map instance — callers get the one operation they need. */
+export function flyTo({ center, zoom, bearing = 0, pitch = 0, duration = 2000 } = {}) {
+  if (!_map || !center) return Promise.resolve();
+  return new Promise((resolve) => {
+    _map.once('moveend', resolve);
+    _map.easeTo({ center, zoom, bearing, pitch, duration });
+  });
 }
 
 // ---------------------------------------------------------------------------

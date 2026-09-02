@@ -23,6 +23,9 @@ mcp-name: io.github.OpenOSINT/openosint
 
 </div>
 
+![OpenOSINT globe view: an agent investigation triggered from a chat prompt lands as a point on an interactive 3D globe, clicking the point pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
+*Investigation results land live on the globe — click a point to pivot. [Watch the sharper MP4](docs/assets/globe-demo.mp4).*
+
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
        alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed independently by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel listing each statement with its dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field — matching values green, differing values amber — with the name-match feature explanation that produced the score; the reviewer clicks Accept and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
