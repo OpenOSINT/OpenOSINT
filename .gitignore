@@ -165,3 +165,7 @@ openosint.tape
 
 # _leadmagnet/ source is tracked; only ignore the local build artifact
 _leadmagnet/openosint-free-prompts.pdf
+
+# Internal legal working notes — intentionally not published, never remove this rule
+legal/INCIDENT-NOTES.md
+legal/REVIEW-QUESTIONS.md
