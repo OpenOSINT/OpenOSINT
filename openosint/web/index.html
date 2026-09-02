@@ -102,6 +102,23 @@
   .md pre { background:var(--surface-dark); border:1px solid var(--border); padding:.65em .9em; border-radius:6px; overflow-x:auto; margin:.4em 0; }
   .md pre code { background:none; border:none; padding:0; font-size:.8em; }
 
+  /* MapLibre's own CSS (loaded lazily, after Tailwind) sets .maplibregl-map
+     to position:relative — same specificity as our .absolute utility class,
+     so it wins the cascade by load order and the container collapses to 0
+     height. An ID selector always outranks it, regardless of load order. */
+  #globe-container { position:absolute; inset:0; }
+
+  /* MapLibre controls — theme to the app's surface/border palette so the
+     globe doesn't look like a bolted-on third-party widget. */
+  .maplibregl-ctrl-group { background:var(--surface) !important; border:1px solid var(--border) !important; box-shadow:none !important; }
+  .maplibregl-ctrl-group button { background:transparent !important; }
+  .maplibregl-ctrl-group button:hover { background:var(--border) !important; }
+  .maplibregl-ctrl-group button:not(:first-child) { border-top:1px solid var(--border) !important; }
+  .maplibregl-ctrl-attrib { background:rgba(0,0,0,0.45) !important; color:var(--text-secondary) !important; font-size:10px !important; }
+  .maplibregl-ctrl-attrib a { color:var(--text-secondary) !important; }
+  .maplibregl-ctrl-attrib-button { display:none !important; }
+  .maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left { font-family:inherit; }
+
   #chat-area { scroll-behavior:smooth; }
   textarea { font-family:inherit; }
   textarea:focus { outline:none; }
@@ -450,23 +467,48 @@
   </div>
 </header>
 
-<!-- Mobile tab bar — only visible when graph has data -->
-<div x-show="hasGraphData" x-cloak class="flex-none flex md:hidden border-b border-app bg-surface text-xs">
-  <button @click="activeTab = 'chat'"
-          :class="activeTab === 'chat' ? 'border-b-2 border-accent text-primary' : 'text-muted'"
-          class="flex-1 py-2 transition-colors">Chat</button>
-  <button @click="activeTab = 'graph'; $nextTick(() => window._graphFns?.resizeGraph())"
-          :class="activeTab === 'graph' ? 'border-b-2 border-accent text-primary' : 'text-muted'"
-          class="flex-1 py-2 transition-colors">Graph</button>
-</div>
-
-<!-- Main content row: chat left, graph right -->
+<!-- Main content row: left rail + view panes -->
 <div class="flex-1 flex overflow-hidden min-h-0">
+
+<!-- LEFT RAIL — CHAT / GLOBE / GRAPH. All three panes below stay mounted;
+     switching here only toggles x-show, so the WebGL globe context and the
+     Cytoscape instance are created once and never torn down. -->
+<nav class="flex-none w-16 flex flex-col border-r border-app bg-surface">
+  <button @click="activeView = 'chat'"
+          :class="activeView === 'chat' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
+          class="flex flex-col items-center justify-center gap-1 py-3 transition-colors">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <span class="text-xs">Chat</span>
+  </button>
+  <button @click="activeView = 'globe'; $nextTick(() => window._globeFns?.onEnterGlobe?.(document.getElementById('globe-container')))"
+          :class="activeView === 'globe' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
+          class="flex flex-col items-center justify-center gap-1 py-3 transition-colors">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    <span class="text-xs">Globe</span>
+  </button>
+  <button @click="activeView = 'graph'; $nextTick(() => window._graphFns?.resizeGraph())"
+          :class="activeView === 'graph' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
+          class="flex flex-col items-center justify-center gap-1 py-3 transition-colors">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="5" cy="6" r="3"/><circle cx="19" cy="6" r="3"/><circle cx="12" cy="18" r="3"/>
+      <line x1="7.5" y1="7.5" x2="10" y2="16"/><line x1="16.5" y1="7.5" x2="14" y2="16"/>
+    </svg>
+    <span class="text-xs">Graph</span>
+  </button>
+</nav>
+
+<!-- VIEW PANES -->
+<div class="flex-1 flex flex-col overflow-hidden min-h-0 relative">
 
 <!-- CHAT AREA -->
 <div id="chat-area"
-     class="overflow-y-auto"
-     :class="activeTab === 'graph' ? 'hidden md:block md:flex-1' : 'flex-1'">
+     x-show="activeView === 'chat'"
+     class="flex-1 overflow-y-auto">
   <div class="max-w-2xl mx-auto px-4 py-6 min-h-full flex flex-col">
 
     <!-- empty state -->
@@ -588,11 +630,38 @@
   </div>
 </div><!-- end chat-area -->
 
-<!-- GRAPH PANEL (desktop: 42% right column; mobile: full-screen on graph tab) -->
-<div class="border-l border-app flex-col bg-app relative"
-     :class="hasGraphData
-       ? (activeTab === 'graph' ? 'flex w-full md:w-[42%] md:flex-none' : 'hidden md:flex md:w-[42%] md:flex-none')
-       : 'hidden'">
+<!-- GLOBE PANE — MapLibre lazy-mounts into #globe-container on first entry
+     into this view. Shift+drag on the globe box-selects a bbox and prefills
+     the chat composer (does not auto-send); tapping a point opens the pivot
+     panel below. -->
+<div x-show="activeView === 'globe'" x-cloak class="flex-1 relative">
+  <div id="globe-container" class="absolute inset-0"></div>
+  <!-- Consecutive tile-failure notice — the basemap can go down without the
+       globe itself being broken; findings/news points stay usable under it. -->
+  <div x-show="basemapUnavailable" x-cloak
+       class="absolute top-2 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
+    Basemap imagery unavailable — points remain usable below.
+  </div>
+  <!-- Pivot popover (shown on point tap) -->
+  <div x-show="globePivotFeature" x-cloak
+       class="absolute bottom-4 right-4 bg-surface border border-app rounded-lg shadow-xl p-3 z-20 w-56 text-xs c-fadein">
+    <div class="flex items-center justify-between mb-1.5">
+      <span class="font-mono text-accent uppercase tracking-wider"
+            x-text="globePivotFeature?.sourceId === 'gdelt-news' ? 'news' : 'finding'"></span>
+      <button @click="globePivotFeature = null" class="text-muted hover:text-primary transition-colors leading-none">✕</button>
+    </div>
+    <p class="text-primary font-medium mb-1 break-words leading-snug" x-text="globePivotLabel()"></p>
+    <a x-show="globePivotUrl()" :href="globePivotUrl()" target="_blank" rel="noopener noreferrer"
+       class="text-accent-blue hover:underline text-xs break-all block mb-3" x-text="globePivotUrl()"></a>
+    <button @click="pivotOnGlobeFeature()"
+            class="w-full py-1.5 rounded-md bg-accent hover:bg-accent-80 text-bg text-xs font-medium transition-colors">
+      Pivot → Investigate
+    </button>
+  </div>
+</div><!-- end globe pane -->
+
+<!-- GRAPH PANE -->
+<div x-show="activeView === 'graph'" x-cloak class="flex-1 flex flex-col bg-app">
   <!-- panel header -->
   <div class="flex-none h-9 px-3 flex items-center gap-2 border-b border-app bg-surface text-xs">
     <span class="text-muted font-mono flex-1">Entity Graph</span>
@@ -603,21 +672,29 @@
             class="text-muted hover:text-secondary transition-colors px-1.5 py-0.5 rounded hover:bg-border-50">JSON</button>
   </div>
   <!-- Cytoscape canvas -->
-  <div id="graph-container" class="flex-1" style="min-height:0;"></div>
-  <!-- Pivot popover (shown on node tap) -->
-  <div x-show="graphPivotNode" x-cloak
-       class="absolute bottom-4 right-4 bg-surface border border-app rounded-lg shadow-xl p-3 z-20 w-56 text-xs c-fadein">
-    <div class="flex items-center justify-between mb-1.5">
-      <span class="font-mono text-accent uppercase tracking-wider" x-text="graphPivotNode?.type || ''"></span>
-      <button @click="graphPivotNode = null" class="text-muted hover:text-primary transition-colors leading-none">✕</button>
+  <div class="flex-1 relative" style="min-height:0;">
+    <div id="graph-container" class="absolute inset-0"></div>
+    <!-- Empty-state hint before any investigation has populated the graph -->
+    <div x-show="!hasGraphData" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <p class="text-muted text-xs text-center leading-relaxed px-4">No graph data yet — start an investigation to populate it.</p>
     </div>
-    <p class="text-primary font-medium mb-3 break-all leading-snug" x-text="graphPivotNode?.label || graphPivotNode?.id || ''"></p>
-    <button @click="pivotOnNode()"
-            class="w-full py-1.5 rounded-md bg-accent hover:bg-accent-80 text-bg text-xs font-medium transition-colors">
-      Pivot → Investigate
-    </button>
+    <!-- Pivot popover (shown on node tap) -->
+    <div x-show="graphPivotNode" x-cloak
+         class="absolute bottom-4 right-4 bg-surface border border-app rounded-lg shadow-xl p-3 z-20 w-56 text-xs c-fadein">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="font-mono text-accent uppercase tracking-wider" x-text="graphPivotNode?.type || ''"></span>
+        <button @click="graphPivotNode = null" class="text-muted hover:text-primary transition-colors leading-none">✕</button>
+      </div>
+      <p class="text-primary font-medium mb-3 break-all leading-snug" x-text="graphPivotNode?.label || graphPivotNode?.id || ''"></p>
+      <button @click="pivotOnNode()"
+              class="w-full py-1.5 rounded-md bg-accent hover:bg-accent-80 text-bg text-xs font-medium transition-colors">
+        Pivot → Investigate
+      </button>
+    </div>
   </div>
-</div><!-- end graph panel -->
+</div><!-- end graph pane -->
+
+</div><!-- end view panes -->
 
 </div><!-- end main content row -->
 
@@ -638,7 +715,7 @@
 </div>
 
 <!-- INPUT BAR -->
-<div class="flex-none bg-app border-t border-app px-4 py-3">
+<div x-show="activeView === 'chat'" class="flex-none bg-app border-t border-app px-4 py-3">
   <div class="max-w-2xl mx-auto">
     <div class="border border-app rounded-md flex items-end gap-2 px-3 py-2 transition-colors">
       <textarea
@@ -751,9 +828,11 @@ document.addEventListener('alpine:init', () => {
     agentLoopReady: false,
     serverSideFallback: true,
     hasGraphData: false,
-    activeTab: 'chat',
+    activeView: 'chat',
     graphNodeCapHit: false,
     graphPivotNode: null,
+    globePivotFeature: null,
+    basemapUnavailable: false,
     currentTarget: '',
 
     // Gate / notice bar state (initialized from localStorage in init())
@@ -826,6 +905,25 @@ document.addEventListener('alpine:init', () => {
           };
         }
         document.addEventListener('graph-node-cap', () => { this.graphNodeCapHit = true; });
+
+        // Globe input/output bindings — wired once; the globe itself lazy-
+        // inits on first GLOBE-view entry, but these callbacks are cheap to
+        // register up front.
+        if (window._globeFns) {
+          window._globeFns.onPointClick((feature, sourceId) => {
+            this.globePivotFeature = { feature, sourceId };
+          });
+          window._globeFns.onBoxSelect((bbox) => {
+            const [minLon, minLat, maxLon, maxLat] = bbox.map(n => Math.round(n * 10000) / 10000);
+            this.globePivotFeature = null;
+            this.activeView = 'chat';
+            this.input = `Investigate recent activity in the bounding box [${minLon}, ${minLat}, ${maxLon}, ${maxLat}] (min_lon, min_lat, max_lon, max_lat) — use search_gdelt_geo scoped to this bbox.`;
+            this.$nextTick(() => document.getElementById('chat-input')?.focus());
+          });
+          window._globeFns.onBasemapUnavailable((unavailable) => {
+            this.basemapUnavailable = unavailable;
+          });
+        }
       };
       if (window._agentLoopReady) {
         _onModulesReady();
@@ -1061,6 +1159,7 @@ document.addEventListener('alpine:init', () => {
                 window._graphFns.addToGraph({ nodes, edges });
                 if (!this.hasGraphData && nodes.length) this.hasGraphData = true;
               }
+              this._pushGeoFeatures(evt.tool, toolTarget, evt.output);
             }
           }
 
@@ -1216,6 +1315,7 @@ document.addEventListener('alpine:init', () => {
                     window._graphFns.addToGraph({ nodes, edges });
                     if (!this.hasGraphData && nodes.length) this.hasGraphData = true;
                   }
+                  this._pushGeoFeatures(evt.tool, toolTarget, evt.output);
                 }
               }
 
@@ -1256,12 +1356,31 @@ document.addEventListener('alpine:init', () => {
       this.messages.push({ role: 'assistant', parts: [{ type: 'text', content: msg, streaming: false }] });
     },
 
+    // Globe: route a tool result's geo features onto the right layer.
+    // search_gdelt_geo owns the gdelt-news source (replaced wholesale, it's
+    // already the full FeatureCollection for that query); every other tool
+    // with geo output accumulates onto agent-findings one point at a time.
+    _pushGeoFeatures(tool, target, output) {
+      if (!window._geoFns || !window._globeFns || !target) return;
+      const features = window._geoFns.extractGeoFeatures(tool, target, output || '');
+      if (!features.length) return;
+      if (tool === 'search_gdelt_geo') {
+        window._globeFns.setNewsFeatureCollection({ type: 'FeatureCollection', features });
+      } else {
+        features.forEach(f => window._globeFns.addFinding(f));
+      }
+    },
+
     // UI helpers
     clearConversation() {
       this.messages = []; this.chatHistory = [];
       this.hasGraphData = false; this.graphNodeCapHit = false;
-      this.graphPivotNode = null; this.currentTarget = '';
+      this.graphPivotNode = null; this.globePivotFeature = null; this.currentTarget = '';
       if (window._graphFns) window._graphFns.clearGraph();
+      if (window._globeFns) {
+        window._globeFns.clearFindings();
+        window._globeFns.setNewsFeatureCollection({ type: 'FeatureCollection', features: [] });
+      }
     },
 
     scrollToBottom() {
@@ -1409,8 +1528,53 @@ document.addEventListener('alpine:init', () => {
       if (!this.graphPivotNode) return;
       const label = this.graphPivotNode.label || this.graphPivotNode.id;
       this.graphPivotNode = null;
-      this.activeTab = 'chat';
+      this.activeView = 'chat';
       this.input = `Investigate ${label}`;
+      this.sendMessage();
+    },
+
+    // Globe pivot panel — label/url readers + the "Investigate" action.
+    // GDELT's raw properties.html (if present) is a third-party-controlled
+    // HTML blurb — never x-html it; only pull a URL out of it via regex and
+    // render that as a plain, properly-bound <a href>.
+    globePivotLabel() {
+      const props = this.globePivotFeature?.feature?.properties || {};
+      return props.name || props.target || 'Unknown location';
+    },
+    globePivotUrl() {
+      const props = this.globePivotFeature?.feature?.properties || {};
+      const m = typeof props.html === 'string' ? /href="([^"]+)"/.exec(props.html) : null;
+      const raw = props.url || (m ? m[1] : '');
+      return window._urlSafety ? window._urlSafety.safeHttpUrl(raw) : '';
+    },
+    pivotOnGlobeFeature() {
+      const f = this.globePivotFeature;
+      if (!f) return;
+      const label = this.globePivotLabel();
+      const url = this.globePivotUrl();
+      this.globePivotFeature = null;
+      this.activeView = 'chat';
+      this.input = url ? `Investigate ${label} (${url})` : `Investigate ${label}`;
+
+      // Land it in the same session graph the GRAPH view renders — same
+      // pattern as a chat-driven pivot, just sourced from the globe.
+      if (window._graphFns) {
+        const [lon, lat] = f.feature.geometry?.coordinates || [];
+        const nodeId = `geo:${f.sourceId}:${label.toLowerCase()}:${lon},${lat}`;
+        const node = {
+          id: nodeId,
+          type: f.sourceId === 'gdelt-news' ? 'article' : 'location',
+          label,
+          data: { source: 'globe', sourceId: f.sourceId, lat, lon, url },
+        };
+        const edges = [];
+        if (this.currentTarget && window._makeTargetNode) {
+          edges.push({ source: window._makeTargetNode(this.currentTarget).id, target: nodeId, label: 'geolocated' });
+        }
+        window._graphFns.addToGraph({ nodes: [node], edges });
+        this.hasGraphData = true;
+      }
+
       this.sendMessage();
     },
 
@@ -1453,10 +1617,16 @@ document.addEventListener('alpine:init', () => {
   import { runAgentLoop } from '/static/agent-loop.js';
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';
   import { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox } from '/static/graph-renderer.js';
+  import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable } from '/static/globe-renderer.js';
+  import { extractGeoFeatures } from '/static/geo-extractor.js';
+  import { safeHttpUrl } from '/static/url-safety.js';
   window._runAgentLoop    = runAgentLoop;
   window._makeTargetNode  = makeTargetNode;
   window._extractEntities = extractEntities;
   window._graphFns        = { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox };
+  window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable };
+  window._geoFns          = { extractGeoFeatures };
+  window._urlSafety       = { safeHttpUrl };
   window._agentLoopReady  = true;
   document.dispatchEvent(new Event('agent-loop-ready'));
 </script>

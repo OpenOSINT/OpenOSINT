@@ -18,6 +18,7 @@
  */
 
 import { createAdapter } from '/static/adapters.js';
+import { splitGeojsonFence } from '/static/geo-extractor.js';
 
 const MAX_ROUNDS = 8;
 const TOOL_TIMEOUT_MS = 120_000;
@@ -260,8 +261,12 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
         });
       }
 
-      // Feed the result back into the conversation (provider-specific format).
-      messages = adapter.appendToolResult(messages, call, resultText);
+      // Feed the result back into the conversation (provider-specific
+      // format). Strip any geojson fence first — the provider gets resent
+      // this whole message list on every subsequent round; the browser
+      // already got the full resultText via the tool_result event above.
+      const [modelText] = splitGeojsonFence(resultText);
+      messages = adapter.appendToolResult(messages, call, modelText);
     }
   }
 }

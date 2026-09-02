@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenOSINT Tools — 19 Intelligence Modules Reference</title>
-<meta name="description" content="Complete reference for all 19 OpenOSINT intelligence tools. Email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
+<title>OpenOSINT Tools — 20 Intelligence Modules Reference</title>
+<meta name="description" content="Complete reference for all 20 OpenOSINT intelligence tools. Email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
 <meta name="keywords" content="OSINT tools, email enumeration, IP lookup, username search, WHOIS lookup, breach detection, subdomain scanner, AbuseIPDB, IP2Location">
 <link rel="canonical" href="https://openosint.tech/tools/">
-<meta property="og:title" content="OpenOSINT Tools — 19 Intelligence Modules Reference">
-<meta property="og:description" content="Reference for all 19 OpenOSINT intelligence tools: email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
+<meta property="og:title" content="OpenOSINT Tools — 20 Intelligence Modules Reference">
+<meta property="og:description" content="Reference for all 20 OpenOSINT intelligence tools: email enumeration, username search, IP geolocation, breach detection, WHOIS, domain scanning, and more.">
 <meta property="og:url" content="https://openosint.tech/tools/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="OpenOSINT">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OpenOSINT Tools — 19 Intelligence Modules Reference">
-<meta name="twitter:description" content="Reference for all 19 OpenOSINT tools: email, username, IP, WHOIS, breach, domain, phone, dorks, and more.">
+<meta name="twitter:title" content="OpenOSINT Tools — 20 Intelligence Modules Reference">
+<meta name="twitter:description" content="Reference for all 20 OpenOSINT tools: email, username, IP, WHOIS, breach, domain, phone, dorks, and more.">
 <link rel="icon" type="image/svg+xml" href="../logo.svg">
 <link rel="stylesheet" href="../style.css">
 </head>
@@ -34,7 +34,7 @@
 
 <h2>TOOLS REFERENCE</h2>
 <div class="indent">
-<p>OpenOSINT exposes 19 intelligence-gathering modules. Each tool is an async Python wrapper around an external binary or API. All tools are available via the <a href="/">interactive REPL</a>, the CLI, and the <a href="/#mcp">MCP server</a>.</p>
+<p>OpenOSINT exposes 20 intelligence-gathering modules. Each tool is an async Python wrapper around an external binary or API. All tools are available via the <a href="/">interactive REPL</a>, the CLI, and the <a href="/#mcp">MCP server</a>.</p>
 
 <aside class="oo-cta">
   <strong>Running these tools by hand? The prompts decide what to ask them.</strong>
@@ -64,6 +64,7 @@
 <tr><td><a href="#search_abuseipdb"><code>search_abuseipdb</code></a></td><td>AbuseIPDB v2 API</td><td>Abuse score, reports, ISP</td><td>ABUSEIPDB_API_KEY</td></tr>
 <tr><td><a href="#search_github"><code>search_github</code></a></td><td>GitHub REST API</td><td>Profile, repos, commit-discovered emails</td><td>&mdash;</td></tr>
 <tr><td><a href="#search_dns"><code>search_dns</code></a></td><td>dnspython (built-in)</td><td>A/AAAA/MX/NS/TXT/CNAME/SOA, SPF/DMARC/DKIM</td><td>&mdash;</td></tr>
+<tr><td><a href="#search_gdelt_geo"><code>search_gdelt_geo</code></a></td><td>GDELT GEO 2.0 API</td><td>Worldwide geolocated news coverage (GeoJSON)</td><td>&mdash;</td></tr>
 <tr><td><a href="#search_dorks_live"><code>search_dorks_live</code></a></td><td>Bright Data SERP API</td><td>Live Google dork results (title, URL, snippet)</td><td>BRIGHTDATA_API_KEY</td></tr>
 <tr><td><a href="#scrape_url"><code>scrape_url</code></a></td><td>Bright Data Web Unlocker</td><td>Fetch any URL bypassing Cloudflare/CAPTCHA</td><td>BRIGHTDATA_API_KEY</td></tr>
 <tr><td><a href="#search_footprint"><code>search_footprint</code></a></td><td>Bright Data SERP API</td><td>Entity-type-aware SERP footprint + correlation graph</td><td>BRIGHTDATA_API_KEY</td></tr>
@@ -257,6 +258,17 @@
 [DNS] A: 93.184.216.34
 [DNS] MX: mail.example.com (priority 10)
 [DNS] SPF: v=spf1 include:_spf.google.com ~all</pre>
+</div>
+
+<hr>
+
+<h2 id="search_gdelt_geo">SEARCH_GDELT_GEO</h2>
+<div class="indent">
+<p>Searches worldwide, geolocated news coverage via the <a href="https://blog.gdeltproject.org/announcing-the-geo-2-0-api/" target="_blank" rel="noopener">GDELT GEO 2.0 API</a> — real-time point-level coverage refreshed every 15 minutes, covering GDELT's machine-translated languages worldwide. No API key. Optionally scoped to a bounding box.</p>
+<p><b>MCP parameters:</b> <code>query</code> (string, required), <code>timespan</code> (minutes, 15&ndash;1440), <code>maxpoints</code> (1&ndash;500), <code>bbox</code> (array) &nbsp;|&nbsp; <b>No API key required</b></p>
+<pre>GDELT geo results for 'ukraine war' (last 60min): 12 location(s)
+[+] Kyiv, Ukraine (50.45, 30.52) — 4 mention(s)
+[+] Kharkiv, Ukraine (49.99, 36.23) — 2 mention(s)</pre>
 </div>
 
 <hr>

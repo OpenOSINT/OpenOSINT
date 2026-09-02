@@ -16,6 +16,7 @@ Routes:
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import ipaddress
 import json
 import logging
@@ -25,6 +26,7 @@ import secrets
 import shutil
 import socket
 import time
+from collections import OrderedDict
 from collections import deque as _deque
 from pathlib import Path
 from typing import AsyncIterator
@@ -41,7 +43,7 @@ except ImportError:
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -58,6 +60,7 @@ from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
 from openosint.tools.search_footprint import run_footprint_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
@@ -255,8 +258,48 @@ _RL_MAX_REQS: int = int(os.getenv("RATE_LIMIT_MAX", "30"))
 
 # Tools that need no API key and are therefore cheaply spammable
 _KEYLESS_TOOLS: frozenset[str] = frozenset(
-    {"search_whois", "search_dns", "generate_dorks", "search_ip", "search_paste"}
+    {"search_whois", "search_dns", "generate_dorks", "search_ip", "search_paste", "search_gdelt_geo"}
 )
+
+# ---------------------------------------------------------------------------
+# Globe basemap tile proxy — GET /api/tiles/{z}/{x}/{y}.
+#
+# The browser never talks to EOX (or any CDN) directly: this app fetches the
+# tile server-side and streams it back, same "zero third-party requests"
+# invariant as the vendored Alpine/Tailwind/Cytoscape/MapLibre assets. Tiles
+# are a fixed, historical (2020) imagery composite — they never change — so
+# an in-process cache with no TTL is correct, just size-bounded.
+# ponytail: single-process LRU dict; move to a real cache if this ever runs
+# behind multiple worker processes.
+_EOX_TILE_URL = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+_TILE_CACHE_MAX = 2000
+_TILE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+# 4^z tiles per zoom level — hard cost ceiling, matches maxzoom on the
+# client's raster source (see globe-renderer.js _style()). z7 is plenty for
+# situational awareness; the client over-zooms z7 tiles past that.
+_TILE_MAX_ZOOM = 7
+_TILE_RATE_STORE: dict[str, "_deque[float]"] = {}
+_TILE_RL_MAX_REQS: int = int(os.getenv("RATE_LIMIT_MAX_TILES", "300"))
+_tile_cache: "OrderedDict[tuple[int, int, int], bytes]" = OrderedDict()
+# 1x1 transparent GIF — served on any upstream failure so MapLibre shows a
+# blank tile instead of a broken-image icon, and never retries in a loop.
+_BLANK_TILE = bytes.fromhex(
+    "47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b"
+)
+
+
+def _tile_cache_get(key: tuple[int, int, int]) -> bytes | None:
+    value = _tile_cache.get(key)
+    if value is not None:
+        _tile_cache.move_to_end(key)
+    return value
+
+
+def _tile_cache_set(key: tuple[int, int, int], value: bytes) -> None:
+    _tile_cache[key] = value
+    _tile_cache.move_to_end(key)
+    if len(_tile_cache) > _TILE_CACHE_MAX:
+        _tile_cache.popitem(last=False)
 
 
 _LOOPBACK_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "::1"})
@@ -308,35 +351,54 @@ def _get_client_ip(request: "Request") -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _check_rate_limit(ip: str) -> bool:
-    """Sliding-window rate limiter. Returns True when the request is allowed."""
+def _sliding_window_allow(
+    store: dict[str, "_deque[float]"], ip: str, max_reqs: int, window_secs: float, max_ip_buckets: int
+) -> bool:
+    """Sliding-window rate limiter over an arbitrary per-caller bucket store.
+    Returns True when the request is allowed."""
     now = time.monotonic()
 
     # Slide the window and evict empty bucket
-    if ip in _RATE_STORE:
-        q = _RATE_STORE[ip]
-        while q and now - q[0] > _RL_WINDOW_SECS:
+    if ip in store:
+        q = store[ip]
+        while q and now - q[0] > window_secs:
             q.popleft()
         if not q:
-            del _RATE_STORE[ip]
+            del store[ip]
 
     # Enforce total bucket cap before inserting a new IP
-    if ip not in _RATE_STORE and len(_RATE_STORE) >= _MAX_IP_BUCKETS:
+    if ip not in store and len(store) >= max_ip_buckets:
         # Prefer evicting an already-expired bucket; fall back to oldest-inserted
         evicted = False
-        for k, q in list(_RATE_STORE.items()):
-            if not q or now - q[0] > _RL_WINDOW_SECS:
-                del _RATE_STORE[k]
+        for k, q in list(store.items()):
+            if not q or now - q[0] > window_secs:
+                del store[k]
                 evicted = True
                 break
         if not evicted:
-            del _RATE_STORE[next(iter(_RATE_STORE))]
+            del store[next(iter(store))]
 
-    q = _RATE_STORE.setdefault(ip, _deque())
-    if len(q) >= _RL_MAX_REQS:
+    q = store.setdefault(ip, _deque())
+    if len(q) >= max_reqs:
         return False
     q.append(now)
     return True
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Sliding-window rate limiter for keyless OSINT tools."""
+    return _sliding_window_allow(_RATE_STORE, ip, _RL_MAX_REQS, _RL_WINDOW_SECS, _MAX_IP_BUCKETS)
+
+
+def _check_tile_rate_limit(ip: str) -> bool:
+    """Sliding-window rate limiter for the globe tile proxy.
+
+    A SEPARATE bucket from _check_rate_limit's _RATE_STORE — panning the
+    globe burns through many tile requests per session, and must never be
+    able to 429 an unrelated keyless tool call (e.g. search_ip) sharing the
+    same client IP, or vice versa.
+    """
+    return _sliding_window_allow(_TILE_RATE_STORE, ip, _TILE_RL_MAX_REQS, _RL_WINDOW_SECS, _MAX_IP_BUCKETS)
 
 
 # ---------------------------------------------------------------------------
@@ -450,6 +512,17 @@ _TOOL_CATALOG: list[dict] = [
         "requires_binary": [],
         "requires_env": ["ABUSEIPDB_API_KEY"],
         "env_hints": {"ABUSEIPDB_API_KEY": "abuseipdb.com/account/api"},
+    },
+    {
+        "name": "search_gdelt_geo",
+        "description": "Search worldwide geolocated news coverage via the GDELT GEO 2.0 API.",
+        "input_label": "Keywords",
+        "input_placeholder": "ukraine war",
+        "category": "Network",
+        "icon": "🌍",
+        "tool_type": "A",
+        "requires_binary": [],
+        "requires_env": [],
     },
     # ---- Recon ----
     {
@@ -611,6 +684,7 @@ _RUNNERS: dict[str, object] = {
         v, timeout_seconds=t, api_key=(keys or {}).get("IP2LOCATION_API_KEY")
     ),
     "search_dns": lambda v, t, keys=None: run_dns_osint(v, timeout_seconds=t),
+    "search_gdelt_geo": lambda v, t, keys=None: run_gdelt_geo_osint(v, timeout_seconds=t),
     "search_abuseipdb": lambda v, t, keys=None: run_abuseipdb_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("ABUSEIPDB_API_KEY")
     ),
@@ -1124,11 +1198,14 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
                                 "output": result,
                                 "elapsed": elapsed,
                             }
+                            # Provider gets the stripped text; every subsequent
+                            # round resends the whole message list.
+                            model_text, _ = split_geojson_fence(result)
                             pending_tool_results.append(
                                 {
                                     "type": "tool_result",
                                     "tool_use_id": current_block["id"],
-                                    "content": result,
+                                    "content": model_text,
                                 }
                             )
 
@@ -1242,7 +1319,8 @@ async def _stream_ollama(
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
-            tool_results_for_next.append({"role": "tool", "content": result})
+            model_text, _ = split_geojson_fence(result)
+            tool_results_for_next.append({"role": "tool", "content": model_text})
 
         msgs = (
             msgs
@@ -1356,11 +1434,12 @@ async def _stream_openai(
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
+            model_text, _ = split_geojson_fence(result)
             tool_results_for_next.append(
                 {
                     "role": "tool",
                     "tool_call_id": tc.get("id", ""),
-                    "content": result,
+                    "content": model_text,
                 }
             )
 
@@ -1603,6 +1682,49 @@ def create_app(host: str | None = None) -> FastAPI:
         except SponsorsValidationError as exc:
             return JSONResponse({"status": "error", "message": str(exc)}, status_code=500)
         return {"status": "ok", "sponsors": sponsors}
+
+    # ------------------------------------------------------------------
+    # GET /api/tiles/{z}/{x}/{y} — globe basemap tile proxy (see the
+    # module-level comment near _tile_cache for why this exists).
+    # ------------------------------------------------------------------
+
+    @app.get("/api/tiles/{z}/{x}/{y}")
+    async def get_tile(z: int, x: int, y: int, request: Request):
+        if z < 0 or z > _TILE_MAX_ZOOM or x < 0 or x >= 2**z or y < 0 or y >= 2**z:
+            return Response(status_code=404)
+
+        cache_key = (z, x, y)
+        cached = _tile_cache_get(cache_key)
+
+        if cached is None:
+            client_ip = _get_client_ip(request)
+            if not _check_tile_rate_limit(client_ip):
+                return Response(status_code=429)
+
+            url = _EOX_TILE_URL.format(z=z, y=y, x=x)
+            try:
+                resp = await asyncio.to_thread(_requests.get, url, timeout=10)
+            except Exception:
+                logging.getLogger(__name__).warning("Tile fetch failed for z=%d x=%d y=%d", z, x, y)
+                return Response(content=_BLANK_TILE, media_type="image/gif")
+
+            if resp.status_code != 200:
+                logging.getLogger(__name__).warning(
+                    "Tile server returned HTTP %d for z=%d x=%d y=%d", resp.status_code, z, x, y
+                )
+                return Response(content=_BLANK_TILE, media_type="image/gif")
+
+            cached = resp.content
+            _tile_cache_set(cache_key, cached)
+
+        # Imagery is a static 2020 composite — content-addressed ETag lets the
+        # browser cache absorb repeat views instead of the in-process LRU.
+        etag = f'"{hashlib.sha256(cached).hexdigest()[:16]}"'
+        headers = {"Cache-Control": _TILE_CACHE_CONTROL, "ETag": etag}
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers=headers)
+
+        return Response(content=cached, media_type="image/jpeg", headers=headers)
 
     # ------------------------------------------------------------------
     # POST /api/run/{tool_name}

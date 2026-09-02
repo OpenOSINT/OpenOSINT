@@ -318,6 +318,126 @@ class TestSearchIpFormatting:
 
 
 # ---------------------------------------------------------------------------
+# search_gdelt_geo
+# ---------------------------------------------------------------------------
+
+
+def _gdelt_feature(lon, lat, name="Kyiv, Ukraine", count=4):
+    return {
+        "type": "Feature",
+        "properties": {"name": name, "count": count},
+        "geometry": {"type": "Point", "coordinates": [lon, lat]},
+    }
+
+
+def _gdelt_fc(features):
+    return {"type": "FeatureCollection", "features": features}
+
+
+class TestSearchGdeltGeoHappyPath:
+    async def test_returns_summary_and_geojson_fence(self):
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        fc = _gdelt_fc([_gdelt_feature(30.52, 50.45)])
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: fc
+
+        with patch("openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response):
+            result = await run_gdelt_geo_osint("ukraine war", timeout_seconds=5)
+
+        assert "Kyiv, Ukraine" in result
+        assert "```geojson" in result
+        assert '"type": "FeatureCollection"' in result or '"type":"FeatureCollection"' in result
+
+    async def test_clamps_timespan_and_maxpoints(self):
+        from openosint.tools.search_gdelt_geo import (
+            _MAX_MAXPOINTS,
+            _MAX_TIMESPAN,
+            run_gdelt_geo_osint,
+        )
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: _gdelt_fc([])
+
+        with patch(
+            "openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response
+        ) as mock_get:
+            await run_gdelt_geo_osint(
+                "x", timeout_seconds=5, timespan=999999, maxpoints=999999
+            )
+
+        params = mock_get.call_args.kwargs["params"]
+        assert params["timespan"] == _MAX_TIMESPAN
+        assert params["maxpoints"] == _MAX_MAXPOINTS
+
+
+class TestSearchGdeltGeoEmptyResult:
+    async def test_empty_feature_collection_returns_no_results_message(self):
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: _gdelt_fc([])
+
+        with patch("openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response):
+            result = await run_gdelt_geo_osint("no such thing", timeout_seconds=5)
+
+        assert "No geolocated coverage found" in result
+        assert "```geojson" not in result
+
+
+class TestSearchGdeltGeoUpstreamError:
+    async def test_upstream_5xx_returns_clean_error_string(self):
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 503
+
+        with patch("openosint.tools.search_gdelt_geo.requests.get", return_value=mock_response):
+            result = await run_gdelt_geo_osint("query", timeout_seconds=5)
+
+        assert "Scan error" in result
+        assert "503" in result
+
+    async def test_network_timeout_returns_clean_error_string(self):
+        import requests
+
+        from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint
+
+        with patch(
+            "openosint.tools.search_gdelt_geo.requests.get",
+            side_effect=requests.Timeout("timed out"),
+        ):
+            result = await run_gdelt_geo_osint("query", timeout_seconds=5)
+
+        assert "Scan error" in result
+        assert "timed out" in result.lower()
+
+
+class TestSearchGdeltGeoBboxFilter:
+    def test_filters_features_outside_bbox(self):
+        from openosint.tools.search_gdelt_geo import _filter_by_bbox
+
+        inside = _gdelt_feature(30.52, 50.45, name="Kyiv, Ukraine")
+        outside = _gdelt_feature(-74.0, 40.7, name="New York, USA")
+        fc = _gdelt_fc([inside, outside])
+
+        filtered = _filter_by_bbox(fc, (20.0, 40.0, 40.0, 60.0))
+
+        names = [f["properties"]["name"] for f in filtered["features"]]
+        assert "Kyiv, Ukraine" in names
+        assert "New York, USA" not in names
+
+    def test_no_bbox_returns_unchanged(self):
+        from openosint.tools.search_gdelt_geo import _filter_by_bbox
+
+        fc = _gdelt_fc([_gdelt_feature(30.52, 50.45)])
+        assert _filter_by_bbox(fc, None) == fc
+
+
+# ---------------------------------------------------------------------------
 # search_paste — output formatting
 # ---------------------------------------------------------------------------
 

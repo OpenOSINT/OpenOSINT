@@ -2,12 +2,13 @@
 """
 OpenOSINT MCP Server — v2.23.0
 
-Exposes all 19 OSINT tool capabilities plus multi-target investigation
+Exposes all 20 OSINT tool capabilities plus multi-target investigation
 to MCP-compliant AI clients over standard I/O. Tools include:
 search_email, search_username, search_breach, search_whois, search_ip,
 search_domain, generate_dorks, search_paste, search_phone, search_shodan,
 search_virustotal, search_censys, search_ip2location, search_abuseipdb,
-search_github, search_dns, search_dorks_live, scrape_url, search_footprint.
+search_github, search_dns, search_gdelt_geo, search_dorks_live, scrape_url,
+search_footprint.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
@@ -255,6 +257,38 @@ async def list_tools() -> list[Tool]:
                     "type": "object",
                     "properties": {"domain": {"type": "string"}},
                     "required": ["domain"],
+                }
+            ),
+        ),
+        Tool(
+            name="search_gdelt_geo",
+            description=(
+                "Search worldwide, geolocated news coverage via the GDELT GEO 2.0 API. "
+                "No API key required. Returns a text summary plus the raw GeoJSON "
+                "FeatureCollection. Optionally scope to a bounding box."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "timespan": {
+                            "type": "integer",
+                            "description": "Lookback window in minutes (15-1440). Default 60.",
+                        },
+                        "maxpoints": {
+                            "type": "integer",
+                            "description": "Max point features to return (1-500). Default 250.",
+                        },
+                        "bbox": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "minItems": 4,
+                            "maxItems": 4,
+                            "description": "[min_lon, min_lat, max_lon, max_lat]",
+                        },
+                    },
+                    "required": ["query"],
                 }
             ),
         ),
@@ -495,6 +529,16 @@ _HANDLERS: dict[str, tuple] = {
         lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
         lambda a: a["domain"],
     ),
+    "search_gdelt_geo": (
+        lambda a: run_gdelt_geo_osint(
+            a["query"],
+            timeout_seconds=15,
+            timespan=int(a.get("timespan", 60)),
+            maxpoints=int(a.get("maxpoints", 250)),
+            bbox=tuple(a["bbox"]) if a.get("bbox") else None,
+        ),
+        lambda a: a["query"],
+    ),
     "search_dorks_live": (
         lambda a: run_dorks_live_osint(a["target"], timeout_seconds=30),
         lambda a: a["target"],
@@ -536,6 +580,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
             raise ValueError(f"Unknown tool: '{name}'")
         handler, target_fn = _HANDLERS[name]
         result = await handler(arguments)
+        # Claude Desktop and every other MCP client has no globe — the raw
+        # FeatureCollection is pure waste here, strip it unconditionally.
+        result, _ = split_geojson_fence(result)
         if should_use_json:
             target = target_fn(arguments)
             text = to_json(name, target, result)

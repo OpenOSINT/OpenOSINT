@@ -33,6 +33,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
@@ -311,6 +312,46 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "search_gdelt_geo",
+        "description": (
+            "Search worldwide, geolocated news coverage via the GDELT GEO 2.0 API. "
+            "No API key required. Use for real-time situational awareness of events "
+            "in a region, or to find geolocated news mentioning a target. "
+            "Optionally scope the search to a bounding box (e.g. from a user-selected "
+            "map area)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "Keywords to search for. Supports quoted phrases and OR groups."
+                    ),
+                },
+                "timespan": {
+                    "type": "integer",
+                    "description": "Lookback window in minutes (15–1440). Defaults to 60.",
+                },
+                "maxpoints": {
+                    "type": "integer",
+                    "description": "Maximum point features to return (1–500). Defaults to 250.",
+                },
+                "bbox": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": (
+                        "Optional [min_lon, min_lat, max_lon, max_lat] to scope results "
+                        "to a bounding box."
+                    ),
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "search_dorks_live",
         "description": (
             "Execute Google dork queries for a target via the Bright Data SERP API, "
@@ -401,6 +442,13 @@ _TOOL_MAP: dict[str, Any] = {
     "search_abuseipdb": lambda a: run_abuseipdb_osint(a["ip"], timeout_seconds=30),
     "search_github": lambda a: run_github_osint(a["query"], timeout_seconds=30),
     "search_dns": lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
+    "search_gdelt_geo": lambda a: run_gdelt_geo_osint(
+        a["query"],
+        timeout_seconds=15,
+        timespan=int(a.get("timespan", 60)),
+        maxpoints=int(a.get("maxpoints", 250)),
+        bbox=tuple(a["bbox"]) if a.get("bbox") else None,
+    ),
     "search_dorks_live": lambda a: run_dorks_live_osint(a["target"], timeout_seconds=30),
     "scrape_url": lambda a: run_scrape_url_osint(a["url"], timeout_seconds=60),
     "search_footprint": lambda a: run_footprint_osint(
@@ -434,6 +482,7 @@ INVESTIGATION STRATEGY:
 - For live Google search results on a target: use search_dorks_live (requires BRIGHTDATA_API_KEY).
 - For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (requires BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
 - To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (requires BRIGHTDATA_API_KEY).
+- For real-time geolocated news coverage of a region or event (no key required): use search_gdelt_geo. If the user has selected a map area, pass its bbox.
 - Chain tools intelligently: use findings from each step to decide the next.
 - Never run search_email or search_breach with a full name — only with actual email addresses.
 - Never run search_username with spaces in the name.
@@ -515,11 +564,16 @@ async def _process_tool_turn(
         result = await _execute_tool(block.name, block.input, on_tool_call)
         tool_calls.append(ToolCall(name=block.name, input=block.input, result=result))
         logger.info("Tool executed: %s → %d chars", block.name, len(result))
+        # The provider gets the stripped text — every subsequent round of
+        # this investigation resends the whole message list, and raw
+        # coordinates are dead weight to a model. ToolCall.result above
+        # keeps the full output for CLI/REPL display.
+        model_text, _ = split_geojson_fence(result)
         tool_results.append(
             {
                 "type": "tool_result",
                 "tool_use_id": block.id,
-                "content": result,
+                "content": model_text,
             }
         )
     messages.append({"role": "user", "content": tool_results})

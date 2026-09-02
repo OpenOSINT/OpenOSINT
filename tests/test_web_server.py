@@ -470,10 +470,12 @@ async def http_client():
     import openosint.web_server as ws
 
     ws._RATE_STORE.clear()
+    ws._TILE_RATE_STORE.clear()
     app = ws.create_app(host="127.0.0.1")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         yield c
     ws._RATE_STORE.clear()
+    ws._TILE_RATE_STORE.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -743,6 +745,178 @@ class TestRateLimiting:
                 os.environ["SHODAN_API_KEY"] = backup
 
         assert 429 not in statuses  # gets key_required (200), never rate-limit (429)
+
+
+# ---------------------------------------------------------------------------
+# GET /api/tiles/{z}/{x}/{y} — globe basemap tile proxy
+# ---------------------------------------------------------------------------
+
+
+class TestTileProxy:
+    async def test_out_of_range_coords_return_404(self, http_client):
+        r = await http_client.get("/api/tiles/2/99/99")  # x,y >= 2**z
+        assert r.status_code == 404
+
+    async def test_negative_zoom_returns_404(self, http_client):
+        r = await http_client.get("/api/tiles/-1/0/0")
+        assert r.status_code == 404
+
+    async def test_zoom_above_max_returns_404(self, http_client):
+        from openosint.web_server import _TILE_MAX_ZOOM
+
+        r = await http_client.get(f"/api/tiles/{_TILE_MAX_ZOOM + 1}/0/0")
+        assert r.status_code == 404
+
+    async def test_zoom_at_max_is_allowed(self, http_client):
+        import openosint.web_server as ws
+        from openosint.web_server import _TILE_MAX_ZOOM
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get(f"/api/tiles/{_TILE_MAX_ZOOM}/0/0")
+        assert r.status_code == 200
+
+    async def test_happy_path_fetches_and_caches(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r1 = await http_client.get("/api/tiles/3/4/5")
+            r2 = await http_client.get("/api/tiles/3/4/5")
+
+        assert r1.status_code == 200
+        assert r1.content == b"\xff\xd8\xff\xe0fakejpeg"
+        assert r1.headers["content-type"] == "image/jpeg"
+        assert r2.content == r1.content
+        mreq.get.assert_called_once()  # second request served from cache
+
+    async def test_upstream_exception_returns_blank_tile(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.side_effect = Exception("connection reset")
+            r = await http_client.get("/api/tiles/3/1/1")
+
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "image/gif"
+        assert r.content == ws._BLANK_TILE
+
+    async def test_upstream_non_200_returns_blank_tile(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=503)
+
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get("/api/tiles/3/2/2")
+
+        assert r.status_code == 200
+        assert r.content == ws._BLANK_TILE
+
+    async def test_rate_limited_after_limit(self, http_client):
+        from openosint.web_server import _TILE_RL_MAX_REQS
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        ws._TILE_RATE_STORE.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"jpegbytes"
+
+        statuses = []
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            # Distinct z7 coordinates each time so the cache never masks the
+            # limiter; z7 has 128x128 tiles, plenty of headroom.
+            for i in range(_TILE_RL_MAX_REQS + 1):
+                r = await http_client.get(f"/api/tiles/7/{i % 100}/{i // 100}")
+                statuses.append(r.status_code)
+
+        assert statuses[0] == 200
+        assert statuses[-1] == 429
+
+    async def test_cache_control_and_etag_present(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get("/api/tiles/3/6/6")
+
+        assert r.headers["cache-control"] == "public, max-age=31536000, immutable"
+        assert r.headers["etag"].startswith('"') and r.headers["etag"].endswith('"')
+
+    async def test_if_none_match_returns_304(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r1 = await http_client.get("/api/tiles/3/6/7")
+            etag = r1.headers["etag"]
+            r2 = await http_client.get("/api/tiles/3/6/7", headers={"If-None-Match": etag})
+
+        assert r1.status_code == 200
+        assert r2.status_code == 304
+        assert r2.content == b""
+        mreq.get.assert_called_once()  # 304 path never re-fetches upstream
+
+    async def test_stale_etag_returns_full_200(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get("/api/tiles/3/6/1", headers={"If-None-Match": '"stale-etag"'})
+
+        assert r.status_code == 200
+        assert r.content == b"\xff\xd8\xff\xe0fakejpeg"
+
+    async def test_tile_bucket_is_separate_from_keyless_tool_bucket(self, http_client):
+        """A globe pan (tile requests) must never 429 a keyless tool call
+        sharing the same client IP, and vice versa — separate buckets."""
+        from openosint.web_server import _RL_MAX_REQS
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        ws._TILE_RATE_STORE.clear()
+        ws._RATE_STORE.clear()
+
+        async def fake_whois(domain, timeout_seconds=15):
+            return "ok"
+
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"jpegbytes"
+
+        with patch("openosint.web_server._requests") as mreq, \
+             patch("openosint.web_server.run_whois_osint", new=fake_whois):
+            mreq.get.return_value = mock_resp
+            # Exhaust the keyless-tool bucket completely.
+            tool_statuses = []
+            for _ in range(_RL_MAX_REQS + 1):
+                r = await http_client.post("/api/run/search_whois", json={"input": "example.com"})
+                tool_statuses.append(r.status_code)
+
+            # A tile request from the same client must still succeed — proves
+            # the tile bucket wasn't touched by exhausting the tool bucket.
+            tile_r = await http_client.get("/api/tiles/3/6/6")
+
+        assert tool_statuses[-1] == 429  # tool bucket genuinely exhausted
+        assert tile_r.status_code == 200  # tile bucket unaffected
 
 
 # ---------------------------------------------------------------------------

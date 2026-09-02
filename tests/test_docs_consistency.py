@@ -219,3 +219,60 @@ def test_no_hallucination_framing_in_cta_copy():
                     f"{path.relative_to(ROOT)}: hallucination framing near {match.group(0)!r}"
                 )
     assert not violations, "hallucination framing found in paid CTA copy:\n" + "\n".join(violations)
+
+
+# ---------------------------------------------------------------------------
+# legal/*.md <-> docs/*/index.html mirror pairs must stay word-for-word
+# identical in substance. Formatting differs by necessity (Markdown syntax vs
+# HTML tags, and a link's visible text omitting the "https://" a raw URL in
+# Markdown shows in full) — normalized to a word stream, ignoring those two
+# known-and-accepted differences, the two sides must match exactly.
+# ---------------------------------------------------------------------------
+
+_MIRROR_PAIRS = [
+    ("legal/PRIVACY_POLICY.md", "docs/privacy/index.html"),
+    ("legal/TERMS_OF_SERVICE.md", "docs/terms/index.html"),
+    ("legal/ACCEPTABLE_USE_POLICY.md", "docs/acceptable-use/index.html"),
+]
+
+
+def _tokenize(text: str) -> list[str]:
+    text = text.replace("’", "'").replace("‘", "'")
+    words = re.findall(r"[A-Za-z0-9']+", text.lower())
+    # A Markdown raw URL (https://example.com/x) tokenizes with a leading
+    # "https"/"http" that the same link's HTML anchor text never shows
+    # (the visible text is "example.com/x", not the full URL) — not drift.
+    return [w for w in words if w not in ("http", "https")]
+
+
+def _normalize_markdown_body(text: str) -> list[str]:
+    lines = [line for line in text.splitlines() if not line.startswith(">")]
+    text = "\n".join(lines)
+    text = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", text)  # [text](url) -> text
+    text = re.sub(r"[#*`_>-]", " ", text)
+    return _tokenize(text)
+
+
+def _normalize_html_body(html_text: str) -> list[str]:
+    import html as _html
+
+    start = html_text.index('<h2 id="intro"')
+    end = html_text.index('<hr>\n<div id="footer">')
+    body = _html.unescape(html_text[start:end])
+    body = re.sub(r"<[^>]+>", " ", body)
+    return _tokenize(body)
+
+
+def test_legal_docs_match_their_html_mirror():
+    mismatches = []
+    for md_rel, html_rel in _MIRROR_PAIRS:
+        md_words = _normalize_markdown_body((ROOT / md_rel).read_text(encoding="utf-8"))
+        html_words = _normalize_html_body((ROOT / html_rel).read_text(encoding="utf-8"))
+        if md_words != html_words:
+            n = min(len(md_words), len(html_words))
+            at = next((i for i in range(n) if md_words[i] != html_words[i]), n)
+            mismatches.append(
+                f"{md_rel} <-> {html_rel} diverge at word {at}: "
+                f"{md_words[max(0, at - 6):at + 6]!r} vs {html_words[max(0, at - 6):at + 6]!r}"
+            )
+    assert not mismatches, "legal doc / HTML mirror drift:\n" + "\n".join(mismatches)
