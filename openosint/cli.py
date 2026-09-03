@@ -31,6 +31,7 @@ import logging  # noqa: E402
 import os  # noqa: E402
 import sys  # noqa: E402
 
+from openosint.agent import MINIMAX_BASE_URLS, MINIMAX_MODELS  # noqa: E402
 from openosint.json_output import format_tool_result  # noqa: E402
 from openosint.proxy import (  # noqa: E402
     ProxyConfigError,
@@ -116,6 +117,7 @@ def _build_parser() -> argparse.ArgumentParser:
             "  openosint --json email target@example.com\n"
             "  openosint --provider ollama                 # use local Ollama\n"
             "  openosint --provider ollama --ollama-model mistral\n"
+            "  openosint --provider minimax --minimax-region cn\n"
             "  openosint --proxy socks5://user:pass@host:1080 email target@example.com\n"
             "  openosint proxy-test                        # verify the configured proxy\n"
             "\n"
@@ -156,7 +158,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--provider",
         type=str,
         default="anthropic",
-        choices=["anthropic", "ollama", "openai"],
+        choices=["anthropic", "ollama", "openai", "minimax"],
         help="AI provider for the interactive REPL (default: anthropic).",
     )
     parser.add_argument(
@@ -203,6 +205,29 @@ def _build_parser() -> argparse.ArgumentParser:
             "API key for the OpenAI-compatible endpoint.  "
             "Falls back to $OPENAI_API_KEY (local servers may ignore it)."
         ),
+    )
+    parser.add_argument(
+        "--minimax-model",
+        type=str,
+        default=os.environ.get("MINIMAX_MODEL", MINIMAX_MODELS[0]),
+        choices=MINIMAX_MODELS,
+        metavar="MODEL",
+        help="MiniMax model (default: MiniMax-M3). Used when --provider minimax.",
+    )
+    parser.add_argument(
+        "--minimax-region",
+        type=str,
+        default=os.environ.get("MINIMAX_REGION", "global"),
+        choices=tuple(MINIMAX_BASE_URLS),
+        metavar="REGION",
+        help="MiniMax endpoint region: global or cn (default: global).",
+    )
+    parser.add_argument(
+        "--minimax-api-key",
+        type=str,
+        default=None,
+        metavar="KEY",
+        help="MiniMax API key. Falls back to MINIMAX_API_KEY.",
     )
     parser.add_argument(
         "--no-pdf",
@@ -1073,6 +1098,9 @@ async def _async_main() -> None:
             openai_base_url=getattr(args, "openai_base_url", "http://localhost:8080/v1"),
             openai_model=getattr(args, "openai_model", "gpt-4o-mini"),
             openai_api_key=getattr(args, "openai_api_key", None),
+            minimax_model=getattr(args, "minimax_model", MINIMAX_MODELS[0]),
+            minimax_region=getattr(args, "minimax_region", "global"),
+            minimax_api_key=getattr(args, "minimax_api_key", None),
             is_pdf_disabled=getattr(args, "is_pdf_disabled", False),
         )
         await repl.run()
