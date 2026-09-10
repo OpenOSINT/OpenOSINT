@@ -18,6 +18,7 @@ import os
 import aiohttp
 
 from openosint.proxy import get_aiohttp_connector, get_aiohttp_proxy
+from openosint.utils import get_ssl_context
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,9 @@ async def _get(
     url: str,
     params: dict | None = None,
 ) -> dict | list | None:
-    async with session.get(url, params=params, proxy=get_aiohttp_proxy()) as resp:
+    async with session.get(
+        url, params=params, proxy=get_aiohttp_proxy(), ssl=get_ssl_context()
+    ) as resp:
         if resp.status == 404:
             return None
         resp.raise_for_status()
