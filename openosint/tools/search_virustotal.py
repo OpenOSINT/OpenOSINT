@@ -24,6 +24,7 @@ import re
 
 import requests
 
+from openosint.env import missing_var_message
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -280,7 +281,7 @@ async def run_virustotal_osint(target: str, timeout_seconds: int = _DEFAULT_TIME
     resolved_key = api_key or os.environ.get("VIRUSTOTAL_API_KEY", "")
     if not resolved_key:
         return (
-            "Scan error: VIRUSTOTAL_API_KEY environment variable is not set. "
+            f"{missing_var_message('VIRUSTOTAL_API_KEY')} "
             "Get a free key at https://www.virustotal.com/gui/my-apikey"
         )
 

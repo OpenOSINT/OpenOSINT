@@ -15,6 +15,7 @@ import os
 
 import requests
 
+from openosint.env import missing_var_clause
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -36,8 +37,7 @@ def _fetch_hibp_breaches(email: str, timeout_seconds: int, api_key: str) -> list
     """
     if not api_key:
         raise OSINTError(
-            "HIBP_API_KEY environment variable is not set. "
-            "Get a key at https://haveibeenpwned.com/API/Key"
+            f"{missing_var_clause('HIBP_API_KEY')} Get a key at https://haveibeenpwned.com/API/Key"
         )
 
     headers = {"hibp-api-key": api_key, "user-agent": _USER_AGENT}

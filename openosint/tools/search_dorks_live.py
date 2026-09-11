@@ -29,6 +29,7 @@ import urllib.parse
 import requests
 
 from openosint.brightdata import BRIGHTDATA_LINK_CLI
+from openosint.env import missing_var_message
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 from openosint.tools.generate_dorks import _DORK_TEMPLATES
 
@@ -39,16 +40,21 @@ _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_DORKS = 5
 _GOOGLE_SEARCH_BASE = "https://www.google.com/search?q="
 
-_MISSING_KEY_MSG = (
-    "Scan error: BRIGHTDATA_API_KEY environment variable is not set. "
-    "A free tier (5,000 requests/month) is available — "
-    f"sign up at {BRIGHTDATA_LINK_CLI}"
-)
-_MISSING_ZONE_MSG = (
-    "Scan error: BRIGHTDATA_SERP_ZONE environment variable is not set. "
-    "Set it to your Bright Data SERP API zone name (e.g. 'serp_api1'). "
-    f"Create a zone at {BRIGHTDATA_LINK_CLI}"
-)
+
+def _missing_key_msg() -> str:
+    return (
+        f"{missing_var_message('BRIGHTDATA_API_KEY')} "
+        "A free tier (5,000 requests/month) is available — "
+        f"sign up at {BRIGHTDATA_LINK_CLI}"
+    )
+
+
+def _missing_zone_msg() -> str:
+    return (
+        f"{missing_var_message('BRIGHTDATA_SERP_ZONE')} "
+        "Set it to your Bright Data SERP API zone name (e.g. 'serp_api1'). "
+        f"Create a zone at {BRIGHTDATA_LINK_CLI}"
+    )
 
 
 def _build_google_url(dork_query: str) -> str:
@@ -120,11 +126,11 @@ async def run_dorks_live_osint(
     _k = api_keys or {}
     api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ.get("BRIGHTDATA_API_KEY", "")
     if not api_key:
-        return _MISSING_KEY_MSG
+        return _missing_key_msg()
 
     zone = _k.get("BRIGHTDATA_SERP_ZONE") or os.environ.get("BRIGHTDATA_SERP_ZONE", "")
     if not zone:
-        return _MISSING_ZONE_MSG
+        return _missing_zone_msg()
 
     target = target.strip()
     if not target:

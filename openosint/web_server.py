@@ -33,7 +33,6 @@ from typing import AsyncIterator
 from urllib.parse import urlparse as _urlparse
 
 import requests as _requests
-from dotenv import load_dotenv
 
 try:
     import httpx as _httpx
@@ -50,6 +49,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from openosint.agent import default_anthropic_model
 from openosint.brightdata import BRIGHTDATA_LINK_WEB
+from openosint.env import load_env
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
@@ -78,7 +78,7 @@ _ROOT = Path(__file__).parent.parent
 _PACKAGE_WEB = Path(__file__).parent / "web"
 _WEB_DIR = _PACKAGE_WEB if _PACKAGE_WEB.exists() else _ROOT / "web"
 
-load_dotenv()
+load_env()
 
 # ---------------------------------------------------------------------------
 # Demo mode / proxy / CORS config
@@ -2351,7 +2351,7 @@ def _require_safe_bind(host: str, allow_remote: bool) -> None:
 async def serve_async(host: str = "127.0.0.1", port: int = 8080, allow_remote: bool = False) -> None:
     """Run uvicorn within an already-running asyncio event loop."""
     _require_safe_bind(host, allow_remote)
-    load_dotenv()
+    load_env()
     app = create_app(host=host)
     _print_banner(host, port)
     config = uvicorn.Config(app, host=host, port=port, log_level="warning", loop="none")
@@ -2362,7 +2362,7 @@ async def serve_async(host: str = "127.0.0.1", port: int = 8080, allow_remote: b
 def run_server(host: str = "127.0.0.1", port: int = 8080, allow_remote: bool = False) -> None:
     """Standalone blocking entry point."""
     _require_safe_bind(host, allow_remote)
-    load_dotenv()
+    load_env()
     app = create_app(host=host)
     _print_banner(host, port)
     uvicorn.run(app, host=host, port=port, log_level="warning")

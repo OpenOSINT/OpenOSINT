@@ -16,6 +16,7 @@ import re
 
 import aiohttp
 
+from openosint.env import missing_var_message
 from openosint.proxy import get_aiohttp_connector, get_aiohttp_proxy
 
 logger = logging.getLogger(__name__)
@@ -25,10 +26,9 @@ _DEFAULT_TIMEOUT = 30
 _MAX_AGE_IN_DAYS = 90
 ABUSE_SCORE_THRESHOLD = 50
 
-_MISSING_KEY_ERROR = (
-    "Scan error: ABUSEIPDB_API_KEY environment variable is not set. "
-    "Get a key at https://www.abuseipdb.com/account/api"
-)
+
+def _missing_key_error() -> str:
+    return f"{missing_var_message('ABUSEIPDB_API_KEY')} Get a key at https://www.abuseipdb.com/account/api"
 
 _IP_RE = re.compile(
     r"^("
@@ -88,7 +88,7 @@ async def run_abuseipdb_osint(ip: str, timeout_seconds: int = _DEFAULT_TIMEOUT, 
     """Check an IP against the AbuseIPDB v2 API. Requires ABUSEIPDB_API_KEY."""
     resolved_key = api_key or os.environ.get("ABUSEIPDB_API_KEY", "")
     if not resolved_key:
-        return _MISSING_KEY_ERROR
+        return _missing_key_error()
     ip = ip.strip()
     if not _is_valid_ip(ip):
         return "Invalid IP address format."

@@ -15,50 +15,28 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
-from pathlib import Path
 from typing import Any
-
-from dotenv import find_dotenv, load_dotenv
 
 logger = logging.getLogger(__name__)
 
 
-# MCP clients launch this entrypoint with an arbitrary cwd (not necessarily
-# the repo checkout), AND this package may be a normal (non-editable) pip
-# install, in which case anchoring purely on __file__ resolves into
-# site-packages/.env — a path no user will ever populate, leaving someone
-# who runs the server by hand from a directory containing .env worse off
-# than before this cascade existed. Most-specific override first:
-#   1. OPENOSINT_ENV_FILE, if set — fail loudly on a typo'd path rather
-#      than silently loading nothing.
-#   2. the repo-root .env, if this is a source/editable checkout.
-#   3. python-dotenv's own cwd-upward search, covering "installed via pip,
-#      run by hand from a directory containing .env".
-# override=False throughout: real env vars from the client's own MCP
-# config always win over anything in the file, in every branch.
-def _resolve_dotenv_path() -> str:
-    explicit = os.environ.get("OPENOSINT_ENV_FILE", "").strip()
-    if explicit:
-        if not Path(explicit).is_file():
-            raise FileNotFoundError(f"OPENOSINT_ENV_FILE={explicit!r} does not exist.")
-        logger.debug("Loading .env from OPENOSINT_ENV_FILE: %s", explicit)
-        return explicit
-
-    repo_root_env = Path(__file__).resolve().parent.parent / ".env"
-    if repo_root_env.is_file():
-        logger.debug("Loading .env from repo root: %s", repo_root_env)
-        return str(repo_root_env)
-
-    cwd_env = find_dotenv(usecwd=True)
-    logger.debug("Loading .env via cwd search: %s", cwd_env or "(none found)")
-    return cwd_env
-
-
 # Must run before the tool-module imports below, several of which read
 # os.environ (API keys) at call time — keep this above them; a future
-# isort/ruff autofix must not reorder it past those imports.
-load_dotenv(dotenv_path=_resolve_dotenv_path(), override=False)
+# isort/ruff autofix must not reorder it past those imports. Always
+# printed to stderr: stdout is the MCP protocol channel, so nothing but
+# protocol frames may be written there. prefer_package_root=True: Claude
+# Desktop and other MCP hosts launch this with an arbitrary cwd (often
+# unrelated to any intended .env), so the repo-root .env (source/editable
+# checkout) is checked before an upward cwd search — the opposite of the
+# CLI/web priority. A bad OPENOSINT_ENV_FILE path is logged here before
+# the process exits, not left to crash silently on an unhandled traceback.
+from openosint.env import load_env  # noqa: E402
+
+try:
+    load_env(prefer_package_root=True)
+except FileNotFoundError as exc:
+    logger.error("%s", exc)
+    raise SystemExit(2) from None
 
 from mcp.server import Server  # noqa: E402
 from mcp.server.stdio import stdio_server  # noqa: E402
