@@ -30,13 +30,9 @@ logger = logging.getLogger(__name__)
 # checkout) is checked before an upward cwd search — the opposite of the
 # CLI/web priority. A bad OPENOSINT_ENV_FILE path is logged here before
 # the process exits, not left to crash silently on an unhandled traceback.
-from openosint.env import load_env  # noqa: E402
+from openosint.env import load_env_or_exit  # noqa: E402
 
-try:
-    load_env(prefer_package_root=True)
-except FileNotFoundError as exc:
-    logger.error("%s", exc)
-    raise SystemExit(2) from None
+load_env_or_exit(prefer_package_root=True)
 
 from mcp.server import Server  # noqa: E402
 from mcp.server.stdio import stdio_server  # noqa: E402

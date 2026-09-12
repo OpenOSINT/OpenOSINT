@@ -23,6 +23,8 @@ import os
 import subprocess
 import sys
 
+import pytest
+
 _PYTHON = sys.executable
 
 
@@ -222,24 +224,75 @@ class TestJsonStdoutStaysClean:
         assert "[*] Loaded .env:" in result.stderr
 
 
-class TestMissingEnvFileGoesToStderr:
-    def test_cli_reports_missing_env_file_on_stderr(self, tmp_path):
+class TestMissingEnvFileExitsCleanly:
+    """A missing $OPENOSINT_ENV_FILE must exit(2) with one readable line on
+    stderr — never a traceback — for every entry point.
+
+    The earlier version of this test (`returncode != 0`, only checking that
+    "does not exist" appeared somewhere in stderr) passed even when cli.py's
+    guard raised NameError on `sys` before `import sys` had run: a NameError
+    exits with a non-zero code and its traceback still contains the
+    FileNotFoundError's "does not exist" text (from
+    "During handling of the above exception..."), so both weak assertions
+    were satisfied by the crash itself. `returncode == 2` and the explicit
+    "Traceback" absence check below are what actually catch that class of
+    regression.
+    """
+
+    _ENTRY_POINTS = {
+        "cli": [_PYTHON, "-m", "openosint.cli", "--help"],
+        "mcp_server": [_PYTHON, "-m", "openosint.mcp_server"],
+        "web_server_import": [_PYTHON, "-c", "import openosint.web_server"],
+    }
+
+    @pytest.mark.parametrize("entry_point", sorted(_ENTRY_POINTS))
+    def test_missing_env_file_exits_2_with_no_traceback(self, tmp_path, entry_point):
         missing = tmp_path / "does-not-exist.env"
 
         result = subprocess.run(
-            [_PYTHON, "-c", "import openosint.cli"],
+            self._ENTRY_POINTS[entry_point],
             cwd=str(tmp_path),
             env={
                 "PATH": os.environ.get("PATH", ""),
                 "HOME": os.environ.get("HOME", ""),
                 "OPENOSINT_ENV_FILE": str(missing),
             },
+            input="",
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=60,
         )
 
-        assert result.returncode != 0
+        assert result.returncode == 2, result.stderr
         assert result.stdout == ""
-        assert "OPENOSINT_ENV_FILE" in result.stderr
+        assert "does not exist" in result.stderr
         assert str(missing) in result.stderr
+        assert "Traceback" not in result.stderr
+
+
+class TestLoadEnvOrExit:
+    def test_returns_load_env_result_when_file_is_valid(self, tmp_path, monkeypatch):
+        _reset_env_module_state(monkeypatch)
+        custom = tmp_path / "custom.env"
+        custom.write_text("MARKER_Z=ok\n")
+        monkeypatch.setenv("OPENOSINT_ENV_FILE", str(custom))
+
+        from openosint.env import load_env_or_exit
+
+        assert load_env_or_exit() == custom
+
+    def test_missing_file_prints_bang_line_and_exits_2(self, tmp_path, monkeypatch, capsys):
+        _reset_env_module_state(monkeypatch)
+        missing = tmp_path / "does-not-exist.env"
+        monkeypatch.setenv("OPENOSINT_ENV_FILE", str(missing))
+
+        from openosint.env import load_env_or_exit
+
+        with pytest.raises(SystemExit) as exc_info:
+            load_env_or_exit()
+
+        assert exc_info.value.code == 2
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith("[!] ")
+        assert str(missing) in captured.err

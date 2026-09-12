@@ -812,7 +812,7 @@ Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ```bash
 export OPENOSINT_DEMO_KEY=sk-ant-...   # your Anthropic key — never committed
-openosint --web &                      # start the web server on :8080
+openosint web &                        # start the web server on :8080
 make demo                              # record -> encode -> write docs/assets/demo-web-graph.*
 git add docs/assets/demo-web-graph.*
 ```

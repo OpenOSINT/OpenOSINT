@@ -1288,6 +1288,11 @@ class TestSetupEndpointGuards:
     """GHSA-cqr4-hcfp-m6m4: /api/setup must reject remote callers, unknown
     keys, and malformed *_BASE_URL values."""
 
+    @pytest.fixture(autouse=True)
+    def _clean_openai_env(self, monkeypatch):
+        for var in ("OPENAI_BASE_URL", "OPENAI_MODEL", "OPENAI_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+
     async def test_loopback_caller_can_save_allowlisted_key(self, http_client, tmp_path, monkeypatch):
         import openosint.web_server as ws
 

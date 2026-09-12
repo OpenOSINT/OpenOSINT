@@ -6,7 +6,7 @@
 #   - node (https://nodejs.org)
 #   - ffmpeg  (brew install ffmpeg)
 #   - gifski  (brew install gifski)
-#   - Web server running: openosint --web  (default http://localhost:8080)
+#   - Web server running: openosint web  (default http://localhost:8080)
 #   - OPENOSINT_DEMO_KEY env var set to your Anthropic API key
 #
 # Usage:
