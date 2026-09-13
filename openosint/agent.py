@@ -721,12 +721,23 @@ class OpenOSINTAgent:
         except anthropic.AuthenticationError:
             return AgentResponse(
                 content="",
-                error="Invalid API key. Run 'openosint config' to update it.",
+                error="Invalid API key. Set ANTHROPIC_API_KEY in your .env or environment.",
             )
         except anthropic.APIConnectionError:
             return AgentResponse(
                 content="",
                 error="Cannot reach the Anthropic API. Check your internet connection.",
+            )
+        except anthropic.NotFoundError:
+            name = (
+                os.environ.get("ANTHROPIC_MODEL")
+                or os.environ.get("OPENOSINT_MODEL")
+                or DEFAULT_ANTHROPIC_MODEL
+            )
+            logger.warning("Anthropic model not found: %s", name)
+            return AgentResponse(
+                content="",
+                error=f"Model '{name}' not found. Check ANTHROPIC_MODEL, or remove it to use the default.",
             )
         except Exception as exc:
             logger.exception("Unexpected error in Anthropic agent loop.")

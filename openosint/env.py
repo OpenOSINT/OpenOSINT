@@ -74,6 +74,10 @@ def load_env(*, prefer_package_root: bool = False) -> Path | None:
     the first is a no-op that returns the cached result, so the banner
     line below is never printed twice for one process. `prefer_package_root`
     swaps the cwd-search/repo-root priority — see the module docstring.
+
+    Raises FileNotFoundError if `$OPENOSINT_ENV_FILE` is set but points at
+    a nonexistent path — see `load_env_or_exit()` for the CLI-friendly
+    wrapper every entry point should call instead of this directly.
     """
     global _loaded_path, _load_attempted
     if _load_attempted:
@@ -87,6 +91,19 @@ def load_env(*, prefer_package_root: bool = False) -> Path | None:
     _loaded_path = path or None
     _load_attempted = True
     return Path(_loaded_path) if _loaded_path else None
+
+
+def load_env_or_exit(*, prefer_package_root: bool = False) -> Path | None:
+    """`load_env()`, but a bad `$OPENOSINT_ENV_FILE` exits cleanly instead of
+    raising.  Every entry point (CLI, MCP server, web server) should call
+    this instead of `load_env()` directly, so a missing env file always
+    produces one `[!] ...` line on stderr and `exit(2)` — never a traceback.
+    """
+    try:
+        return load_env(prefer_package_root=prefer_package_root)
+    except FileNotFoundError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        raise SystemExit(2) from None
 
 
 def missing_var_clause(var_name: str) -> str:
