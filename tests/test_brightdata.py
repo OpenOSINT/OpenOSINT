@@ -15,16 +15,26 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _mock_serp_response(status_code: int, json_body: dict | None = None) -> MagicMock:
-    """Mock for SERP calls: response.json() returns parsed SERP data."""
+def _mock_serp_response(
+    status_code: int, json_body: dict | None = None, headers: dict | None = None
+) -> MagicMock:
+    """Mock for SERP calls: response.json() returns parsed SERP data.
+
+    Bright Data returns HTTP 200 at the API level with the real outcome in
+    x-brd-* response headers, so ``headers`` defaults to an empty dict rather
+    than an unconfigured MagicMock (which would look truthy to ``.get()``).
+    """
     resp = MagicMock()
     resp.status_code = status_code
     resp.json.return_value = json_body or {}
+    resp.headers = headers if headers is not None else {}
     return resp
 
 
@@ -215,6 +225,342 @@ class TestSearchDorksLive:
 
         assert isinstance(result, str)
         assert "error" in result.lower()
+
+    async def test_one_dork_failing_does_not_stop_others(self, monkeypatch):
+        """A JSONDecodeError-style failure on one dork must not abort the rest."""
+        monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
+        monkeypatch.setenv("BRIGHTDATA_SERP_ZONE", "serp_api1")
+
+        bad_resp = _mock_serp_response(200)
+        bad_resp.text = ""  # empty body -> SerpFetchError
+        good_resp = _mock_serp_response(200, {"organic": []})
+        good_resp.text = '{"organic": []}'
+
+        with patch(
+            "openosint.tools.search_dorks_live.requests.post",
+            side_effect=[bad_resp, good_resp],
+        ):
+            from openosint.tools.search_dorks_live import run_dorks_live_osint
+
+            result = await run_dorks_live_osint("target", max_dorks=2)
+
+        assert "(error:" in result
+        assert "(no organic results)" in result
+
+    async def test_x_twitter_dork_string(self):
+        from openosint.tools.generate_dorks import _DORK_TEMPLATES
+
+        assert '("{target}") (site:x.com OR site:twitter.com)' in _DORK_TEMPLATES
+        assert '"{target}" site:twitter.com' not in _DORK_TEMPLATES
+        assert '"{target}" site:x.com OR site:twitter.com' not in _DORK_TEMPLATES
+
+    async def test_x_twitter_dork_built_string_is_grouped(self):
+        from openosint.tools.generate_dorks import _DORK_TEMPLATES
+
+        template = next(t for t in _DORK_TEMPLATES if "x.com" in t and "twitter.com" in t)
+        built = template.format(target="openosint.tech")
+        assert built == '("openosint.tech") (site:x.com OR site:twitter.com)'
+
+    async def test_all_dorks_failed_summarizes_distinct_error_codes(self, monkeypatch):
+        monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
+        monkeypatch.setenv("BRIGHTDATA_SERP_ZONE", "serp_api1")
+
+        resp_502 = _mock_serp_response(
+            200,
+            headers={
+                "x-brd-status-code": "502",
+                "x-brd-error-code": "expect_body",
+                "x-brd-error": "response body was rejected",
+            },
+        )
+        resp_502.text = ""
+        resp_429 = _mock_serp_response(
+            200,
+            headers={
+                "x-brd-status-code": "429",
+                "x-brd-error-code": "failed_query_rejected",
+                "x-brd-error": "same query blocked",
+            },
+        )
+        resp_429.text = ""
+
+        with patch(
+            "openosint.tools.search_dorks_live.requests.post",
+            side_effect=[resp_502, resp_502, resp_502, resp_429, resp_429],
+        ):
+            from openosint.tools.search_dorks_live import run_dorks_live_osint
+
+            result = await run_dorks_live_osint("target", max_dorks=5)
+
+        assert "all 5 dorks failed" in result
+        assert "3x 502 expect_body" in result
+        assert "2x 429 failed_query_rejected" in result
+        assert "BRIGHTDATA_API_KEY" not in result
+
+
+class TestCleanLink:
+    def test_clean_absolute_url_returned_as_is(self):
+        from openosint.tools.search_dorks_live import _clean_link
+
+        assert _clean_link({"link": "https://example.com/page"}) == "https://example.com/page"
+
+    def test_google_url_redirect_with_absolute_q_param_unwrapped(self):
+        from openosint.tools.search_dorks_live import _clean_link
+
+        item = {"link": "/url?q=https://example.com/page&sa=U"}
+        assert _clean_link(item) == "https://example.com/page"
+
+    def test_opaque_goto_redirect_returns_none(self):
+        from openosint.tools.search_dorks_live import _clean_link
+
+        item = {"link": "/goto?url=CAESdgHrOzAVwmzu3csuqwCiDN3m8jAH92tze2GTyVr0E4Rn"}
+        assert _clean_link(item) is None
+
+    def test_url_with_trailing_snippet_text_keeps_first_token(self):
+        from openosint.tools.search_dorks_live import _clean_link
+
+        item = {"link": "https://lnkd.in/g8BV_Fwz — openosint.tech #OSINT #infosec"}
+        assert _clean_link(item) == "https://lnkd.in/g8BV_Fwz"
+
+    def test_empty_field_returns_none(self):
+        from openosint.tools.search_dorks_live import _clean_link
+
+        assert _clean_link({"link": ""}) is None
+
+    def test_missing_field_returns_none(self):
+        from openosint.tools.search_dorks_live import _clean_link
+
+        assert _clean_link({}) is None
+
+
+class TestExtractOrganic:
+    def test_unresolvable_link_kept_with_url_none(self):
+        from openosint.tools.search_dorks_live import _extract_organic
+
+        data = {
+            "organic": [
+                {"title": "Unresolvable", "link": "/goto?url=CAESdgHrOzAV", "description": "x"},
+            ]
+        }
+        results = _extract_organic(data)
+
+        assert len(results) == 1
+        assert results[0]["url"] is None
+        assert results[0]["title"] == "Unresolvable"
+
+
+class TestFetchSerp:
+    def test_empty_200_body_raises_serp_fetch_error(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = ""
+        mock_resp.headers = {"content-type": "application/json"}
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert "200" in message
+        assert "application/json" in message
+
+    def test_502_raises_serp_fetch_error(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 502
+        mock_resp.text = "Bad Gateway"
+        mock_resp.headers = {"content-type": "text/plain"}
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        assert "502" in str(exc_info.value)
+
+    def test_html_body_raises_serp_fetch_error(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.text = "<html><body>proxy auth required</body></html>"
+        mock_resp.headers = {"content-type": "text/html"}
+        mock_resp.json.side_effect = ValueError("Expecting value: line 1 column 1 (char 0)")
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert "text/html" in message
+
+    def test_does_not_bypass_ambient_proxy_env_vars(self, monkeypatch):
+        """Users behind a mandatory corporate proxy must not be silently bypassed."""
+        from openosint.tools.search_dorks_live import _fetch_serp
+
+        mock_resp = _mock_serp_response(200, {"organic": []})
+        mock_resp.text = '{"organic": []}'
+
+        with patch(
+            "openosint.tools.search_dorks_live.requests.post", return_value=mock_resp
+        ) as mock_post:
+            _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        assert "proxies" not in mock_post.call_args.kwargs
+
+    def test_502_expect_body_uses_brd_headers(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(
+            200,
+            headers={
+                "x-brd-status-code": "502",
+                "x-brd-error-code": "expect_body",
+                "x-brd-error": "response body was rejected",
+            },
+        )
+        mock_resp.text = ""
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert message == "Bright Data 502 expect_body: response body was rejected"
+        assert exc_info.value.status_code == 502
+        assert exc_info.value.error_code == "expect_body"
+
+    def test_502_captcha_adds_verification_hint(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(
+            200,
+            headers={
+                "x-brd-status-code": "502",
+                "x-brd-error-code": "captcha",
+                "x-brd-error": "redirect location was rejected",
+            },
+        )
+        mock_resp.text = ""
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert "captcha" in message
+        assert "search engine returned a verification page; not billed" in message
+
+    def test_429_failed_query_rejected_no_retry(self):
+        """A rejected query is never retried — requests.post is called exactly once."""
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(
+            200,
+            headers={
+                "x-brd-status-code": "429",
+                "x-brd-error-code": "failed_query_rejected",
+            },
+        )
+        mock_resp.text = ""
+
+        with patch(
+            "openosint.tools.search_dorks_live.requests.post", return_value=mock_resp
+        ) as mock_post:
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        assert mock_post.call_count == 1
+        message = str(exc_info.value)
+        assert "failed_query_rejected" in message
+        assert "retry after 15 seconds" in message
+
+    def test_wrong_api_status_400(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(
+            200,
+            headers={"x-brd-status-code": "400", "x-brd-error-code": "wrong_api"},
+        )
+        mock_resp.text = ""
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        assert "wrong_api" in str(exc_info.value)
+
+    def test_proxy_layer_err_code_fallback(self):
+        """Proxy-layer failures use x-brd-err-code/x-brd-err-msg, not x-brd-error-code/-error."""
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(
+            200,
+            headers={
+                "x-brd-status-code": "502",
+                "x-brd-err-code": "proxy_error",
+                "x-brd-err-msg": "no peers available",
+            },
+        )
+        mock_resp.text = ""
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert "proxy_error" in message
+        assert "no peers available" in message
+
+    def test_empty_body_with_no_brd_headers_falls_back(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(200)
+        mock_resp.text = ""
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        assert "empty response body" in str(exc_info.value)
+
+    def test_401_token_expired_message(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(401)
+        mock_resp.text = '{"error": "Token expired"}'
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert "Token expired" in message
+        assert "renew it in the Bright Data dashboard" in message
+
+    def test_401_body_included_and_key_redacted(self):
+        from openosint.tools.search_dorks_live import SerpFetchError, _fetch_serp
+
+        mock_resp = _mock_serp_response(401)
+        mock_resp.text = '{"error": "invalid key test-key"}'
+
+        with patch("openosint.tools.search_dorks_live.requests.post", return_value=mock_resp):
+            with pytest.raises(SerpFetchError) as exc_info:
+                _fetch_serp("https://www.google.com/search?q=x", "test-key", "serp_api1", 30)
+
+        message = str(exc_info.value)
+        assert "test-key" not in message
+        assert "***REDACTED***" in message
+
+    def test_build_google_url_contains_hl_and_gl(self):
+        from openosint.tools.search_dorks_live import _build_google_url
+
+        url = _build_google_url('"openosint.tech"')
+        assert "hl=en" in url
+        assert "gl=us" in url
+        assert url.endswith("&hl=en&gl=us")
 
 
 # ---------------------------------------------------------------------------

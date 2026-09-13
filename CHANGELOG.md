@@ -48,6 +48,25 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   - MCP server: `$OPENOSINT_ENV_FILE`, then the repo root, then the current directory, because MCP clients start it from an arbitrary directory.
 
   Real environment variables always win. `[*] Loaded .env: <path>` is printed to stderr. If `OPENOSINT_ENV_FILE` points to a missing file, OpenOSINT prints one error line and exits with code 2. Missing-key errors now say when no `.env` was found.
+- **`search_dorks_live`: Bright Data failures showed a `JSONDecodeError`
+  traceback instead of the actual error.** Bright Data returns HTTP 200 at
+  the API level even when the fetch failed, reporting the real outcome in
+  `x-brd-*` response headers. These are now read and turned into a clear
+  message, e.g. `Bright Data 502 captcha: redirect location was rejected`.
+  Rate-limit and CAPTCHA failures add a hint about the 15-second block.
+  There is no automatic retry: Bright Data blocks a repeated identical
+  query for at least 15 seconds, and cataloged errors are not billed.
+- A failed dork no longer stops the scan or prints a traceback: it logs a
+  warning, the remaining dorks run, and if all fail the summary lists the
+  distinct error codes.
+- 401/403 responses now include Bright Data's own redacted body, with a
+  specific hint when the API key has expired.
+- Result URLs are normalized: opaque Google `/goto?url=...` redirect
+  tokens and snippet text leaking into the URL field are no longer shown
+  as links. Unresolvable links render as `(unresolved)`.
+- The Twitter dork is now grouped as `("{target}") (site:x.com OR
+  site:twitter.com)`; the previous form let Google match either the
+  quoted term or a site independently, returning unrelated results.
 
 ## [2.27.0] — 2026-08-26
 

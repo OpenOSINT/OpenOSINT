@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 _DORK_TEMPLATES: list[str] = [
     '"{target}"',
     '"{target}" site:linkedin.com',
-    '"{target}" site:twitter.com',
+    '("{target}") (site:x.com OR site:twitter.com)',
     '"{target}" site:facebook.com',
     '"{target}" site:instagram.com',
     '"{target}" site:github.com',
