@@ -1,10 +1,22 @@
 # tests/test_mcp_server_dotenv.py
 """
-openosint/mcp_server.py resolves its .env via a three-step cascade —
+openosint/mcp_server.py resolves its .env via
+openosint.env.load_env(prefer_package_root=True)'s three-step cascade —
 OPENOSINT_ENV_FILE override, then the repo-root .env, then python-dotenv's
-own cwd-upward search — because a fixed __file__-anchored path resolves
-into site-packages/.env under a normal (non-editable) pip install, a
-location no user will ever populate.
+own cwd-upward search as a last resort.
+
+MCP is the ONE entry point that checks repo-root before cwd search — the
+opposite of the CLI/web server priority (see tests/test_env_loading.py).
+Claude Desktop and other MCP hosts launch this process with an arbitrary
+cwd that has nothing to do with any .env the user intends (often the
+user's home directory, or wherever the host itself happens to run from),
+so an upward cwd search from there risks silently picking up an unrelated
+.env before a real repo-root one is ever considered. A fixed
+__file__-anchored path resolves into site-packages/.env under a normal
+(non-editable) pip install, a location no user will ever populate — hence
+the cwd-search fallback still exists, just last in line for this entry
+point. For MCP, OPENOSINT_ENV_FILE (or the client's own `env` config
+block) is the reliable way to point at a specific file.
 
 These tests run the real module in a subprocess, with a from-scratch
 environment and cwd deliberately set away from the repo, and assert the
@@ -114,7 +126,7 @@ class TestExplicitOverride:
 
 
 class TestRepoRootAndCwdFallback:
-    """Cascade steps (b) repo-root .env and (c) cwd-upward search.
+    """Cascade steps (b) repo-root .env and (c) cwd-upward search fallback.
 
     Both need a throwaway copy of the package so the real repo .env is
     never read: a fixed __file__-anchored path is exactly the bug being
@@ -154,7 +166,11 @@ class TestRepoRootAndCwdFallback:
         assert _markers(result)["MARKER_C"] == "cwd-value"
 
     def test_repo_root_takes_priority_over_cwd_search(self, tmp_path):
-        """When both a repo-root .env and a cwd .env exist, step (b) wins."""
+        """When both a repo-root .env and a cwd .env exist, step (b) — the
+        repo-root .env — wins. This is the MCP-specific priority: an
+        arbitrary host-chosen cwd must not shadow a real repo-root .env,
+        unlike the CLI/web server (see
+        test_env_loading.py::TestCliWebPreferCwdOverRepoRoot)."""
         pkgroot = tmp_path / "pkgroot"
         self._copy_package(pkgroot)
         (pkgroot / ".env").write_text("MARKER_B=repo-root-value\n")

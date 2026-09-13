@@ -552,11 +552,20 @@ claude mcp list
   "mcpServers": {
     "openosint": {
       "command": "python",
-      "args": ["/absolute/path/to/OpenOSINT/openosint/mcp_server.py"]
+      "args": ["/absolute/path/to/OpenOSINT/openosint/mcp_server.py"],
+      "env": { "OPENOSINT_ENV_FILE": "/absolute/path/to/your/.env" }
     }
   }
 }
 ```
+
+MCP hosts launch this server with a cwd that has nothing to do with your
+`.env` (often your home directory, or wherever the host itself runs from).
+The server falls back to a repo-root `.env` for a source checkout, then an
+upward search from that arbitrary cwd — but for a `pip install`ed
+`openosint`, neither is reliable. Setting `OPENOSINT_ENV_FILE` in the
+client's own `env` block above, as shown, is the one option guaranteed to
+work regardless of how the host launches the process.
 
 Prefer zero setup? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) is also available as a hosted MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — no server to run, no config file to edit. Try for free.
 
@@ -575,6 +584,9 @@ $ claude
 ```bash
 # From PyPI (recommended)
 pip install openosint
+
+# Updating
+pip install --upgrade openosint
 
 # From source
 git clone https://github.com/OpenOSINT/OpenOSINT.git
@@ -607,14 +619,23 @@ Don't want to install these locally? The [OpenOSINT Email Recon Actor](https://a
 
 ## Configuration
 
-Store keys in a `.env` file at the project root (copy `.env.example`). `python-dotenv` loads it automatically at startup.
+Copy `.env.example` to `.env` and fill in your keys. `.env` is read from the
+**directory you run `openosint` from** (searched upward, like `git` finds
+`.git`) — it does not need to be at any particular "project root", and a
+regular `pip install` works the same way as running from a source checkout.
+Set `OPENOSINT_ENV_FILE=/path/to/.env` to point at an explicit file instead
+(useful for the MCP server, which is launched by its host with an arbitrary
+working directory). A real environment variable always takes priority over
+a value in `.env`.
 
 | Variable | Tool | Required | Purpose |
 |----------|------|----------|---------|
 | `ANTHROPIC_API_KEY` | AI agent | Yes (or Ollama / OpenAI) | Anthropic API key |
+| `ANTHROPIC_MODEL` | AI agent | Optional | Model name to request (default: `claude-sonnet-5`). Replaces the deprecated `OPENOSINT_MODEL`. |
 | `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`) |
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
+| `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
 | `HIBP_API_KEY` | `search_breach` | Optional | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
 | `IPINFO_TOKEN` | `search_ip` | Optional | ipinfo.io higher rate limits |
 | `SHODAN_API_KEY` | `search_shodan` | Optional | Shodan API — [get one](https://account.shodan.io) |

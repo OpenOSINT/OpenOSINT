@@ -20,9 +20,13 @@ Usage:
 
 from __future__ import annotations
 
-from dotenv import load_dotenv
+from openosint.env import load_env
 
-load_dotenv()
+try:
+    load_env()
+except FileNotFoundError as exc:
+    print(f"[!] {exc}", file=sys.stderr)
+    raise SystemExit(2) from None
 
 import argparse  # noqa: E402
 import asyncio  # noqa: E402

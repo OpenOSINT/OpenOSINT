@@ -53,17 +53,37 @@ _MAX_TOKENS = 4096
 # Pinned deliberately. Dateless Claude model IDs are NOT evergreen
 # pointers — from the 4.6 generation on, a dateless ID maps to one
 # fixed snapshot. Revisit when a newer Sonnet ships.
-# Override at runtime with OPENOSINT_MODEL.  (reviewed 2026-09)
+# Override at runtime with ANTHROPIC_MODEL.  (reviewed 2026-09)
 DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+
+_warned_openosint_model_deprecated = False
 
 
 def default_anthropic_model() -> str:
-    """Return the Anthropic model to use, honouring OPENOSINT_MODEL if set.
+    """Return the Anthropic model to use.
 
-    Resolved at call time (not as a module-level import-time constant) so a
-    .env loaded later by the entry point is always honoured.
+    Resolution order: $ANTHROPIC_MODEL > $OPENOSINT_MODEL (deprecated, warns
+    once) > DEFAULT_ANTHROPIC_MODEL. Resolved at call time (not as a
+    module-level import-time constant) so a .env loaded later by the entry
+    point is always honoured.
     """
-    return os.environ.get("OPENOSINT_MODEL") or DEFAULT_ANTHROPIC_MODEL
+    global _warned_openosint_model_deprecated
+
+    anthropic_model = os.environ.get("ANTHROPIC_MODEL", "").strip()
+    if anthropic_model:
+        return anthropic_model
+
+    legacy_model = os.environ.get("OPENOSINT_MODEL", "").strip()
+    if legacy_model:
+        if not _warned_openosint_model_deprecated:
+            logger.warning(
+                "OPENOSINT_MODEL is deprecated and will be removed in a future "
+                "release; use ANTHROPIC_MODEL instead."
+            )
+            _warned_openosint_model_deprecated = True
+        return legacy_model
+
+    return DEFAULT_ANTHROPIC_MODEL
 
 # ---------------------------------------------------------------------------
 # Tool definitions — Anthropic format

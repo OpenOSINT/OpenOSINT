@@ -39,6 +39,27 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   README before setting it, including the note that doing so makes you the
   controller for anyone the proxy relays to this instance.
 
+### Fixed
+- **`.env` was silently ignored under a regular (non-editable) `pip install
+  openosint`.** The CLI and web server called `load_dotenv()` with no path;
+  python-dotenv then searches upward from inside site-packages, not from
+  the directory the command was run from, so a `.env` in your cwd was never
+  read — while the MCP server already handled this correctly. All three
+  entry points now share one loader (`openosint.env.load_env()`): resolve
+  `$OPENOSINT_ENV_FILE` first, then search upward from cwd, then fall back
+  to the repo root for a source/editable checkout. `override=False`
+  throughout, so a real environment variable always wins. When a `.env` is
+  loaded, `[*] Loaded .env: <path>` is now printed (stderr in the MCP
+  server, since stdout is its protocol channel). Every tool's missing-key
+  error now says explicitly whether no `.env` was found and where it
+  looked, e.g. `BRIGHTDATA_API_KEY environment variable is not set (no
+  .env found in /home/user; set OPENOSINT_ENV_FILE or export the
+  variable)`.
+- **`ANTHROPIC_MODEL` is now the documented override for the default Claude
+  model**, consistent with the existing `OPENAI_MODEL`. `OPENOSINT_MODEL`
+  still works as a deprecated fallback and logs a one-time warning to
+  switch.
+
 ## [2.27.0] — 2026-08-26
 
 ### Added
