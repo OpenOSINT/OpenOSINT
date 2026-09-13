@@ -9,6 +9,8 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.28.0] — 2026-09-13
+
 ### Changed — BREAKING
 - **Web UI: locally-held provider keys are now gated by bind address, not an
   env var.** Previously, whether a request could use a key from your `.env`
