@@ -9,6 +9,8 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.28.2] — 2026-09-14
+
 ### Fixed
 - **With `--provider openai`, gpt-4o refused to run tools that use API keys**, reporting the credentials as missing even when correctly configured. Tool descriptions said "Requires <VAR>", which the model treated as a precondition it had to verify and could not. Tools are now always called, and whatever error they return is reported.
 - README: optional features install via extras, e.g. `pip install "openosint[openai]"`.
