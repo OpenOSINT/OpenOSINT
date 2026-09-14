@@ -3,7 +3,7 @@
   "name": "io.github.OpenOSINT/openosint",
   "title": "OpenOSINT",
   "description": "AI-powered OSINT agent & MCP server. 16 tools: email, breach, IP, WHOIS, DNS, Shodan, GitHub & more.",
-  "version": "2.28.0",
+  "version": "2.28.1",
   "websiteUrl": "https://openosint.tech",
   "repository": {
     "url": "https://github.com/OpenOSINT/OpenOSINT",
@@ -13,7 +13,7 @@
     {
       "registryType": "pypi",
       "identifier": "openosint",
-      "version": "2.28.0",
+      "version": "2.28.1",
       "transport": {
         "type": "stdio"
       },
