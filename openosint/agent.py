@@ -212,7 +212,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "description": (
             "Query Shodan for host intelligence or banner searches. "
             "If the query looks like an IP address, performs a host lookup. "
-            "Otherwise performs a keyword/service search. Requires SHODAN_API_KEY."
+            "Otherwise performs a keyword/service search. Uses SHODAN_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -230,7 +230,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "description": (
             "Check IP, domain, URL, or file hash against VirusTotal's 70+ antivirus "
             "engines and threat intelligence. Auto-detects input type. "
-            "Requires VIRUSTOTAL_API_KEY."
+            "Uses VIRUSTOTAL_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -252,7 +252,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Search Censys for internet-facing infrastructure data. "
             "For IPs: returns open ports, services, ASN. "
             "For domains: returns certificate history, SANs, and issuer information. "
-            "Requires CENSYS_API_ID and CENSYS_SECRET."
+            "Uses CENSYS_API_ID and CENSYS_SECRET."
         ),
         "input_schema": {
             "type": "object",
@@ -271,7 +271,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Enhanced IP intelligence using IP2Location Security Plan. "
             "Returns geolocation, ISP, ASN, and detects VPN, proxy, Tor exit nodes, "
             "and datacenter hosting. Sponsored integration. "
-            "Requires IP2LOCATION_API_KEY."
+            "Uses IP2LOCATION_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -291,7 +291,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Returns abuse confidence score (0–100%), total reports, country, ISP, domain, "
             "and last reported timestamp. Use this when investigating suspicious IPs "
             "to determine if they are known attackers, spammers, or malicious actors. "
-            "Requires ABUSEIPDB_API_KEY."
+            "Uses ABUSEIPDB_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -393,7 +393,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "returning live structured results (title, URL, snippet). "
             "Use after generate_dorks when you need actual search results, not just URLs. "
             "Runs up to 5 dorks by default — each is a billable API call. "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
         ),
         "input_schema": {
             "type": "object",
@@ -413,7 +413,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Cloudflare, CAPTCHA, and other bot-protection. Returns the page as clean "
             "Markdown. Use to retrieve content from URLs discovered by other tools when "
             "direct access is blocked. "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE."
+            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE."
         ),
         "input_schema": {
             "type": "object",
@@ -434,7 +434,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "entity-type-aware Google queries, returning structured results (title, URL, snippet) "
             "and Entity Correlation Graph nodes/edges for discovered domains and profiles. "
             "Use when you need a targeted, type-aware SERP sweep rather than generic dork URLs. "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
         ),
         "input_schema": {
             "type": "object",
@@ -514,9 +514,9 @@ INVESTIGATION STRATEGY:
 - For IP reputation/abuse: use search_abuseipdb to get the abuseConfidenceScore — a score above 50% indicates a high-risk IP; combine with search_ip or search_shodan for full context.
 - For a domain or IP infrastructure: use search_censys for certificate history and port data.
 - For a Shodan query or banners: use search_shodan.
-- For live Google search results on a target: use search_dorks_live (requires BRIGHTDATA_API_KEY).
-- For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (requires BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
-- To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (requires BRIGHTDATA_API_KEY).
+- For live Google search results on a target: use search_dorks_live (uses BRIGHTDATA_API_KEY).
+- For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (uses BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
+- To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (uses BRIGHTDATA_API_KEY).
 - For real-time geolocated news coverage of a region or event (no key required): use search_gdelt_geo. If the user has selected a map area, pass its bbox.
 - Chain tools intelligently: use findings from each step to decide the next.
 - Never run search_email or search_breach with a full name — only with actual email addresses.
@@ -533,6 +533,7 @@ CRITICAL RULES:
 - NEVER invent, guess, or fabricate information not returned by tools.
 - If a tool returns no results, report exactly that.
 - Be honest about ambiguity — if multiple people share the name, say so.
+- Never ask the user for API keys or credentials, and never decline a tool call on the assumption that a credential is missing — call the tool and report whatever error it returns.
 - For general questions or chat, respond normally without calling tools."""
 
 
