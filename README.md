@@ -611,11 +611,11 @@ Don't want to install these locally? The [OpenOSINT Email Recon Actor](https://a
 
 | Package | Purpose | Install |
 |---------|---------|---------|
-| `ollama` | Local LLM backend (no API key) | `pip install ollama` *(also requires [Ollama runtime](https://ollama.com))* |
+| `ollama` | Local LLM backend (no API key) | `pip install "openosint[ollama]"` *(also requires [Ollama runtime](https://ollama.com))* |
 | `openai` | OpenAI-compatible backend | `pip install "openosint[openai]"` |
-| `shodan` | Shodan API client | `pip install shodan` |
-| `reportlab` | PDF report export | `pip install reportlab` |
-| `censys` | Censys API client | `pip install censys` |
+| `shodan` | Shodan API client | `pip install "openosint[shodan]"` |
+| `reportlab` | PDF report export | `pip install "openosint[pdf]"` |
+| `censys` | Censys API client | `pip install "openosint[censys]"` |
 
 ## Configuration
 

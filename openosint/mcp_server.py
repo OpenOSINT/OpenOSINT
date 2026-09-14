@@ -102,7 +102,7 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="search_breach",
-            description="Check if an email appears in data breaches via HaveIBeenPwned. Requires HIBP_API_KEY env var.",
+            description="Check if an email appears in data breaches via HaveIBeenPwned. Uses HIBP_API_KEY env var.",
             inputSchema=_with_json(
                 {
                     "type": "object",
@@ -179,7 +179,7 @@ async def list_tools() -> list[Tool]:
                 "Query Shodan for host intelligence or banner search. "
                 "IP address → host lookup (open ports, org, CVEs). "
                 "Any other string → keyword/service search. "
-                "Requires SHODAN_API_KEY env var."
+                "Uses SHODAN_API_KEY env var."
             ),
             inputSchema=_with_json(
                 {
@@ -194,7 +194,7 @@ async def list_tools() -> list[Tool]:
             description=(
                 "Check IP, domain, URL, or file hash against VirusTotal's 70+ antivirus "
                 "engines and threat intelligence. Auto-detects input type. "
-                "Requires VIRUSTOTAL_API_KEY env var."
+                "Uses VIRUSTOTAL_API_KEY env var."
             ),
             inputSchema=_with_json(
                 {
@@ -210,7 +210,7 @@ async def list_tools() -> list[Tool]:
                 "Search Censys for internet-facing infrastructure data. "
                 "IP address → open ports, services, ASN, country. "
                 "Domain → certificate history, SANs, issuer, first/last seen. "
-                "Requires CENSYS_API_ID and CENSYS_SECRET env vars."
+                "Uses CENSYS_API_ID and CENSYS_SECRET env vars."
             ),
             inputSchema=_with_json(
                 {
@@ -226,7 +226,7 @@ async def list_tools() -> list[Tool]:
                 "Enhanced IP intelligence using IP2Location Security Plan. "
                 "Returns geolocation, ISP, ASN, and detects VPN, proxy, Tor exit nodes, "
                 "and datacenter hosting. Sponsored integration. "
-                "Requires IP2LOCATION_API_KEY env var."
+                "Uses IP2LOCATION_API_KEY env var."
             ),
             inputSchema=_with_json(
                 {"type": "object", "properties": {"ip": {"type": "string"}}, "required": ["ip"]}
@@ -238,7 +238,7 @@ async def list_tools() -> list[Tool]:
                 "Check an IP address against the AbuseIPDB v2 API for abuse reputation. "
                 "Returns abuse confidence score (0–100%), total reports, country, ISP, domain, "
                 "and last reported timestamp. Shows a warning when score exceeds 50%. "
-                "Requires ABUSEIPDB_API_KEY env var."
+                "Uses ABUSEIPDB_API_KEY env var."
             ),
             inputSchema=_with_json(
                 {"type": "object", "properties": {"ip": {"type": "string"}}, "required": ["ip"]}
@@ -314,7 +314,7 @@ async def list_tools() -> list[Tool]:
                 "Execute Google dork queries for a target via the Bright Data SERP API, "
                 "returning live structured results (title, URL, snippet). "
                 "Runs up to 5 dorks by default — each is a billable API call. "
-                "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE env vars."
+                "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE env vars."
             ),
             inputSchema=_with_json(
                 {
@@ -329,7 +329,7 @@ async def list_tools() -> list[Tool]:
             description=(
                 "Fetch any public URL through the Bright Data Web Unlocker API, bypassing "
                 "Cloudflare, CAPTCHA, and bot-protection. Returns the page as clean Markdown. "
-                "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE env vars."
+                "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE env vars."
             ),
             inputSchema=_with_json(
                 {
@@ -346,7 +346,7 @@ async def list_tools() -> list[Tool]:
                 "Detects entity type (email, username, domain, phone, or full name) and runs "
                 "entity-type-aware Google queries, returning structured results and Entity "
                 "Correlation Graph nodes/edges for discovered domains and profiles. "
-                "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE env vars."
+                "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE env vars."
             ),
             inputSchema=_with_json(
                 {
@@ -468,7 +468,7 @@ async def list_tools() -> list[Tool]:
             description=(
                 "Investigate multiple targets in parallel using the full OSINT tool chain. "
                 "Each target gets its own report file. A summary report is also generated. "
-                "Maximum 10 targets. Requires ANTHROPIC_API_KEY env var."
+                "Maximum 10 targets. Uses ANTHROPIC_API_KEY env var."
             ),
             inputSchema={
                 "type": "object",
