@@ -724,7 +724,7 @@ OpenOSINT is the tool. These guides are the method — buying directly funds Ope
 
 **Singles:**
 - [AI OSINT Prompt Pack — $29](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-prompt-pack&utm_content=resources) — 30+ tested prompts across 8 target types, one repeatable collect → pivot → verify → document flow
-- [The AI OSINT Operator's Playbook — $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=resources) — 12 complete workflows, per-tool playbooks, reporting templates, legal/ethics primer
+- [The AI OSINT Operator's Playbook — $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=resources) — the 5-phase method, 8 investigation playbooks, 2 full case walkthroughs, reusable templates
 
 **→ [AI OSINT Complete Kit — $55 ($68 value) — best value](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources)** — Prompt Pack + Operator's Playbook, bundled
 
