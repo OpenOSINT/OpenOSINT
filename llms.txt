@@ -2,7 +2,7 @@
 > MCP-native Open Source Intelligence framework for AI agents. Autonomous OSINT investigations from your terminal.
 
 ## Overview
-OpenOSINT is a modular OSINT framework that exposes 9 intelligence-gathering tools to large language models via the Model Context Protocol (MCP). It also operates as a standalone CLI for direct human use. No LLM is embedded — OpenOSINT provides the tool surface that an MCP-compatible client (e.g. Claude Code) drives autonomously.
+OpenOSINT is a modular OSINT framework that exposes 20 intelligence-gathering tools to large language models via the Model Context Protocol (MCP). It also operates as a standalone CLI, interactive REPL, and browser Web UI for direct human use. No LLM is embedded — OpenOSINT provides the tool surface that an MCP-compatible client (e.g. Claude Code, Claude Desktop) drives autonomously.
 
 ## Installation
 - PyPI: `pip install openosint`
@@ -12,7 +12,7 @@ OpenOSINT is a modular OSINT framework that exposes 9 intelligence-gathering too
 ## Claude Code MCP setup
 `claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py`
 
-## Available MCP tools
+## Available MCP tools (20)
 - `search_email` — enumerate online services registered against an email address (via holehe)
 - `search_username` — search a username across 300+ platforms (via sherlock)
 - `search_breach` — check if an email appears in known data breaches (HaveIBeenPwned v3 API, requires HIBP_API_KEY)
@@ -22,13 +22,35 @@ OpenOSINT is a modular OSINT framework that exposes 9 intelligence-gathering too
 - `generate_dorks` — generate 12 targeted Google dork URLs for any target string
 - `search_paste` — search Pastebin dumps for mentions of an email or username
 - `search_phone` — carrier, country, and line type data for a phone number (via phoneinfoga)
+- `search_shodan` — open ports, banners, and CVEs from Shodan (requires SHODAN_API_KEY)
+- `search_virustotal` — file/URL/IP verdicts from 70+ antivirus engines (requires VIRUSTOTAL_API_KEY)
+- `search_censys` — internet-facing infrastructure and certificate search (requires CENSYS_API_ID + CENSYS_SECRET)
+- `search_ip2location` — enhanced IP intelligence: geolocation, ISP, VPN/Proxy/Tor/datacenter flags, sponsored (requires IP2LOCATION_API_KEY)
+- `search_abuseipdb` — IP abuse confidence score, reports, country, ISP (requires ABUSEIPDB_API_KEY)
+- `search_github` — GitHub profile, repos, commit-discovered emails, username/keyword search
+- `search_dns` — A/AAAA/MX/NS/TXT/CNAME/SOA records plus SPF, DMARC, DKIM analysis
+- `search_gdelt_geo` — worldwide geolocated news coverage via GDELT GEO 2.0 API, GeoJSON output
+- `search_dorks_live` — live Google search results for dork queries via Bright Data SERP API
+- `scrape_url` — fetch any URL bypassing Cloudflare/CAPTCHA via Bright Data Web Unlocker, returns clean Markdown
+- `search_footprint` — entity-type-aware public search-engine footprint (email/username/domain/phone/name), returns structured results + Entity Correlation Graph nodes/edges
 
 ## Optional environment variables
 - `HIBP_API_KEY` — HaveIBeenPwned API key for breach search
 - `IPINFO_TOKEN` — ipinfo.io token for higher rate limits
+- `SHODAN_API_KEY`, `VIRUSTOTAL_API_KEY`, `CENSYS_API_ID`, `CENSYS_SECRET`, `IP2LOCATION_API_KEY`, `ABUSEIPDB_API_KEY` — per-tool API keys, see README for full list
 
 ## External binary dependencies
 holehe, sherlock, sublist3r, phoneinfoga — must be present in PATH
+
+## Guides & prompt libraries
+OpenOSINT is the tool; these are the method. Free entries first, then the recommended bundle:
+- Free — [AI OSINT Prompts: 5-prompt Starter Set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=llms&utm_medium=llms-txt&utm_campaign=free-osint-prompts)
+- Free — [AI OSINT Field Manual: Free Edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=llms&utm_medium=llms-txt&utm_campaign=ai-osint-operators-playbook-free)
+- $29 — [AI OSINT Prompt Pack (30+ prompts)](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=llms&utm_medium=llms-txt&utm_campaign=ai-osint-prompt-pack)
+- $39 — [The AI OSINT Operator's Playbook](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=llms&utm_medium=llms-txt&utm_campaign=ai-osint-playbook)
+- $55 ($68 value, recommended) — [AI OSINT Complete Kit — Prompt Pack + Operator's Playbook](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=llms&utm_medium=llms-txt&utm_campaign=ai-osint-complete-kit)
+- $19 — [OpenOSINT Playbook Pack — one-command investigations to PDF reports](https://tommasodev.gumroad.com/l/openosint-playbook-pack?utm_source=llms&utm_medium=llms-txt&utm_campaign=openosint-playbook-pack)
+- $19 — [OSINT Investigation Report Templates (DOCX + Markdown)](https://tommasodev.gumroad.com/l/osint-report-templates?utm_source=llms&utm_medium=llms-txt&utm_campaign=osint-report-templates)
 
 ## License
 MIT
@@ -36,4 +58,4 @@ MIT
 ## Links
 - GitHub: https://github.com/OpenOSINT/OpenOSINT
 - PyPI: https://pypi.org/project/openosint/
-- Docs: https://openosint.github.io/OpenOSINT/
+- Docs: https://openosint.tech/
