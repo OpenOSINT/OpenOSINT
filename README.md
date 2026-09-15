@@ -72,8 +72,6 @@ _Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [
 pip install openosint
 ```
 
-**Paid:** [Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit) (prompts + playbook, bundled) · [Setup Sprint — $350](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint) (done-for-you install) · [Commercial License — from €300/yr](./COMMERCIAL.md) (vendor contract, SLA, indemnification)
-
 ## Quick Start
 
 ```bash
@@ -87,7 +85,7 @@ openosint web
 openosint email target@example.com
 ```
 
-New to OSINT methodology? Grab the [free 5-prompt starter set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme_quickstart&utm_campaign=free_starter) or the [free Playbook edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme_quickstart&utm_campaign=free_manual) before your first run.
+**Learn the method:** free [5-prompt Starter Set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=quickstart) to try it risk-free, or go straight to the **[AI OSINT Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=quickstart)** (Prompt Pack + Operator's Playbook, $68 value — recommended). Buying separately? [Prompt Pack $29](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-prompt-pack&utm_content=quickstart) · [Playbook $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=quickstart). Full ladder: [Resources & Guides](#resources--guides).
 
 ### 📬 Agents & OSINT — the newsletter
 
@@ -119,6 +117,8 @@ openosint > investigate target@example.com
 
   Report saved -> reports/2026-05-11_14-32-11_report.md
 ```
+
+Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($55)](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=tool-section)
 
 ## Features
 
@@ -714,48 +714,23 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
 
-## Get the Method
+## Resources & Guides
 
-OpenOSINT is the tool. The **AI OSINT Complete Kit** ($55) is the method: the Prompt Pack and the Operator's Playbook, bundled.
+OpenOSINT is the tool. These guides are the method — buying directly funds OpenOSINT's development.
 
-**→ [Get the Complete Kit ($55)](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit)**
+**Free — try the method risk-free:**
+- [AI OSINT Prompts — 5-prompt Starter Set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) — one prompt per investigation stage, instant PDF
+- [AI OSINT Field Manual — Free Edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-operators-playbook-free&utm_content=resources) — the 5-phase method walked end to end on one worked case
 
-### AI OSINT Prompt Pack
+**Singles:**
+- [AI OSINT Prompt Pack — $29](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-prompt-pack&utm_content=resources) — 30+ tested prompts across 8 target types, one repeatable collect → pivot → verify → document flow
+- [The AI OSINT Operator's Playbook — $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=resources) — the 5-phase method, 8 investigation playbooks, 2 full case walkthroughs, reusable templates
 
-OpenOSINT gives you the tooling. The **AI OSINT Prompt Pack** gives you the method: 30+ tested prompts across 8 target types, with one repeatable collect → pivot → verify → document flow for running OpenOSINT investigations.
+**→ [AI OSINT Complete Kit — $55 ($68 value) — best value](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources)** — Prompt Pack + Operator's Playbook, bundled
 
-- Email, username, domain, IP, phone, company due-diligence, image & reporting prompts
-- One repeatable investigation flow + an ethics & legal primer
-- Instant download · pairs directly with OpenOSINT
-
-**→ [Get the Prompt Pack ($29)](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=prompt_pack)**
-
-### AI OSINT Operator's Playbook
-
-Step-by-step workflows for running investigations with ChatGPT, Claude, and OpenOSINT.
-
-**→ [Get the Playbook ($39)](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)**
-
-_Buying directly funds OpenOSINT's development._
-
-### AI OSINT Prompts — Free Starter Set
-
-New to AI-assisted OSINT? The **free starter set** gives you 5 structured prompts — one per stage of a real investigation — that make ChatGPT and Claude collect real public data instead of hallucinating it.
-
-- Scope → Collect → Pivot → Verify → Document
-- Works with any AI assistant (Claude, ChatGPT, Gemini)
-- Instant PDF, no card required
-
-**→ [Get the free starter set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free_starter)**
-
-### AI OSINT Operator's Playbook — Free Edition
-
-The free edition walks the 5-phase method once, end to end, on a single worked case: scope → collect → pivot → verify → document. Includes one sample prompt and the confidence rubric used to grade findings.
-
-- Free edition: the method + one worked investigation
-- Full edition ($39): 12 complete workflows, per-tool playbooks, reporting templates, and the legal/ethics primer
-
-**→ [Get the free edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme&utm_campaign=free_manual)** · [Full Playbook ($39) →](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)
+**Add-ons:**
+- [OpenOSINT Playbook Pack — $19](https://tommasodev.gumroad.com/l/openosint-playbook-pack?utm_source=github&utm_medium=readme&utm_campaign=openosint-playbook-pack&utm_content=resources) — one-command investigations → PDF reports
+- [OSINT Investigation Report Templates — $19](https://tommasodev.gumroad.com/l/osint-report-templates?utm_source=github&utm_medium=readme&utm_campaign=osint-report-templates&utm_content=resources) — DOCX + Markdown
 
 ## Sponsor this project
 
@@ -794,9 +769,8 @@ The framework is free and MIT-licensed. This is an optional paid setup service o
 
 Get OpenOSINT wired into your stack in 3–5 days — done-for-you, fully async, no calls.
 
-**[Book the Setup Sprint → $350 (founding price, first 5 teams)](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint)**
-
-→ Or email [commercial@openosint.tech](mailto:commercial@openosint.tech) · [LinkedIn](https://www.linkedin.com/company/openosintoss)
+<!-- TODO: relink when Setup Sprint is republished -->
+**[Email commercial@openosint.tech to book a Setup Sprint →](mailto:commercial@openosint.tech?subject=OpenOSINT%20Setup%20Sprint)** · [LinkedIn](https://www.linkedin.com/company/openosintoss)
 
 *For authorized use only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
@@ -843,7 +817,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.27.0 — August 2026*
+*OpenOSINT v2.28.2 — September 2026*
 
 ## Star History
 
