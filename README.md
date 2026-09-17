@@ -778,7 +778,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.28.2 — September 2026*
+*OpenOSINT v2.29.0 — September 2026*
 
 ## Star History
 
