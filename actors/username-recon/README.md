@@ -6,6 +6,8 @@ Give it a username, get back every platform where that exact handle is registere
 
 For each username you provide, it checks hundreds of sites (social media, developer platforms, gaming, forums) via [sherlock](https://github.com/sherlock-project/sherlock) and reports every platform where an account exists. NSFW sites are excluded by default.
 
+Each run also scans one random, never-registered username as a control and excludes any site that falsely reports it as "claimed" (plus a small static denylist of sites known to do this) — so you're not charged for a handful of sites that always say yes.
+
 ## Use cases
 
 - **Brand monitoring** — find every platform an impersonator or unauthorized reseller is using your brand's handle on

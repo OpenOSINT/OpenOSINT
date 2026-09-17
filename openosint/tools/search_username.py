@@ -18,9 +18,17 @@ from openosint.utils import run_subprocess
 logger = logging.getLogger(__name__)
 
 _BINARY = "sherlock"
-_DEFAULT_TIMEOUT = 180
+_DEFAULT_TIMEOUT = 180  # overall subprocess timeout for the CLI-invoking run_username_osint() below
 _INSTALL_HINT = "Install it with: pip install sherlock-project"
-_PER_SITE_TIMEOUT = "3"  # seconds per site, passed to sherlock --timeout
+_PER_SITE_TIMEOUT = "3"  # seconds per site, passed to sherlock --timeout (CLI path)
+
+# Per-HTTP-request timeout passed to sherlock's own sherlock() call (library path,
+# run_username_osint_structured() below). This is NOT the same knob as _DEFAULT_TIMEOUT
+# above — that one bounds the whole CLI subprocess, this one bounds a single site's
+# HTTP request. Conflating the two previously caused every unresponsive site to be
+# allowed up to 180s each, with sherlock's own internal 20-worker cap meaning a
+# handful of slow sites could stall an entire scan for minutes.
+_DEFAULT_SITE_REQUEST_TIMEOUT_SECONDS = 10
 
 
 async def _run_sherlock(username: str, timeout_seconds: int) -> str:
@@ -137,7 +145,7 @@ def _run_sherlock_structured(username: str, site_data: dict, timeout_seconds: in
 async def run_username_osint_structured(
     username: str,
     site_data: dict,
-    timeout_seconds: int = _DEFAULT_TIMEOUT,
+    timeout_seconds: int = _DEFAULT_SITE_REQUEST_TIMEOUT_SECONDS,
 ) -> list[dict]:
     """
     Run a structured sherlock scan for username, returning one dict per hit.
