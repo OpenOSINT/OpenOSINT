@@ -7,9 +7,9 @@
 #   e.g. ./actors/build-local.sh username-recon
 #
 # This never touches the real `.actor/Dockerfile` build path used by
-# `apify push` / the Apify Cloud build: it just drops a wheel into that
-# actor's local-wheels/ directory (gitignored, empty otherwise) before
-# building, and the Dockerfile installs it if present.
+# `apify push` / the Apify Cloud build: it builds from `.actor/Dockerfile.local`
+# instead, which drops a wheel into that actor's local-wheels/ directory
+# (gitignored, empty otherwise) and installs it if present.
 set -euo pipefail
 
 ACTOR_NAME="${1:?Usage: $0 <actor-name>, e.g. $0 username-recon}"
@@ -31,7 +31,7 @@ else
 fi
 
 echo "==> Building Docker image for $ACTOR_NAME"
-docker build -f "$ACTOR_DIR/.actor/Dockerfile" -t "openosint-$ACTOR_NAME-local" "$ACTOR_DIR"
+docker build -f "$ACTOR_DIR/.actor/Dockerfile.local" -t "openosint-$ACTOR_NAME-local" "$ACTOR_DIR"
 
 echo "==> Done. Run it with, e.g.:"
 echo "    docker run --rm -e APIFY_LOCAL_STORAGE_DIR=/tmp/storage openosint-$ACTOR_NAME-local"
