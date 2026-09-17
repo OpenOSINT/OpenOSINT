@@ -115,6 +115,50 @@ class TestSearchUsernameMissingBinary:
 
 
 # ---------------------------------------------------------------------------
+# search_username — structured sherlock results (used by the Apify Actor)
+# ---------------------------------------------------------------------------
+
+
+class TestSearchUsernameStructured:
+    def test_parses_claimed_sites_only(self, monkeypatch):
+        pytest.importorskip("sherlock_project", reason="requires sherlock-project (pip install sherlock-project)")
+        from sherlock_project.result import QueryResult, QueryStatus
+
+        from openosint.tools.search_username import _run_sherlock_structured
+
+        raw_results = {
+            "GitHub": {
+                "status": QueryResult("alice", "GitHub", "https://github.com/alice", QueryStatus.CLAIMED),
+            },
+            "SomeSite": {
+                "status": QueryResult("alice", "SomeSite", "https://somesite.com/alice", QueryStatus.AVAILABLE),
+            },
+        }
+        monkeypatch.setattr(
+            "sherlock_project.sherlock.sherlock", lambda *a, **k: raw_results
+        )
+
+        found = _run_sherlock_structured("alice", site_data={}, timeout_seconds=10)
+
+        assert found == [
+            {"username": "alice", "platform": "GitHub", "url": "https://github.com/alice", "category": None}
+        ]
+
+    def test_wraps_sherlock_exceptions(self, monkeypatch):
+        pytest.importorskip("sherlock_project", reason="requires sherlock-project (pip install sherlock-project)")
+        from openosint.tools.exceptions import ToolExecutionError
+        from openosint.tools.search_username import _run_sherlock_structured
+
+        def _boom(*_a, **_k):
+            raise RuntimeError("network is down")
+
+        monkeypatch.setattr("sherlock_project.sherlock.sherlock", _boom)
+
+        with pytest.raises(ToolExecutionError):
+            _run_sherlock_structured("alice", site_data={}, timeout_seconds=10)
+
+
+# ---------------------------------------------------------------------------
 # search_domain — binary missing
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,15 @@
+{
+    "title": "OpenOSINT Domain Recon Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "domains": {
+            "title": "Domains",
+            "type": "array",
+            "description": "One or more domains to investigate (max 50 per run). Duplicates are removed automatically.",
+            "editor": "stringList",
+            "prefill": ["example.com"]
+        }
+    },
+    "required": ["domains"]
+}

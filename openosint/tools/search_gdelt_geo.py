@@ -62,6 +62,36 @@ def _clamp(value: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, value))
 
 
+def clamp_gdelt_params(timespan: int, maxpoints: int) -> tuple[int, int]:
+    """Clamp (timespan, maxpoints) to GDELT GEO 2.0's accepted ranges."""
+    return (
+        _clamp(int(timespan), _MIN_TIMESPAN, _MAX_TIMESPAN),
+        _clamp(int(maxpoints), 1, _MAX_MAXPOINTS),
+    )
+
+
+_HREF_RE = re.compile(r'href=[\'"]([^\'"]+)[\'"]', re.IGNORECASE)
+
+
+def extract_urls_from_popup_html(html: str | None, limit: int = 3) -> list[str]:
+    """
+    Extract article URLs from a GDELT GEO feature's `html` popup field.
+
+    GDELT GEO 2.0 doesn't return article URLs as a separate structured
+    field — they're embedded as <a href="..."> links inside the popup HTML
+    string shown on the map. This pulls them out with a link count cap.
+    """
+    if not html:
+        return []
+    seen: list[str] = []
+    for url in _HREF_RE.findall(html):
+        if url not in seen:
+            seen.append(url)
+        if len(seen) >= limit:
+            break
+    return seen
+
+
 def _cache_get(key: tuple) -> dict | None:
     hit = _cache.get(key)
     if hit is None:
@@ -97,7 +127,7 @@ def _filter_by_bbox(feature_collection: dict, bbox: BBox | None) -> dict:
     return {**feature_collection, "features": kept}
 
 
-def _fetch_gdelt_data(query: str, timespan: int, maxpoints: int, timeout_seconds: int) -> dict:
+def fetch_gdelt_data(query: str, timespan: int, maxpoints: int, timeout_seconds: int) -> dict:
     """
     Query the GDELT GEO 2.0 API for point-level geolocated news coverage.
 
@@ -256,7 +286,7 @@ async def run_gdelt_geo_osint(
         data = _cache_get(cache_key)
         if data is None:
             data = await asyncio.to_thread(
-                _fetch_gdelt_data, query, timespan, maxpoints, timeout_seconds
+                fetch_gdelt_data, query, timespan, maxpoints, timeout_seconds
             )
             _cache_set(cache_key, data)
         data = _filter_by_bbox(data, bbox)

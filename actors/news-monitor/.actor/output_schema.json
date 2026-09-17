@@ -1,0 +1,13 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "OpenOSINT News Monitor Output",
+    "description": "News articles matching the requested query, one item per article.",
+    "properties": {
+        "articles": {
+            "type": "string",
+            "title": "Articles",
+            "description": "Dataset of matching news articles.",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}
