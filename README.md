@@ -23,6 +23,51 @@ mcp-name: io.github.OpenOSINT/openosint
 
 </div>
 
+## ☁️ OpenOSINT Cloud — zero install
+
+No Python, no binaries, no API keys. Pay per use. Works as MCP tools in Claude, Cursor, and Windsurf via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server).
+
+| Cloud tool | Input | Output | |
+|---|---|---|---|
+| OpenOSINT Email Recon | email address | linked social accounts, breach exposure, generated dorks | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
+<!-- Add one row per new Actor here as they ship -->
+
+[![Try OpenOSINT Cloud](https://img.shields.io/badge/Try-OpenOSINT%20Cloud-3fb950?style=for-the-badge)](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-badge)
+
+## 💻 Self-host (free, MIT)
+
+```bash
+pip install openosint
+```
+
+```bash
+# Interactive AI REPL (default)
+openosint
+
+# Web interface
+openosint web
+
+# Direct tool (no AI)
+openosint email target@example.com
+```
+
+<div align="center">
+  <a href="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.mp4">
+    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.gif"
+         alt="OpenOSINT running a DNS lookup and returning records in under two seconds"
+         width="800" />
+  </a>
+</div>
+
+**[Try the live demo →](https://demo.openosint.tech)** — bring your own Anthropic / OpenRouter / Ollama key, no signup.
+
+**Cloud or self-host?** Cloud: zero setup, pay per call, hosted by us. Self-host: free forever, your own API keys, full control.
+
+### 📬 Agents & OSINT — the newsletter
+
+One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
+**[Subscribe →](https://agentsosint.substack.com)**
+
 ![OpenOSINT globe view: an agent investigation triggered from a chat prompt lands as a point on an interactive 3D globe, clicking the point pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
 *Investigation results land live on the globe — click a point to pivot. [Watch the sharper MP4](docs/assets/globe-demo.mp4).*
 
@@ -59,44 +104,6 @@ mcp-name: io.github.OpenOSINT/openosint
 _Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [SPONSORSHIP.md](SPONSORSHIP.md)._
 
 <!-- SPONSORS:END -->
-
-<div align="center">
-  <a href="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.mp4">
-    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.gif"
-         alt="OpenOSINT running a DNS lookup and returning records in under two seconds"
-         width="800" />
-  </a>
-</div>
-
-```bash
-pip install openosint
-```
-
-## Quick Start
-
-```bash
-# Interactive AI REPL (default)
-openosint
-
-# Web interface
-openosint web
-
-# Direct tool (no AI)
-openosint email target@example.com
-```
-
-**Learn the method:** free [5-prompt Starter Set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=quickstart) to try it risk-free, or go straight to the **[AI OSINT Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=quickstart)** (Prompt Pack + Operator's Playbook, $68 value — recommended). Buying separately? [Prompt Pack $29](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-prompt-pack&utm_content=quickstart) · [Playbook $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=quickstart). Full ladder: [Resources & Guides](#resources--guides).
-
-### 📬 Agents & OSINT — the newsletter
-
-One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
-**[Subscribe →](https://agentsosint.substack.com)**
-
-## Run in the cloud (no install)
-
-No Python, no `holehe` / `sherlock` / `sublist3r` / `phoneinfoga` binaries in `PATH`, no API keys — run OpenOSINT Email Recon from your browser, or as an MCP tool in Claude, Cursor, and Windsurf via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server). Try for free.
-
-**[Try OpenOSINT Email Recon on Apify →](https://apify.com/complete_analogy/openosint-email-recon)**
 
 ## Usage
 
@@ -138,16 +145,6 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 > **Legal Disclaimer**: OpenOSINT is intended for **legal and authorized use only**.
 > Users are solely responsible for ensuring their use complies with all applicable laws and regulations.
 > The authors accept no liability for misuse. See [DISCLAIMER.md](DISCLAIMER.md).
-
-## Custom Integrations
-
-Need OpenOSINT wired into your SOC, fraud, threat-intel, or AI-agent stack?
-I build bespoke OSINT integrations for teams — you bring the data
-sources and compliance requirements, I deliver a working integration.
-
-→ **[Get in touch](mailto:commercial@openosint.tech?subject=OpenOSINT%20Custom%20Integration)**
-
----
 
 ## Tools
 
@@ -714,23 +711,12 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
 
-## Resources & Guides
+## Resources
 
-OpenOSINT is the tool. These guides are the method — buying directly funds OpenOSINT's development.
+- [AI OSINT Prompts — 5-prompt Starter Set (free)](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) — one prompt per investigation stage, instant PDF
+- [AI OSINT Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources) — Prompt Pack + Operator's Playbook, bundled
 
-**Free — try the method risk-free:**
-- [AI OSINT Prompts — 5-prompt Starter Set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) — one prompt per investigation stage, instant PDF
-- [AI OSINT Field Manual — Free Edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-operators-playbook-free&utm_content=resources) — the 5-phase method walked end to end on one worked case
-
-**Singles:**
-- [AI OSINT Prompt Pack — $29](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-prompt-pack&utm_content=resources) — 30+ tested prompts across 8 target types, one repeatable collect → pivot → verify → document flow
-- [The AI OSINT Operator's Playbook — $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=resources) — the 5-phase method, 8 investigation playbooks, 2 full case walkthroughs, reusable templates
-
-**→ [AI OSINT Complete Kit — $55 ($68 value) — best value](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources)** — Prompt Pack + Operator's Playbook, bundled
-
-**Add-ons:**
-- [OpenOSINT Playbook Pack — $19](https://tommasodev.gumroad.com/l/openosint-playbook-pack?utm_source=github&utm_medium=readme&utm_campaign=openosint-playbook-pack&utm_content=resources) — one-command investigations → PDF reports
-- [OSINT Investigation Report Templates — $19](https://tommasodev.gumroad.com/l/osint-report-templates?utm_source=github&utm_medium=readme&utm_campaign=osint-report-templates&utm_content=resources) — DOCX + Markdown
+Purchases directly fund OpenOSINT's development.
 
 ## Sponsor this project
 
@@ -748,31 +734,6 @@ Earn 30–45% commission promoting the AI OSINT Prompt Pack, Operator's Playbook
 Good fit for OSINT/infosec newsletter authors, security YouTube channels, and tool-directory maintainers.
 
 **→ [Affiliate program details & terms](https://openosint.tech/affiliates/)**
-
-## SERVICES
-
-The framework is free and MIT-licensed. This is an optional paid setup service offered by the maintainer.
-
-**OSINT-MCP Setup Sprint** — done-for-you installation and configuration of an autonomous OSINT-MCP pipeline on your environment. Fully async, no calls required.
-
-**Includes:**
-- Pre-configured OpenOSINT setup tailored to your stack (Claude Code, Claude Desktop, or any MCP client)
-- API keys wired in (Shodan, VirusTotal, IP2Location, HaveIBeenPwned, and others as needed)
-- One investigation workflow built around your use case
-- Written step-by-step setup guide + screen-recorded walkthrough
-
-**Delivery:** 3–5 days, fully async.
-
-**For:** SOC analysts · threat-intel teams · fraud/AML · pentesters · OSINT investigators
-
-### Need it set up for you?
-
-Get OpenOSINT wired into your stack in 3–5 days — done-for-you, fully async, no calls.
-
-<!-- TODO: relink when Setup Sprint is republished -->
-**[Email commercial@openosint.tech to book a Setup Sprint →](mailto:commercial@openosint.tech?subject=OpenOSINT%20Setup%20Sprint)** · [LinkedIn](https://www.linkedin.com/company/openosintoss)
-
-*For authorized use only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
 ## Commercial License & Support
 
