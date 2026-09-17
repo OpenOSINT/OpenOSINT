@@ -10,6 +10,7 @@
                 "description": "The domain that was checked.",
                 "example": "example.com"
             },
+            "domainExists": { "type": ["boolean", "null"], "title": "Domain exists", "description": "False when DNS confirms NXDOMAIN and no NS/SOA records exist. Null when this could not be determined (e.g. DNS and RDAP both timed out).", "example": true },
             "dnsA": { "type": "array", "title": "A records", "description": "IPv4 addresses.", "example": ["93.184.216.34"] },
             "dnsAaaa": { "type": "array", "title": "AAAA records", "description": "IPv6 addresses.", "example": [] },
             "dnsMx": { "type": "array", "title": "MX records", "description": "Mail exchange records.", "example": ["10 mail.example.com"] },
@@ -19,15 +20,17 @@
             "dnsSoa": { "type": "array", "title": "SOA record", "description": "Start-of-authority record.", "example": ["ns.icann.org. noc.dns.icann.org. ..."] },
             "spfRecord": { "type": ["string", "null"], "title": "SPF record", "description": "Raw SPF record, or null if absent.", "example": "v=spf1 -all" },
             "dmarcRecord": { "type": ["string", "null"], "title": "DMARC record", "description": "Raw DMARC record, or null if absent.", "example": "v=DMARC1; p=reject" },
-            "dkimSelectorsFound": { "type": "array", "title": "DKIM selectors found", "description": "Common DKIM selectors that resolved.", "example": ["default"] },
+            "dkimSelectorsFound": { "type": "array", "title": "DKIM selectors found", "description": "Common DKIM selectors that resolved. Always empty when dkimWildcard is true.", "example": ["default"] },
+            "dkimWildcard": { "type": "boolean", "title": "DKIM wildcard detected", "description": "True when this domain's DNS answers ANY _domainkey selector (wildcard) — in that case dkimSelectorsFound is not trustworthy and is left empty.", "example": false },
             "emailSecurityGrade": { "type": "string", "title": "Email security grade", "description": "Simple A-F heuristic grade based on SPF/DMARC/DKIM posture.", "example": "B" },
             "emailSecurityIssues": { "type": "array", "title": "Email security issues", "description": "Human-readable list of issues behind the grade.", "example": ["DMARC policy is p=quarantine — suspicious mail is quarantined, not rejected."] },
-            "whoisRegistrar": { "type": ["string", "null"], "title": "Registrar", "description": "Domain registrar name.", "example": "MarkMonitor Inc." },
-            "whoisCreatedDate": { "type": ["string", "null"], "title": "Created", "description": "ISO 8601 registration date.", "example": "1995-08-14T04:00:00" },
-            "whoisExpiresDate": { "type": ["string", "null"], "title": "Expires", "description": "ISO 8601 expiration date.", "example": "2026-08-13T04:00:00" },
-            "whoisNameServers": { "type": "array", "title": "WHOIS name servers", "description": "Name servers per the WHOIS record. Registrant personal fields are intentionally dropped.", "example": ["a.iana-servers.net"] },
+            "rdapRegistrar": { "type": ["string", "null"], "title": "Registrar", "description": "Domain registrar name, from RDAP.", "example": "MarkMonitor Inc." },
+            "rdapCreatedDate": { "type": ["string", "null"], "title": "Created", "description": "ISO 8601 registration date, from RDAP.", "example": "1995-08-14T04:00:00Z" },
+            "rdapExpiresDate": { "type": ["string", "null"], "title": "Expires", "description": "ISO 8601 expiration date, from RDAP.", "example": "2026-08-13T04:00:00Z" },
+            "rdapNameServers": { "type": "array", "title": "RDAP name servers", "description": "Name servers per the RDAP record. Registrant personal fields are never read at all (RDAP, not WHOIS).", "example": ["a.iana-servers.net"] },
+            "rdapStatus": { "type": "array", "title": "RDAP status", "description": "EPP/RDAP domain status codes (e.g. clientTransferProhibited).", "example": ["client transfer prohibited"] },
             "dorkUrls": { "type": "array", "title": "Dork URLs", "description": "Generated Google dork queries and URLs for this domain.", "example": [{"query": "\"example.com\" site:linkedin.com", "url": "https://www.google.com/search?q=..."}] },
-            "warnings": { "type": "array", "title": "Warnings", "description": "Partial-failure notes (e.g. WHOIS lookup failed) when part of the report couldn't be completed.", "example": [] },
+            "warnings": { "type": "array", "title": "Warnings", "description": "Partial-failure notes (e.g. RDAP lookup failed) when part of the report couldn't be completed.", "example": [] },
             "checkedAt": { "type": "string", "title": "Checked at", "description": "ISO 8601 timestamp when this domain was checked.", "example": "2026-09-17T12:00:00Z" }
         },
         "required": ["domain", "checkedAt"]
@@ -36,15 +39,16 @@
         "overview": {
             "title": "Overview",
             "transformation": {
-                "fields": ["domain", "emailSecurityGrade", "whoisRegistrar", "whoisExpiresDate", "checkedAt"]
+                "fields": ["domain", "domainExists", "emailSecurityGrade", "rdapRegistrar", "rdapExpiresDate", "checkedAt"]
             },
             "display": {
                 "component": "table",
                 "properties": {
                     "domain": { "label": "Domain" },
+                    "domainExists": { "label": "Exists" },
                     "emailSecurityGrade": { "label": "Email grade" },
-                    "whoisRegistrar": { "label": "Registrar" },
-                    "whoisExpiresDate": { "label": "Expires" },
+                    "rdapRegistrar": { "label": "Registrar" },
+                    "rdapExpiresDate": { "label": "Expires" },
                     "checkedAt": { "label": "Checked at" }
                 }
             }
