@@ -1,2 +1,2 @@
-apify < 4.0.0
+apify >= 4.0.2, < 5.0.0
 openosint >= 2.29.0

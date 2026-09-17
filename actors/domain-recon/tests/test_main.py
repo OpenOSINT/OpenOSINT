@@ -6,7 +6,7 @@ network or a real Actor run.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -139,3 +139,43 @@ class TestBuildDomainReport:
 
 def test_max_domains_per_run_matches_spec():
     assert MAX_DOMAINS_PER_RUN == 50
+
+
+class TestChargeLimitStopsTheRun:
+    """Proves main() stops processing further domains once Actor.push_data()
+    reports event_charge_limit_reached. The Actor object itself is fully
+    mocked so this test never touches real Apify local storage."""
+
+    async def test_stops_after_limit_reached_domain(self):
+        from types import SimpleNamespace
+
+        from src.main import main
+
+        mock_actor = MagicMock()
+        mock_actor.__aenter__ = AsyncMock(return_value=mock_actor)
+        mock_actor.__aexit__ = AsyncMock(return_value=False)
+        mock_actor.get_input = AsyncMock(return_value={"domains": ["a.com", "b.com", "c.com"]})
+        mock_actor.fail = AsyncMock()
+        mock_actor.set_status_message = AsyncMock()
+
+        def _report(domain: str) -> dict:
+            return {"domain": domain, "domainExists": True, "warnings": []}
+
+        charge_results = iter(
+            [SimpleNamespace(event_charge_limit_reached=False), SimpleNamespace(event_charge_limit_reached=True)]
+        )
+        mock_actor.push_data = AsyncMock(side_effect=lambda *a, **k: next(charge_results))
+
+        with (
+            patch("src.main.Actor", mock_actor),
+            patch("src.main.fetch_rdap_bootstrap", return_value={}),
+            patch(
+                "src.main.build_report_with_retry",
+                new=AsyncMock(side_effect=[_report("a.com"), _report("b.com"), _report("c.com")]),
+            ),
+        ):
+            await main()
+
+        # Only a.com and b.com should have been pushed — c.com is never reached.
+        assert mock_actor.push_data.call_count == 2
+        mock_actor.fail.assert_not_called()

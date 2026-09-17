@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 import time
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -136,3 +136,45 @@ class TestScanUsername:
 
 def test_max_usernames_per_run_matches_spec():
     assert MAX_USERNAMES_PER_RUN == 20
+
+
+class TestChargeLimitStopsTheRun:
+    """Proves main() stops pushing/charging once Actor.push_data() reports
+    event_charge_limit_reached — this is what a real run does when the
+    Console-configured (or ACTOR_MAX_TOTAL_CHARGE_USD-simulated) budget is
+    spent. The Actor object itself is fully mocked so this test never
+    touches real Apify local storage."""
+
+    async def test_stops_pushing_once_limit_reached(self):
+        from types import SimpleNamespace
+
+        from src.main import main
+
+        mock_actor = MagicMock()
+        mock_actor.__aenter__ = AsyncMock(return_value=mock_actor)
+        mock_actor.__aexit__ = AsyncMock(return_value=False)
+        mock_actor.get_input = AsyncMock(return_value={"usernames": ["alice"]})
+        mock_actor.fail = AsyncMock()
+        mock_actor.set_status_message = AsyncMock()
+
+        # Five real hits available for "alice" — the run should stop after
+        # the second push (the one that reports the limit reached).
+        hits = [
+            {"username": "alice", "platform": f"Site{i}", "url": f"https://site{i}.test/alice", "category": None}
+            for i in range(5)
+        ]
+        charge_results = iter(
+            [SimpleNamespace(event_charge_limit_reached=False), SimpleNamespace(event_charge_limit_reached=True)]
+        )
+        mock_actor.push_data = AsyncMock(side_effect=lambda *a, **k: next(charge_results))
+
+        with (
+            patch("src.main.Actor", mock_actor),
+            patch("src.main.build_sherlock_site_data", return_value={}),
+            patch("src.main.chunk_site_data", return_value=[{}]),
+            patch("src.main.scan_username", new=AsyncMock(side_effect=[([], True), (hits, True)])),
+        ):
+            await main()
+
+        assert mock_actor.push_data.call_count == 2
+        mock_actor.fail.assert_not_called()

@@ -173,3 +173,6 @@ legal/REVIEW-QUESTIONS.md
 # Apify Actors — local `apify run` output, never committed
 actors/*/storage/
 actors/*/.venv/
+
+# Apify Actors — local Docker-build wheel (see actors/build-local.sh), never committed
+actors/*/local-wheels/*.whl
