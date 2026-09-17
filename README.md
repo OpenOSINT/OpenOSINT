@@ -711,23 +711,12 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
 
-## Resources & Guides
+## Resources
 
-OpenOSINT is the tool. These guides are the method — buying directly funds OpenOSINT's development.
+- [AI OSINT Prompts — 5-prompt Starter Set (free)](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) — one prompt per investigation stage, instant PDF
+- [AI OSINT Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources) — Prompt Pack + Operator's Playbook, bundled
 
-**Free — try the method risk-free:**
-- [AI OSINT Prompts — 5-prompt Starter Set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) — one prompt per investigation stage, instant PDF
-- [AI OSINT Field Manual — Free Edition](https://tommasodev.gumroad.com/l/ai-osint-operators-playbook-free?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-operators-playbook-free&utm_content=resources) — the 5-phase method walked end to end on one worked case
-
-**Singles:**
-- [AI OSINT Prompt Pack — $29](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-prompt-pack&utm_content=resources) — 30+ tested prompts across 8 target types, one repeatable collect → pivot → verify → document flow
-- [The AI OSINT Operator's Playbook — $39](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-playbook&utm_content=resources) — the 5-phase method, 8 investigation playbooks, 2 full case walkthroughs, reusable templates
-
-**→ [AI OSINT Complete Kit — $55 ($68 value) — best value](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources)** — Prompt Pack + Operator's Playbook, bundled
-
-**Add-ons:**
-- [OpenOSINT Playbook Pack — $19](https://tommasodev.gumroad.com/l/openosint-playbook-pack?utm_source=github&utm_medium=readme&utm_campaign=openosint-playbook-pack&utm_content=resources) — one-command investigations → PDF reports
-- [OSINT Investigation Report Templates — $19](https://tommasodev.gumroad.com/l/osint-report-templates?utm_source=github&utm_medium=readme&utm_campaign=osint-report-templates&utm_content=resources) — DOCX + Markdown
+Purchases directly fund OpenOSINT's development.
 
 ## Sponsor this project
 
@@ -745,31 +734,6 @@ Earn 30–45% commission promoting the AI OSINT Prompt Pack, Operator's Playbook
 Good fit for OSINT/infosec newsletter authors, security YouTube channels, and tool-directory maintainers.
 
 **→ [Affiliate program details & terms](https://openosint.tech/affiliates/)**
-
-## SERVICES
-
-The framework is free and MIT-licensed. This is an optional paid setup service offered by the maintainer.
-
-**OSINT-MCP Setup Sprint** — done-for-you installation and configuration of an autonomous OSINT-MCP pipeline on your environment. Fully async, no calls required.
-
-**Includes:**
-- Pre-configured OpenOSINT setup tailored to your stack (Claude Code, Claude Desktop, or any MCP client)
-- API keys wired in (Shodan, VirusTotal, IP2Location, HaveIBeenPwned, and others as needed)
-- One investigation workflow built around your use case
-- Written step-by-step setup guide + screen-recorded walkthrough
-
-**Delivery:** 3–5 days, fully async.
-
-**For:** SOC analysts · threat-intel teams · fraud/AML · pentesters · OSINT investigators
-
-### Need it set up for you?
-
-Get OpenOSINT wired into your stack in 3–5 days — done-for-you, fully async, no calls.
-
-<!-- TODO: relink when Setup Sprint is republished -->
-**[Email commercial@openosint.tech to book a Setup Sprint →](mailto:commercial@openosint.tech?subject=OpenOSINT%20Setup%20Sprint)** · [LinkedIn](https://www.linkedin.com/company/openosintoss)
-
-*For authorized use only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
 ## Commercial License & Support
 
