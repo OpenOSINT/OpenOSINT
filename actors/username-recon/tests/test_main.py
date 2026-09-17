@@ -111,27 +111,40 @@ class TestScanUsername:
         hits_a = [{"platform": "GitHub"}]
         hits_b = [{"platform": "Reddit"}]
         with patch("src.main.scan_chunk", new=AsyncMock(side_effect=[hits_a, hits_b])):
-            hits, had_success = await scan_username("alice", chunks=[{"a": {}}, {"b": {}}], run_deadline=time.monotonic() + 60)
+            hits, had_success, skipped = await scan_username(
+                "alice", chunks=[{"a": {}}, {"b": {}}], run_deadline=time.monotonic() + 60
+            )
         assert hits == hits_a + hits_b
         assert had_success is True
+        assert skipped == 0
 
     async def test_had_success_true_if_any_chunk_succeeds(self):
         with patch("src.main.scan_chunk", new=AsyncMock(side_effect=[None, [{"platform": "GitHub"}]])):
-            hits, had_success = await scan_username("alice", chunks=[{"a": {}}, {"b": {}}], run_deadline=time.monotonic() + 60)
+            hits, had_success, skipped = await scan_username(
+                "alice", chunks=[{"a": {}, "b": {}}, {"c": {}}], run_deadline=time.monotonic() + 60
+            )
         assert had_success is True
         assert hits == [{"platform": "GitHub"}]
+        assert skipped == 2
 
     async def test_had_success_false_when_every_chunk_fails(self):
         with patch("src.main.scan_chunk", new=AsyncMock(return_value=None)):
-            hits, had_success = await scan_username("alice", chunks=[{"a": {}}, {"b": {}}], run_deadline=time.monotonic() + 60)
+            hits, had_success, skipped = await scan_username(
+                "alice", chunks=[{"a": {}}, {"b": {}, "c": {}}], run_deadline=time.monotonic() + 60
+            )
         assert had_success is False
         assert hits == []
+        assert skipped == 3
 
     async def test_stops_early_once_run_deadline_has_passed(self):
         mock_chunk = AsyncMock(return_value=[{"platform": "GitHub"}])
         with patch("src.main.scan_chunk", new=mock_chunk):
-            await scan_username("alice", chunks=[{"a": {}}, {"b": {}}, {"c": {}}], run_deadline=time.monotonic() - 1)
+            hits, had_success, skipped = await scan_username(
+                "alice", chunks=[{"a": {}}, {"b": {}}, {"c": {}}], run_deadline=time.monotonic() - 1
+            )
         mock_chunk.assert_not_called()
+        assert skipped == 3
+        assert had_success is False
 
 
 def test_max_usernames_per_run_matches_spec():
@@ -139,42 +152,79 @@ def test_max_usernames_per_run_matches_spec():
 
 
 class TestChargeLimitStopsTheRun:
-    """Proves main() stops pushing/charging once Actor.push_data() reports
-    event_charge_limit_reached — this is what a real run does when the
-    Console-configured (or ACTOR_MAX_TOTAL_CHARGE_USD-simulated) budget is
-    spent. The Actor object itself is fully mocked so this test never
-    touches real Apify local storage."""
+    """Proves main() checks the charge limit before scanning each username
+    (via the charging manager) and stops cleanly once no more
+    `username-scanned` events fit in the budget. The Actor object itself is
+    fully mocked so this test never touches real Apify local storage."""
 
-    async def test_stops_pushing_once_limit_reached(self):
-        from types import SimpleNamespace
-
+    async def test_stops_before_scanning_once_limit_reached(self):
         from src.main import main
 
         mock_actor = MagicMock()
         mock_actor.__aenter__ = AsyncMock(return_value=mock_actor)
         mock_actor.__aexit__ = AsyncMock(return_value=False)
-        mock_actor.get_input = AsyncMock(return_value={"usernames": ["alice"]})
+        mock_actor.get_input = AsyncMock(return_value={"usernames": ["alice", "bob", "carol"]})
         mock_actor.fail = AsyncMock()
         mock_actor.set_status_message = AsyncMock()
+        mock_actor.set_value = AsyncMock()
+        mock_actor.push_data = AsyncMock()
+        mock_actor.charge = AsyncMock()
 
-        # Five real hits available for "alice" — the run should stop after
-        # the second push (the one that reports the limit reached).
-        hits = [
-            {"username": "alice", "platform": f"Site{i}", "url": f"https://site{i}.test/alice", "category": None}
-            for i in range(5)
-        ]
-        charge_results = iter(
-            [SimpleNamespace(event_charge_limit_reached=False), SimpleNamespace(event_charge_limit_reached=True)]
-        )
-        mock_actor.push_data = AsyncMock(side_effect=lambda *a, **k: next(charge_results))
+        # Budget allows exactly one more `username-scanned` charge for the
+        # first check ("alice"), then none — "bob" and "carol" must never
+        # be scanned.
+        mock_charging_manager = MagicMock()
+        mock_charging_manager.is_event_charge_limit_reached = MagicMock(side_effect=[False, True, True])
+        mock_actor.get_charging_manager = MagicMock(return_value=mock_charging_manager)
+
+        hits = [{"username": "alice", "platform": "GitHub", "url": "https://github.com/alice", "category": None}]
 
         with (
             patch("src.main.Actor", mock_actor),
             patch("src.main.build_sherlock_site_data", return_value={}),
             patch("src.main.chunk_site_data", return_value=[{}]),
-            patch("src.main.scan_username", new=AsyncMock(side_effect=[([], True), (hits, True)])),
+            patch("src.main.scan_username", new=AsyncMock(side_effect=[([], True, 0), (hits, True, 0)])),
         ):
             await main()
 
-        assert mock_actor.push_data.call_count == 2
+        # Only "alice" gets scanned and charged — "bob" and "carol" are
+        # skipped once the pre-scan check reports the limit is reached.
+        assert mock_actor.charge.call_count == 1
+        assert mock_actor.push_data.call_count == 1
+        mock_actor.fail.assert_not_called()
+
+    async def test_does_not_charge_a_username_whose_scan_failed_entirely(self):
+        from src.main import main
+
+        mock_actor = MagicMock()
+        mock_actor.__aenter__ = AsyncMock(return_value=mock_actor)
+        mock_actor.__aexit__ = AsyncMock(return_value=False)
+        mock_actor.get_input = AsyncMock(return_value={"usernames": ["alice", "bob"]})
+        mock_actor.fail = AsyncMock()
+        mock_actor.set_status_message = AsyncMock()
+        mock_actor.set_value = AsyncMock()
+        mock_actor.push_data = AsyncMock()
+        mock_actor.charge = AsyncMock()
+
+        mock_charging_manager = MagicMock()
+        mock_charging_manager.is_event_charge_limit_reached = MagicMock(return_value=False)
+        mock_actor.get_charging_manager = MagicMock(return_value=mock_charging_manager)
+
+        hits = [{"username": "bob", "platform": "GitHub", "url": "https://github.com/bob", "category": None}]
+
+        with (
+            patch("src.main.Actor", mock_actor),
+            patch("src.main.build_sherlock_site_data", return_value={}),
+            patch("src.main.chunk_site_data", return_value=[{}]),
+            # Order: control scan (succeeds, no hits), "alice" (fails
+            # entirely — had_success=False), "bob" (succeeds with a hit).
+            patch(
+                "src.main.scan_username",
+                new=AsyncMock(side_effect=[([], True, 0), ([], False, 40), (hits, True, 0)]),
+            ),
+        ):
+            await main()
+
+        assert mock_actor.charge.call_count == 1
+        assert mock_actor.push_data.call_count == 1
         mock_actor.fail.assert_not_called()

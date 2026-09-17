@@ -6,7 +6,15 @@ Give it a username, get back every platform where that exact handle is registere
 
 For each username you provide, it checks hundreds of sites (social media, developer platforms, gaming, forums) via [sherlock](https://github.com/sherlock-project/sherlock) and reports every platform where an account exists. NSFW sites are excluded by default.
 
-Each run also scans one random, never-registered username as a control and excludes any site that falsely reports it as "claimed" (plus a small static denylist of sites known to do this) — so you're not charged for a handful of sites that always say yes.
+### The false-positive filter
+
+Some sites answer "claimed" for *any* username you throw at them — a wildcard DNS entry, a parked domain, or a wiki that generates a valid-looking "User:&lt;name&gt;" page for any string, even one that was never registered. Left unfiltered, those sites would show up as a "hit" on every single run, which is just noise dressed up as a finding.
+
+Before scanning your usernames, each run first scans one random, 12-character hex string — a username that is, for all practical purposes, guaranteed to have never been registered anywhere. Any site that reports that random string as "claimed" is a false positive for this run and gets excluded from your results, on top of a small static denylist of sites already confirmed to do this. This means you only ever see accounts that a control scan couldn't also "find" for a string nobody has ever used.
+
+### Partial coverage is always reported
+
+A handful of unresponsive sites shouldn't sink an entire scan. Sites are checked in small batches, and a batch that times out is skipped rather than retried — but skipped sites mean that username's result set is incomplete. The number of sites skipped per username is included in the run's status message and in the `SUMMARY` key-value-store record (see Output below), so you always know when coverage was partial rather than exhaustive.
 
 ## Use cases
 
@@ -43,17 +51,21 @@ Each run also scans one random, never-registered username as a control and exclu
 
 `category` is currently always `null` — sherlock's site catalog doesn't carry a per-platform category taxonomy.
 
+### Run summary (key-value store)
+
+Alongside the dataset, each run writes a `SUMMARY` record to its key-value store: a map of `{username: {accountsFound, sitesSkipped, checkedAt}}` covering every username that was scanned. Check this if you need per-username coverage stats without scanning the whole dataset.
+
 ## Pricing
 
 Pay per event:
 
-- **`username-found`** — charged once per (username, platform) hit that's actually found.
+- **`username-scanned`** — charged once per username that produces at least a partial result set (at least one site batch scanned successfully), regardless of how many accounts were found. Not charged if a username's scan fails entirely.
 
-You never pay for a platform that comes back empty, and nothing is charged if a username fails validation or the scan itself errors out.
+Discovered accounts are still pushed to the dataset one row per hit, but that's not billed separately — you pay per username, not per hit. Nothing is charged for a username that fails validation, and the Actor checks the remaining budget before starting each username so a capped run stops cleanly rather than overspending mid-scan.
 
 ## Use with AI agents (MCP)
 
-This Actor is available as an MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — add it to Claude, Cursor, or Windsurf and the agent can call it directly, no local install required.
+This Actor is available as an MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — add it to Claude, Cursor, or Windsurf and the agent can call it directly, no local install required. Because pricing is per-username rather than per-hit, an agent can query several usernames in one call without the cost swinging wildly based on how common each handle turns out to be — useful when an agent is following up leads (e.g. checking variants of a name) and needs predictable per-step cost to reason about its own budget.
 
 ## Data sources
 

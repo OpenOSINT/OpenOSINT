@@ -8,6 +8,12 @@
             "title": "Accounts found",
             "description": "Dataset of discovered accounts, one item per username x platform hit.",
             "template": "{{links.apiDefaultDatasetUrl}}/items"
+        },
+        "runSummary": {
+            "type": "string",
+            "title": "Run summary",
+            "description": "Key-value-store record mapping each scanned username to {accountsFound, sitesSkipped, checkedAt} — check sitesSkipped to see when coverage was partial.",
+            "template": "{{links.apiDefaultKeyValueStoreUrl}}/records/SUMMARY"
         }
     }
 }

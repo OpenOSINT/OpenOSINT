@@ -2,14 +2,20 @@
 
 Given one or more usernames, uses sherlock (NSFW sites excluded) to discover
 which platforms they are registered on. Monetized via Apify pay-per-event:
-one charge per discovered (username, platform) hit — nothing is charged for
-usernames that come back empty or fail to scan.
+one `username-scanned` charge per username that produces at least a partial
+result set — not per (username, platform) hit, which made cost unpredictable
+(a popular username can match 100+ sites). Discovered accounts are still
+pushed to the dataset, just not billed individually. A username whose scan
+fails entirely (every chunk errors out) is never charged.
 
 Sherlock's site catalog is scanned in small chunks rather than all ~400+
 sites in one call: a single unresponsive site no longer stalls (or loses)
 the whole scan, results are pushed as each chunk completes, and a failed
 chunk is simply skipped rather than retried (retrying re-hits the same
-slow/unresponsive sites for no benefit).
+slow/unresponsive sites for no benefit). Skipped chunks mean partial
+coverage for that username — the number of sites skipped is reported in the
+run's status message and in the `SUMMARY` key-value-store record, so it's
+never silently swallowed.
 """
 
 from __future__ import annotations
@@ -26,7 +32,15 @@ from openosint.tools.search_username import build_sherlock_site_data, run_userna
 
 # Event name — this MUST match exactly what you configure in the Apify
 # Console under Publication > Monetization.
-EVENT_USERNAME_FOUND = "username-found"
+EVENT_USERNAME_SCANNED = "username-scanned"
+
+# Single key-value-store record holding a per-username summary (accounts
+# found, sites skipped, checked-at). A KV record fits better here than a
+# dataset item: the dataset schema's "Overview" table view is locked to the
+# {username, platform, url, category, checkedAt} shape, so a differently-
+# shaped `{"type": "summary"}` row would break that view and the schema's
+# `required` validation. The KV store has no such shape constraint.
+SUMMARY_KV_KEY = "SUMMARY"
 
 MAX_USERNAMES_PER_RUN = 20
 # Typical platform username charset: letters, digits, dot, underscore, hyphen.
@@ -122,25 +136,31 @@ async def scan_chunk(username: str, chunk: dict) -> list[dict] | None:
         return None
 
 
-async def scan_username(username: str, chunks: list[dict], run_deadline: float) -> tuple[list[dict], bool]:
+async def scan_username(username: str, chunks: list[dict], run_deadline: float) -> tuple[list[dict], bool, int]:
     """
     Scan username across all chunks, stopping early if the run budget is spent.
 
-    Returns (hits, had_any_successful_chunk). had_any_successful_chunk is
-    False only when every chunk failed — that's a genuine scan failure, not
-    "zero accounts found", and callers should treat it differently.
+    Returns (hits, had_any_successful_chunk, skipped_site_count).
+    had_any_successful_chunk is False only when every chunk failed — that's a
+    genuine scan failure, not "zero accounts found", and callers should treat
+    it differently. skipped_site_count covers both chunks that errored out
+    and chunks never attempted because the run deadline hit first — either
+    way, those sites were never actually checked for this username.
     """
     hits: list[dict] = []
     had_success = False
-    for chunk in chunks:
+    skipped_sites = 0
+    for i, chunk in enumerate(chunks):
         if time.monotonic() > run_deadline:
+            skipped_sites += sum(len(c) for c in chunks[i:])
             break
         result = await scan_chunk(username, chunk)
         if result is None:
+            skipped_sites += len(chunk)
             continue
         had_success = True
         hits.extend(result)
-    return hits, had_success
+    return hits, had_success, skipped_sites
 
 
 async def main() -> None:
@@ -186,9 +206,10 @@ async def main() -> None:
         )
 
         run_deadline = time.monotonic() + _MAX_RUN_SECONDS
+        charging_manager = Actor.get_charging_manager()
 
         control_username = generate_control_username()
-        control_hits, control_ok = await scan_username(control_username, chunks, run_deadline)
+        control_hits, control_ok, _control_skipped = await scan_username(control_username, chunks, run_deadline)
         noisy_platforms = set(_KNOWN_NOISY_SITES) | {hit["platform"] for hit in control_hits}
         if not control_ok:
             Actor.log.warning("Control scan for false-positive detection failed entirely — proceeding without it.")
@@ -197,15 +218,22 @@ async def main() -> None:
             Actor.log.info(f"Control scan flagged {len(newly_flagged)} noisy site(s) this run: {sorted(newly_flagged)}")
 
         total_found = 0
+        total_sites_skipped = 0
         scanned_ok = 0
         failed_usernames: list[str] = []
         limit_reached = False
+        summaries: dict[str, dict] = {}
 
         for username in valid_usernames:
-            if limit_reached or time.monotonic() > run_deadline:
+            if time.monotonic() > run_deadline:
                 break
 
-            hits, had_success = await scan_username(username, chunks, run_deadline)
+            if charging_manager.is_event_charge_limit_reached(EVENT_USERNAME_SCANNED):
+                Actor.log.info(f"Charge limit reached — stopping before scanning '{username}'.")
+                limit_reached = True
+                break
+
+            hits, had_success, skipped_sites = await scan_username(username, chunks, run_deadline)
             checked_at = datetime.now(timezone.utc).isoformat()
 
             if not had_success:
@@ -214,23 +242,29 @@ async def main() -> None:
                 continue
 
             scanned_ok += 1
+            total_sites_skipped += skipped_sites
             username_found = 0
             for hit in hits:
                 if hit["platform"] in noisy_platforms:
                     continue
-                item = {**hit, "checkedAt": checked_at}
-                charge_result = await Actor.push_data(item, charged_event_name=EVENT_USERNAME_FOUND)
+                await Actor.push_data({**hit, "checkedAt": checked_at})
                 total_found += 1
                 username_found += 1
 
-                if charge_result.event_charge_limit_reached:
-                    Actor.log.info("Charge limit reached — stopping.")
-                    limit_reached = True
-                    break
+            await Actor.charge(EVENT_USERNAME_SCANNED)
 
-            Actor.log.info(f"{username}: {username_found} account(s) found")
+            summaries[username] = {
+                "accountsFound": username_found,
+                "sitesSkipped": skipped_sites,
+                "checkedAt": checked_at,
+            }
+            skip_note = f", {skipped_sites} site(s) skipped (timeout)" if skipped_sites else ""
+            Actor.log.info(f"{username}: {username_found} account(s) found{skip_note}")
+
+        await Actor.set_value(SUMMARY_KV_KEY, summaries)
 
         ran_out_of_time = time.monotonic() > run_deadline
+        not_scanned = len(valid_usernames) - scanned_ok - len(failed_usernames)
 
         if scanned_ok == 0:
             await Actor.fail(
@@ -239,8 +273,12 @@ async def main() -> None:
             return
 
         status = f"{total_found} account(s) found for {scanned_ok}/{len(valid_usernames)} username(s) scanned"
+        if total_sites_skipped:
+            status += f"; {total_sites_skipped} site check(s) skipped across all usernames (timeouts)"
         if failed_usernames:
             status += f"; {len(failed_usernames)} failed: {', '.join(failed_usernames)}"
+        if limit_reached and not_scanned:
+            status += f"; {not_scanned} username(s) not scanned (charge limit reached)"
         if ran_out_of_time:
             status += " [stopped early: run time budget exceeded]"
         Actor.log.info(status)
