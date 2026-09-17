@@ -1,8 +1,8 @@
 {
     "actorSpecification": 1,
-    "name": "openosint-news-geo",
-    "title": "OpenOSINT News Geo — Real-Time Geolocated News Search",
-    "description": "Given a keyword query, returns real-time geolocated news mentions worldwide via the public GDELT GEO 2.0 API. Native OSINT tool for AI agents via MCP.",
+    "name": "openosint-news-monitor",
+    "title": "OpenOSINT News Monitor — Real-Time Global News Search",
+    "description": "Given a keyword query, returns matching real-time global news articles via the public GDELT DOC 2.0 API. Native OSINT tool for AI agents via MCP.",
     "version": "0.1",
     "meta": {
         "templateId": "python-start"
