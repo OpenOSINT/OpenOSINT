@@ -8,10 +8,11 @@ target username is registered. Returns a formatted string; never raises.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from openosint.proxy import get_sherlock_proxy_args
-from openosint.tools.exceptions import OSINTError
+from openosint.tools.exceptions import OSINTError, ToolExecutionError
 from openosint.utils import run_subprocess
 
 logger = logging.getLogger(__name__)
@@ -74,3 +75,87 @@ async def run_username_osint(
     except Exception as exc:  # pragma: no cover
         logger.exception("Unexpected error during username scan.")
         return f"Internal error: {exc}"
+
+
+def build_sherlock_site_data() -> dict:
+    """
+    Load sherlock's site catalog (NSFW sites excluded), for structured scans.
+
+    Call once per batch of usernames and reuse the result — this pulls the
+    live site manifest and exclusion list from sherlock-project over the
+    network, which is unnecessary work if you're checking more than one
+    username.
+
+    Raises
+    ------
+    OSINTError
+        When sherlock-project is not installed as a library, or the site
+        catalog cannot be loaded.
+    """
+    try:
+        from sherlock_project.sites import SitesInformation
+    except ImportError as exc:
+        raise OSINTError("sherlock-project is not installed. Run: pip install sherlock-project") from exc
+
+    try:
+        sites = SitesInformation()
+    except Exception as exc:
+        raise OSINTError(f"Failed to load sherlock site catalog: {exc}") from exc
+
+    sites.remove_nsfw_sites()
+    return {site.name: site.information for site in sites}
+
+
+def _run_sherlock_structured(username: str, site_data: dict, timeout_seconds: int) -> list[dict]:
+    from sherlock_project.notify import QueryNotify
+    from sherlock_project.result import QueryStatus
+    from sherlock_project.sherlock import sherlock
+
+    try:
+        raw_results = sherlock(username, site_data, QueryNotify(), timeout=timeout_seconds)
+    except Exception as exc:
+        raise ToolExecutionError(f"sherlock scan failed for '{username}': {exc}") from exc
+
+    found = []
+    for platform, data in raw_results.items():
+        status = data.get("status")
+        if status is None or status.status != QueryStatus.CLAIMED:
+            continue
+        # sherlock's site catalog carries no per-site category taxonomy —
+        # category is always None until/unless a manual mapping is added.
+        found.append(
+            {
+                "username": username,
+                "platform": platform,
+                "url": status.site_url_user,
+                "category": None,
+            }
+        )
+    return found
+
+
+async def run_username_osint_structured(
+    username: str,
+    site_data: dict,
+    timeout_seconds: int = _DEFAULT_TIMEOUT,
+) -> list[dict]:
+    """
+    Run a structured sherlock scan for username, returning one dict per hit.
+
+    Unlike run_username_osint(), this calls sherlock's library API directly
+    (no subprocess, no text parsing) and returns machine-readable rows:
+    {username, platform, url, category}. Raises OSINTError/ToolExecutionError
+    on failure instead of returning an error string — callers that need the
+    "never raises" contract should use run_username_osint() instead.
+
+    Parameters
+    ----------
+    username:
+        Target username or alias.
+    site_data:
+        Sherlock site catalog, from build_sherlock_site_data(). Passed in so
+        callers scanning multiple usernames load it once and reuse it.
+    timeout_seconds:
+        Per-site request timeout passed through to sherlock.
+    """
+    return await asyncio.to_thread(_run_sherlock_structured, username, site_data, timeout_seconds)

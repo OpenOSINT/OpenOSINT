@@ -1,0 +1,13 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "OpenOSINT Username Recon Output",
+    "description": "Discovered accounts for the requested usernames, one row per username x platform hit.",
+    "properties": {
+        "accountsFound": {
+            "type": "string",
+            "title": "Accounts found",
+            "description": "Dataset of discovered accounts, one item per username x platform hit.",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}
