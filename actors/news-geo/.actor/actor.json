@@ -1,0 +1,18 @@
+{
+    "actorSpecification": 1,
+    "name": "openosint-news-geo",
+    "title": "OpenOSINT News Geo — Real-Time Geolocated News Search",
+    "description": "Given a keyword query, returns real-time geolocated news mentions worldwide via the public GDELT GEO 2.0 API. Native OSINT tool for AI agents via MCP.",
+    "version": "0.1",
+    "meta": {
+        "templateId": "python-start"
+    },
+    "input": "./input_schema.json",
+    "output": "./output_schema.json",
+    "dockerfile": "./Dockerfile",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "minMemoryMbytes": 256,
+    "maxMemoryMbytes": 512
+}

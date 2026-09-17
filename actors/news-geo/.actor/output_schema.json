@@ -1,0 +1,13 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "OpenOSINT News Geo Output",
+    "description": "Geolocated news mentions for the requested query, one item per location.",
+    "properties": {
+        "geoResults": {
+            "type": "string",
+            "title": "Geo results",
+            "description": "Dataset of geolocated news mentions, one item per location.",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}

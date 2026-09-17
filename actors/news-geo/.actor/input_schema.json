@@ -1,0 +1,23 @@
+{
+    "title": "OpenOSINT News Geo Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "query": {
+            "title": "Query",
+            "type": "string",
+            "description": "Keywords to search for. Supports quoted phrases and OR groups, e.g. \"red cross\" or (flood OR earthquake).",
+            "editor": "textfield",
+            "prefill": "ukraine"
+        },
+        "timespanMinutes": {
+            "title": "Timespan (minutes)",
+            "type": "integer",
+            "description": "How far back to look, in minutes. Clamped to GDELT's accepted range of 15-1440 (24h).",
+            "default": 60,
+            "minimum": 15,
+            "maximum": 1440
+        }
+    },
+    "required": ["query"]
+}
