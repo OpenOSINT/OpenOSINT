@@ -9,7 +9,7 @@ import dns.exception
 import dns.resolver
 import pytest
 
-from openosint.tools.search_dns import run_dns_osint
+from openosint.tools.search_dns import RecordSet, compute_email_security_grade, run_dns_osint
 
 
 def _answers(strings: list[str]) -> list[MagicMock]:
@@ -159,3 +159,44 @@ async def test_timeout_returns_error_string() -> None:
         instance.resolve.side_effect = dns.exception.Timeout()
         result = await run_dns_osint("slow.example")
     assert "timed out" in result.lower() or "timeout" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# compute_email_security_grade — pure logic, used by the domain-recon Actor
+# ---------------------------------------------------------------------------
+
+
+def _record_set(**overrides) -> RecordSet:
+    defaults = dict(a=[], aaaa=[], mx=[], ns=[], txt=[], cname=[], soa=[], dmarc=[], dkim_found=[])
+    defaults.update(overrides)
+    return RecordSet(**defaults)
+
+
+class TestComputeEmailSecurityGrade:
+    def test_fully_configured_domain_gets_a(self):
+        rs = _record_set(
+            txt=['"v=spf1 -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+            dkim_found=["default: v=DKIM1; k=rsa; p=..."],
+        )
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[])
+        assert grade == "A"
+        assert issues == []
+
+    def test_missing_spf_is_worst_case_f(self):
+        rs = _record_set(dmarc=['"v=DMARC1; p=reject"'], dkim_found=["default: ..."])
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[])
+        assert grade == "F"
+        assert any("SPF" in issue for issue in issues)
+
+    def test_missing_dmarc_caps_at_d(self):
+        rs = _record_set(txt=['"v=spf1 -all"'], dkim_found=["default: ..."])
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[])
+        assert grade == "D"
+        assert any("DMARC" in issue for issue in issues)
+
+    def test_missing_dkim_caps_at_c(self):
+        rs = _record_set(txt=['"v=spf1 -all"'], dmarc=['"v=DMARC1; p=reject"'])
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[])
+        assert grade == "C"
+        assert any("DKIM" in issue for issue in issues)

@@ -17,6 +17,8 @@ from typing import NamedTuple
 import dns.exception
 import dns.resolver
 
+from openosint.tools.exceptions import OSINTError
+
 logger = logging.getLogger(__name__)
 
 _DEFAULT_TIMEOUT = 10
@@ -35,7 +37,7 @@ _DKIM_SELECTORS = [
 _WEAK_SPF_MECHANISMS = ("+all", "~all")
 
 
-class _RecordSet(NamedTuple):
+class RecordSet(NamedTuple):
     a: list[str]
     aaaa: list[str]
     mx: list[str]
@@ -45,6 +47,9 @@ class _RecordSet(NamedTuple):
     soa: list[str]
     dmarc: list[str]
     dkim_found: list[str]
+
+
+_GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 
 
 def _query(resolver: dns.resolver.Resolver, domain: str, rdtype: str) -> list[str]:
@@ -99,7 +104,97 @@ def _analyze_dmarc(dmarc_records: list[str]) -> list[str]:
     return []
 
 
-def _build_output(domain: str, rs: _RecordSet) -> str:
+def compute_email_security_grade(rs: RecordSet, spf_warnings: list[str], dmarc_warnings: list[str]) -> tuple[str, list[str]]:
+    """
+    Return a simple A-F email-security grade plus the list of issues behind it.
+
+    Heuristic, not a substitute for a full email security audit: missing SPF
+    or DMARC caps the grade hardest, a weak/monitoring-only policy caps it
+    less, and missing DKIM caps it moderately.
+    """
+    issues: list[str] = []
+    grade = "A"
+
+    def _cap(to: str) -> None:
+        nonlocal grade
+        if _GRADE_RANK[to] > _GRADE_RANK[grade]:
+            grade = to
+
+    has_spf = any("v=spf1" in r.lower() for r in rs.txt)
+    if not has_spf:
+        issues.append("No SPF record — anyone can spoof email from this domain.")
+        _cap("F")
+    elif spf_warnings:
+        issues.append("SPF policy is weak (+all/~all) — spoofed mail may not be rejected by receivers.")
+        _cap("C")
+
+    if not rs.dmarc:
+        issues.append("No DMARC policy — SPF/DKIM failures are not enforced.")
+        _cap("D")
+    else:
+        dmarc = rs.dmarc[0].strip('"')
+        if "p=none" in dmarc:
+            issues.append("DMARC policy is p=none — monitoring only, no rejection.")
+            _cap("C")
+        elif "p=quarantine" in dmarc:
+            issues.append("DMARC policy is p=quarantine — suspicious mail is quarantined, not rejected.")
+            _cap("B")
+
+    if not rs.dkim_found:
+        issues.append("No DKIM record found for common selectors.")
+        _cap("C")
+
+    return grade, issues
+
+
+async def collect_dns_records(domain: str, timeout_seconds: int = _DEFAULT_TIMEOUT) -> RecordSet:
+    """
+    Collect DNS records for domain as structured data.
+
+    Raises
+    ------
+    OSINTError
+        When domain is empty, doesn't exist, or the query times out.
+    """
+    domain = domain.strip().lower().rstrip(".")
+    if not domain:
+        raise OSINTError("domain cannot be empty.")
+
+    resolver = dns.resolver.Resolver()
+    resolver.timeout = min(timeout_seconds, 5)
+    resolver.lifetime = float(timeout_seconds)
+
+    try:
+        resolver.resolve(domain, "A")
+    except dns.resolver.NXDOMAIN as exc:
+        raise OSINTError(f"Domain '{domain}' does not exist.") from exc
+    except dns.exception.Timeout as exc:
+        raise OSINTError(f"DNS query timed out after {timeout_seconds}s.") from exc
+    except Exception:
+        pass
+
+    loop = asyncio.get_running_loop()
+
+    def _collect() -> RecordSet:
+        return RecordSet(
+            a=_query(resolver, domain, "A"),
+            aaaa=_query(resolver, domain, "AAAA"),
+            mx=_query(resolver, domain, "MX"),
+            ns=_query(resolver, domain, "NS"),
+            txt=_query(resolver, domain, "TXT"),
+            cname=_query(resolver, domain, "CNAME"),
+            soa=_query(resolver, domain, "SOA"),
+            dmarc=_query(resolver, f"_dmarc.{domain}", "TXT"),
+            dkim_found=_probe_dkim(resolver, domain),
+        )
+
+    try:
+        return await loop.run_in_executor(None, _collect)
+    except dns.exception.Timeout as exc:
+        raise OSINTError(f"DNS query timed out after {timeout_seconds}s.") from exc
+
+
+def _build_output(domain: str, rs: RecordSet) -> str:
     lines: list[str] = [f"[DNS] Domain: {domain}"]
 
     for label, records in (
@@ -147,45 +242,14 @@ def _build_output(domain: str, rs: _RecordSet) -> str:
 
 async def run_dns_osint(domain: str, timeout_seconds: int = _DEFAULT_TIMEOUT) -> str:
     """Enumerate DNS records and highlight email security misconfigurations."""
-    domain = domain.strip().lower().rstrip(".")
-    if not domain:
-        return "Error: domain cannot be empty."
-
-    resolver = dns.resolver.Resolver()
-    resolver.timeout = min(timeout_seconds, 5)
-    resolver.lifetime = float(timeout_seconds)
-
     try:
-        # NXDOMAIN probe
-        try:
-            resolver.resolve(domain, "A")
-        except dns.resolver.NXDOMAIN:
-            return f"Domain '{domain}' does not exist."
-        except dns.exception.Timeout:
-            raise
-        except Exception:
-            pass
-
-        loop = asyncio.get_running_loop()
-
-        def _collect() -> _RecordSet:
-            return _RecordSet(
-                a=_query(resolver, domain, "A"),
-                aaaa=_query(resolver, domain, "AAAA"),
-                mx=_query(resolver, domain, "MX"),
-                ns=_query(resolver, domain, "NS"),
-                txt=_query(resolver, domain, "TXT"),
-                cname=_query(resolver, domain, "CNAME"),
-                soa=_query(resolver, domain, "SOA"),
-                dmarc=_query(resolver, f"_dmarc.{domain}", "TXT"),
-                dkim_found=_probe_dkim(resolver, domain),
-            )
-
-        rs = await loop.run_in_executor(None, _collect)
-        return _build_output(domain, rs)
-
-    except dns.exception.Timeout:
-        return f"Scan error: DNS query timed out after {timeout_seconds}s."
+        rs = await collect_dns_records(domain, timeout_seconds)
+        return _build_output(domain.strip().lower().rstrip("."), rs)
+    except OSINTError as exc:
+        message = str(exc)
+        if "does not exist" in message or "cannot be empty" in message:
+            return message
+        return f"Scan error: {message}"
     except Exception as exc:
         logger.exception("Unexpected error during DNS lookup.")
         return f"Internal error: {exc}"

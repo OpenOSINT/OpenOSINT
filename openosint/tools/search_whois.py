@@ -20,11 +20,12 @@ logger = logging.getLogger(__name__)
 _DEFAULT_TIMEOUT = 15
 
 
-def _fetch_whois_data(domain: str) -> object:
+def fetch_whois_data(domain: str) -> object:
     """
-    Perform a synchronous WHOIS lookup for domain.
+    Perform a synchronous WHOIS lookup for domain, returning the raw record.
 
-    Intended to run inside a thread executor.
+    Intended to run inside a thread executor (see run_whois_osint below, or
+    call via asyncio.to_thread from other callers).
 
     Raises
     ------
@@ -96,7 +97,7 @@ async def run_whois_osint(
     try:
         loop = asyncio.get_event_loop()
         data = await asyncio.wait_for(
-            loop.run_in_executor(None, _fetch_whois_data, domain),
+            loop.run_in_executor(None, fetch_whois_data, domain),
             timeout=float(timeout_seconds),
         )
         result = _format_whois_results(data, domain)
