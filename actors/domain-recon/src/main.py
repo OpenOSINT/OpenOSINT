@@ -85,6 +85,7 @@ async def build_domain_report(domain: str, rdap_bootstrap: dict | None) -> dict:
         "dmarcRecord": None,
         "dkimSelectorsFound": [],
         "dkimWildcard": False,
+        "mailProfile": None,
         "emailSecurityGrade": None,
         "emailSecurityIssues": [],
         "rdapRegistrar": None,
@@ -112,6 +113,7 @@ async def build_domain_report(domain: str, rdap_bootstrap: dict | None) -> dict:
             dmarcRecord=security["dmarc"],
             dkimSelectorsFound=security["dkimSelectorsFound"],
             dkimWildcard=security["dkimWildcard"],
+            mailProfile=security["mailProfile"],
             emailSecurityGrade=security["grade"],
             emailSecurityIssues=security["issues"],
         )

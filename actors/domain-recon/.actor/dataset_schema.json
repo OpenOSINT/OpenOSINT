@@ -22,7 +22,8 @@
             "dmarcRecord": { "type": ["string", "null"], "title": "DMARC record", "description": "Raw DMARC record, or null if absent.", "example": "v=DMARC1; p=reject" },
             "dkimSelectorsFound": { "type": "array", "title": "DKIM selectors found", "description": "Common DKIM selectors that resolved. Always empty when dkimWildcard is true.", "example": ["default"] },
             "dkimWildcard": { "type": "boolean", "title": "DKIM wildcard detected", "description": "True when this domain's DNS answers ANY _domainkey selector (wildcard) — in that case dkimSelectorsFound is not trustworthy and is left empty.", "example": false },
-            "emailSecurityGrade": { "type": "string", "title": "Email security grade", "description": "Simple A-F heuristic grade based on SPF/DMARC/DKIM posture.", "example": "B" },
+            "mailProfile": { "type": ["string", "null"], "title": "Mail profile", "description": "\"no-mail\" (RFC 7505 null MX, or no MX at all, plus a strict non-authorizing SPF — DKIM not required for the grade), \"sending\" (has a real MX record), or \"unknown\" (neither signal is conclusive). Null only if DNS lookups failed entirely.", "example": "sending" },
+            "emailSecurityGrade": { "type": "string", "title": "Email security grade", "description": "Simple A-F heuristic grade based on SPF/DMARC/DKIM posture — DKIM is not required for a \"no-mail\" domain. See README for the full rubric.", "example": "B" },
             "emailSecurityIssues": { "type": "array", "title": "Email security issues", "description": "Human-readable list of issues behind the grade.", "example": ["DMARC policy is p=quarantine — suspicious mail is quarantined, not rejected."] },
             "rdapRegistrar": { "type": ["string", "null"], "title": "Registrar", "description": "Domain registrar name, from RDAP.", "example": "MarkMonitor Inc." },
             "rdapCreatedDate": { "type": ["string", "null"], "title": "Created", "description": "ISO 8601 registration date, from RDAP.", "example": "1995-08-14T04:00:00Z" },
@@ -39,7 +40,7 @@
         "overview": {
             "title": "Overview",
             "transformation": {
-                "fields": ["domain", "domainExists", "emailSecurityGrade", "rdapRegistrar", "rdapExpiresDate", "checkedAt"]
+                "fields": ["domain", "domainExists", "emailSecurityGrade", "mailProfile", "rdapRegistrar", "rdapExpiresDate", "checkedAt"]
             },
             "display": {
                 "component": "table",
@@ -47,6 +48,7 @@
                     "domain": { "label": "Domain" },
                     "domainExists": { "label": "Exists" },
                     "emailSecurityGrade": { "label": "Email grade" },
+                    "mailProfile": { "label": "Mail profile" },
                     "rdapRegistrar": { "label": "Registrar" },
                     "rdapExpiresDate": { "label": "Expires" },
                     "checkedAt": { "label": "Checked at" }

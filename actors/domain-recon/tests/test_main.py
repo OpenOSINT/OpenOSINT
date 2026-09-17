@@ -124,6 +124,52 @@ class TestBuildDomainReport:
         assert report["dkimWildcard"] is True
         assert report["dkimSelectorsFound"] == []
 
+    async def test_no_mail_domain_gets_grade_a_and_mail_profile(self):
+        """example.com-like: null MX (RFC 7505), strict SPF, DMARC p=reject — no DKIM needed."""
+        rs = _record_set(
+            ns=["ns1.example.com"],
+            mx=["0 ."],
+            txt=['"v=spf1 -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+        )
+        with (
+            patch("src.main.collect_dns_records", new=AsyncMock(return_value=rs)),
+            patch("src.main.fetch_rdap_data", return_value={}),
+        ):
+            report = await build_domain_report("example.com", rdap_bootstrap={"com": ["https://rdap.test/"]})
+
+        assert report["mailProfile"] == "no-mail"
+        assert report["emailSecurityGrade"] == "A"
+        assert report["emailSecurityIssues"] == []
+
+    async def test_sending_domain_without_dkim_stays_capped(self):
+        """github.com-like: real MX, strict SPF, DMARC p=reject, but no DKIM at common selectors."""
+        rs = _record_set(
+            ns=["ns1.example.com"],
+            mx=["1 aspmx.l.google.com."],
+            txt=['"v=spf1 include:_spf.google.com -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+        )
+        with (
+            patch("src.main.collect_dns_records", new=AsyncMock(return_value=rs)),
+            patch("src.main.fetch_rdap_data", return_value={}),
+        ):
+            report = await build_domain_report("github.com", rdap_bootstrap={"com": ["https://rdap.test/"]})
+
+        assert report["mailProfile"] == "sending"
+        assert report["emailSecurityGrade"] == "C"
+
+    async def test_domain_with_no_spf_or_dmarc_gets_f(self):
+        rs = _record_set(ns=["ns1.example.com"])
+        with (
+            patch("src.main.collect_dns_records", new=AsyncMock(return_value=rs)),
+            patch("src.main.fetch_rdap_data", return_value={}),
+        ):
+            report = await build_domain_report("nospf.example", rdap_bootstrap={"com": ["https://rdap.test/"]})
+
+        assert report["emailSecurityGrade"] == "F"
+        assert report["mailProfile"] == "unknown"
+
     async def test_always_includes_dork_urls(self):
         from openosint.tools.exceptions import OSINTError
 
