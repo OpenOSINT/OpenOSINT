@@ -59,7 +59,7 @@ Alongside the dataset, each run writes a `SUMMARY` record to its key-value store
 
 Pay per event:
 
-- **`username-scanned`** — charged once per username that produces at least a partial result set (at least one site batch scanned successfully), regardless of how many accounts were found. Not charged if a username's scan fails entirely.
+- **`username-scanned`** — **$0.04** per username, charged once per username that produces at least a partial result set (at least one site batch scanned successfully), regardless of how many accounts were found. Not charged if a username's scan fails entirely.
 
 Discovered accounts are still pushed to the dataset one row per hit, but that's not billed separately — you pay per username, not per hit. Nothing is charged for a username that fails validation, and the Actor checks the remaining budget before starting each username so a capped run stops cleanly rather than overspending mid-scan.
 

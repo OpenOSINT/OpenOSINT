@@ -95,7 +95,7 @@ This distinction fixes a real grading bug: before it existed, a correctly locked
 
 Pay per event:
 
-- **`domain-report`** — charged once per domain that produces a report, **except** a confirmed-nonexistent domain (`domainExists: false`) — that's reported but not charged. Nothing is charged for malformed input or a domain whose lookups fail on every retry attempt.
+- **`domain-report`** — **$0.02** per domain, charged once per domain that produces a report, **except** a confirmed-nonexistent domain (`domainExists: false`) — that's reported but not charged. Nothing is charged for malformed input or a domain whose lookups fail on every retry attempt.
 
 ## Use with AI agents (MCP)
 
