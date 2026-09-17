@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
+import secrets
 from typing import NamedTuple
 
 import dns.exception
@@ -47,6 +49,7 @@ class RecordSet(NamedTuple):
     soa: list[str]
     dmarc: list[str]
     dkim_found: list[str]
+    dkim_wildcard: bool = False
 
 
 _GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
@@ -63,18 +66,50 @@ def _query(resolver: dns.resolver.Resolver, domain: str, rdtype: str) -> list[st
         return []
 
 
-def _probe_dkim(resolver: dns.resolver.Resolver, domain: str) -> list[str]:
+_EMPTY_DKIM_KEY_RE = re.compile(r"p=\s*(;|$)")
+
+
+def _is_valid_dkim_record(txt: str) -> bool:
+    """
+    A DKIM-looking TXT record with an empty p= tag is a revoked/placeholder
+    key (RFC 6376 4.1: "if the value is empty, this key is revoked"), not a
+    real one — it must not count as DKIM being configured.
+    """
+    if not any(tag in txt for tag in ("v=DKIM1", "k=rsa", "p=")):
+        return False
+    return not _EMPTY_DKIM_KEY_RE.search(txt)
+
+
+def _probe_dkim(resolver: dns.resolver.Resolver, domain: str) -> tuple[list[str], bool]:
+    """
+    Probe common DKIM selectors, returning (selectors_found, wildcard_detected).
+
+    Some domains answer *any* _domainkey subdomain with a DKIM-looking TXT
+    record (wildcard DNS, or a catch-all/parking page) — confirmed via
+    `dig TXT <random>._domainkey.<domain>`. When that's the case, every
+    "common selector" would falsely look present, so this probes one random
+    selector first: if it answers, real selector matches are meaningless and
+    none are reported.
+    """
+    probe_selector = f"zzprobe{secrets.token_hex(6)}"
+    try:
+        answers = resolver.resolve(f"{probe_selector}._domainkey.{domain}", "TXT")
+        if any(_is_valid_dkim_record(str(r).strip('"')) for r in answers):
+            return [], True
+    except Exception:
+        pass
+
     found = []
     for selector in _DKIM_SELECTORS:
         try:
             answers = resolver.resolve(f"{selector}._domainkey.{domain}", "TXT")
             for r in answers:
                 txt = str(r).strip('"')
-                if any(tag in txt for tag in ("v=DKIM1", "k=rsa", "p=")):
+                if _is_valid_dkim_record(txt):
                     found.append(f"{selector}: {txt[:80]}")
         except Exception:
             pass
-    return found
+    return found, False
 
 
 def _analyze_spf(txt_records: list[str]) -> tuple[str | None, list[str]]:
@@ -118,6 +153,7 @@ def analyze_email_security(rs: RecordSet) -> dict:
         "spf": spf,
         "dmarc": rs.dmarc[0].strip('"') if rs.dmarc else None,
         "dkimSelectorsFound": rs.dkim_found,
+        "dkimWildcard": rs.dkim_wildcard,
         "grade": grade,
         "issues": issues,
     }
@@ -159,7 +195,13 @@ def compute_email_security_grade(rs: RecordSet, spf_warnings: list[str], dmarc_w
             issues.append("DMARC policy is p=quarantine — suspicious mail is quarantined, not rejected.")
             _cap("B")
 
-    if not rs.dkim_found:
+    if rs.dkim_wildcard:
+        issues.append(
+            "DKIM cannot be verified — this domain's DNS answers any selector "
+            "(wildcard), so real key presence is unknown."
+        )
+        _cap("C")
+    elif not rs.dkim_found:
         issues.append("No DKIM record found for common selectors.")
         _cap("C")
 
@@ -195,6 +237,7 @@ async def collect_dns_records(domain: str, timeout_seconds: int = _DEFAULT_TIMEO
     loop = asyncio.get_running_loop()
 
     def _collect() -> RecordSet:
+        dkim_found, dkim_wildcard = _probe_dkim(resolver, domain)
         return RecordSet(
             a=_query(resolver, domain, "A"),
             aaaa=_query(resolver, domain, "AAAA"),
@@ -204,7 +247,8 @@ async def collect_dns_records(domain: str, timeout_seconds: int = _DEFAULT_TIMEO
             cname=_query(resolver, domain, "CNAME"),
             soa=_query(resolver, domain, "SOA"),
             dmarc=_query(resolver, f"_dmarc.{domain}", "TXT"),
-            dkim_found=_probe_dkim(resolver, domain),
+            dkim_found=dkim_found,
+            dkim_wildcard=dkim_wildcard,
         )
 
     try:
@@ -249,7 +293,9 @@ def _build_output(domain: str, rs: RecordSet) -> str:
         lines.append(f"[DNS] DMARC: {rs.dmarc[0][:120]}")
     lines.extend(dmarc_warnings)
 
-    if rs.dkim_found:
+    if rs.dkim_wildcard:
+        lines.append("[!] DKIM cannot be verified — this domain answers ANY selector (wildcard DNS).")
+    elif rs.dkim_found:
         lines.append("[DNS] DKIM selectors found:")
         for rec in rs.dkim_found:
             lines.append(f"  • {rec}")

@@ -9,7 +9,13 @@ import dns.exception
 import dns.resolver
 import pytest
 
-from openosint.tools.search_dns import RecordSet, compute_email_security_grade, run_dns_osint
+from openosint.tools.search_dns import (
+    RecordSet,
+    _is_valid_dkim_record,
+    _probe_dkim,
+    compute_email_security_grade,
+    run_dns_osint,
+)
 
 
 def _answers(strings: list[str]) -> list[MagicMock]:
@@ -200,3 +206,84 @@ class TestComputeEmailSecurityGrade:
         grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[])
         assert grade == "C"
         assert any("DKIM" in issue for issue in issues)
+
+    def test_dkim_wildcard_caps_at_c_even_with_selectors_reported(self):
+        # dkim_found should always be empty when dkim_wildcard is True in practice,
+        # but the grader itself must not trust dkim_found when the flag is set.
+        rs = _record_set(
+            txt=['"v=spf1 -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+            dkim_found=["default: v=DKIM1; p=fake"],
+            dkim_wildcard=True,
+        )
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[])
+        assert grade == "C"
+        assert any("wildcard" in issue.lower() for issue in issues)
+
+
+# ---------------------------------------------------------------------------
+# _probe_dkim / _is_valid_dkim_record — wildcard and revoked-key handling
+# ---------------------------------------------------------------------------
+
+
+class TestIsValidDkimRecord:
+    def test_accepts_a_real_looking_key(self):
+        assert _is_valid_dkim_record("v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUA") is True
+
+    def test_rejects_empty_p_tag_with_trailing_semicolon(self):
+        assert _is_valid_dkim_record("v=DKIM1; p=;") is False
+
+    def test_rejects_empty_p_tag_at_end_of_string(self):
+        assert _is_valid_dkim_record("v=DKIM1; k=rsa; p=") is False
+
+    def test_rejects_record_with_no_dkim_markers_at_all(self):
+        assert _is_valid_dkim_record("just some unrelated txt record") is False
+
+
+def _dkim_side_effect(known_selector_answers: dict[str, list[str]], wildcard_answer: list[str] | None):
+    """Resolver.resolve side_effect: known selectors get their mapped answer;
+    any *other* _domainkey query (the random wildcard probe) gets wildcard_answer,
+    or NoAnswer if wildcard_answer is None."""
+
+    def _resolve(name: str, rdtype: str):
+        if "_domainkey." in name and rdtype == "TXT":
+            selector = name.split("._domainkey.")[0]
+            if selector in known_selector_answers:
+                return _answers(known_selector_answers[selector])
+            if wildcard_answer is not None:
+                return _answers(wildcard_answer)
+        raise dns.resolver.NoAnswer()
+
+    return _resolve
+
+
+class TestProbeDkimWildcard:
+    def test_no_wildcard_reports_real_selector_matches(self):
+        resolver = MagicMock()
+        resolver.resolve.side_effect = _dkim_side_effect(
+            known_selector_answers={"default": ['"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3"']},
+            wildcard_answer=None,
+        )
+        found, wildcard = _probe_dkim(resolver, "example.com")
+        assert wildcard is False
+        assert any("default" in f for f in found)
+
+    def test_wildcard_domain_reports_no_selectors(self):
+        resolver = MagicMock()
+        resolver.resolve.side_effect = _dkim_side_effect(
+            known_selector_answers={"default": ['"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3"']},
+            wildcard_answer=['"v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3"'],
+        )
+        found, wildcard = _probe_dkim(resolver, "wildcard.example.com")
+        assert wildcard is True
+        assert found == []
+
+    def test_revoked_key_at_a_real_selector_is_not_counted(self):
+        resolver = MagicMock()
+        resolver.resolve.side_effect = _dkim_side_effect(
+            known_selector_answers={"default": ['"v=DKIM1; k=rsa; p="']},
+            wildcard_answer=None,
+        )
+        found, wildcard = _probe_dkim(resolver, "example.com")
+        assert wildcard is False
+        assert found == []
