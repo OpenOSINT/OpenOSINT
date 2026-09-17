@@ -9,6 +9,19 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.29.0] — 2026-09-17
+
+### Added
+- `openosint/tools/search_rdap.py`: RDAP (RFC 7482/9083) domain lookup tool — the structured-JSON replacement for WHOIS used by the `openosint-domain-recon` Apify Actor. Unlike legacy WHOIS, gTLD RDAP is required by ICANN policy to redact registrant PII by default, and nothing prints a terms-of-service banner to stdout.
+- `openosint/tools/search_dns.py`: `mailProfile` classification (`"no-mail"` / `"sending"` / `"unknown"`) for `analyze_email_security()`, plus the `GRADING_RUBRIC` constant documenting the full A-F rubric. A confirmed non-mail domain (RFC 7505 null MX, or no MX at all, with a strict `-all` SPF authorizing no sender — `example.com` is the canonical case) is no longer capped for "missing DKIM"; DKIM isn't required for a domain that can't send mail in the first place.
+- Structured (non-text) helper functions across the OSINT tools — `run_username_osint_structured()`, `build_sherlock_site_data()`, `collect_dns_records()`, `parse_rdap_domain()` — returning machine-readable dicts/dataclasses instead of formatted strings, for Apify Actors and other callers that need structured output rather than CLI display text.
+
+### Changed
+- `openosint-username-recon` Actor: monetization switched from per-(username, platform)-hit charging (`username-found`) to per-username charging (`username-scanned`, once per username that produces at least a partial result set). Fixes unpredictable run cost — a popular username matching 100+ sites previously cost over $1 at $0.01/hit; the new model is a flat $0.04/username. The Actor now checks the remaining charge budget before starting each username and stops cleanly if the next username wouldn't fit, and reports the number of sites skipped due to timeouts per username in both the run status message and a new `SUMMARY` key-value-store record.
+
+### Fixed
+- `openosint-domain-recon` Actor: a domain with a correctly locked-down non-mail posture (null MX, `SPF -all`, `DMARC p=reject`) was previously capped at grade C for "missing DKIM," even though a domain that can't send mail has no use for DKIM.
+
 ## [2.28.2] — 2026-09-14
 
 ### Fixed
