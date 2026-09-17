@@ -8,16 +8,17 @@ Manual steps only. Nothing here is automated — run each step yourself, in orde
 
 Merge the `apify-cloud-actors` branch's PR(s) into `main` on GitHub. Confirm CI is green before merging.
 
-## 2. Tag and publish `openosint` 2.29.0 to PyPI
+## 2. Tag `v2.29.0` — publishing to PyPI is fully automated from here
 
 ```bash
 git checkout main && git pull
 git tag v2.29.0
 git push origin v2.29.0
-
-python -m build
-twine upload dist/openosint-2.29.0*
 ```
+
+That's it — do not run `python -m build` / `twine upload` yourself. Pushing the tag triggers `.github/workflows/release.yml`, which builds the package, publishes to PyPI via trusted publishing (OIDC, no token/twine involved), creates the GitHub Release, waits for the new version to actually appear on PyPI, and publishes to the MCP Registry.
+
+Watch it run: open the repo's **Actions** tab → the "Release" workflow run for the `v2.29.0` tag (or `gh run watch` from the CLI right after pushing the tag). Wait for it to go green before moving to step 3 — it also confirms the "Publish to MCP Registry" workflow (triggered separately by the GitHub Release this creates) succeeds or safely no-ops on the already-published version.
 
 Confirm on PyPI: `pip index versions openosint` should list `2.29.0`. Both Actors' `requirements.txt` already pin `openosint >= 2.29.0`, so their Docker builds will pull this release automatically — no Actor-side code change needed for this step.
 
@@ -37,7 +38,7 @@ cd actors/domain-recon
 apify push
 ```
 
-`apify push` builds using `.actor/Dockerfile` against the real PyPI `openosint` package (not the `local-wheels/` override — that only exists for `build-local.sh`), so step 2 must be done first or the build will fail to resolve `openosint>=2.29.0`.
+`apify push` builds using `.actor/Dockerfile`, which installs only from `requirements.txt` against the real PyPI `openosint` package — it never references `local-wheels/` or `.actor/Dockerfile.local` (those exist only for `build-local.sh`). So step 2 must be done first or the build will fail to resolve `openosint>=2.29.0`.
 
 ## 4. Apify Console — pricing, categories, SEO
 
