@@ -12,8 +12,11 @@ import pytest
 from openosint.tools.search_dns import (
     RecordSet,
     _is_valid_dkim_record,
+    _is_null_mx,
     _probe_dkim,
+    _spf_authorizes_senders,
     compute_email_security_grade,
+    compute_mail_profile,
     run_dns_osint,
 )
 
@@ -287,3 +290,120 @@ class TestProbeDkimWildcard:
         found, wildcard = _probe_dkim(resolver, "example.com")
         assert wildcard is False
         assert found == []
+
+
+# ---------------------------------------------------------------------------
+# _is_null_mx / _spf_authorizes_senders / compute_mail_profile
+# ---------------------------------------------------------------------------
+
+
+class TestIsNullMx:
+    def test_rfc7505_null_mx_is_detected(self):
+        assert _is_null_mx(["0 ."]) is True
+
+    def test_real_mx_record_is_not_null(self):
+        assert _is_null_mx(["10 mail.example.com."]) is False
+
+    def test_multiple_mx_records_are_never_null(self):
+        assert _is_null_mx(["0 .", "10 mail.example.com."]) is False
+
+    def test_no_mx_records_is_not_null_mx(self):
+        assert _is_null_mx([]) is False
+
+
+class TestSpfAuthorizesSenders:
+    def test_bare_deny_all_authorizes_no_one(self):
+        assert _spf_authorizes_senders("v=spf1 -all") is False
+
+    def test_include_mechanism_authorizes_senders(self):
+        assert _spf_authorizes_senders("v=spf1 include:_spf.google.com -all") is True
+
+    def test_mx_mechanism_authorizes_senders(self):
+        assert _spf_authorizes_senders("v=spf1 mx -all") is True
+
+    def test_ip4_mechanism_authorizes_senders(self):
+        assert _spf_authorizes_senders("v=spf1 ip4:203.0.113.0/24 -all") is True
+
+
+class TestComputeMailProfile:
+    def test_null_mx_with_non_authorizing_spf_is_no_mail(self):
+        rs = _record_set(mx=["0 ."], txt=['"v=spf1 -all"'])
+        assert compute_mail_profile(rs, "v=spf1 -all") == "no-mail"
+
+    def test_no_mx_at_all_with_non_authorizing_spf_is_no_mail(self):
+        rs = _record_set(mx=[], txt=['"v=spf1 -all"'])
+        assert compute_mail_profile(rs, "v=spf1 -all") == "no-mail"
+
+    def test_real_mx_is_sending_even_with_strict_spf(self):
+        rs = _record_set(mx=["10 mail.example.com."], txt=['"v=spf1 -all"'])
+        assert compute_mail_profile(rs, "v=spf1 -all") == "sending"
+
+    def test_no_mx_but_authorizing_spf_is_unknown(self):
+        rs = _record_set(mx=[], txt=['"v=spf1 include:_spf.google.com -all"'])
+        assert compute_mail_profile(rs, "v=spf1 include:_spf.google.com -all") == "unknown"
+
+    def test_no_mx_and_no_spf_is_unknown(self):
+        rs = _record_set(mx=[])
+        assert compute_mail_profile(rs, None) == "unknown"
+
+
+# ---------------------------------------------------------------------------
+# compute_email_security_grade — mail_profile-aware grading
+# ---------------------------------------------------------------------------
+
+
+class TestGradeWithMailProfile:
+    def test_no_mail_domain_gets_a_without_dkim(self):
+        """example.com-like: null MX, strict SPF, DMARC p=reject — DKIM not required."""
+        rs = _record_set(
+            mx=["0 ."],
+            txt=['"v=spf1 -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+        )
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[], mail_profile="no-mail")
+        assert grade == "A"
+        assert issues == []
+
+    def test_sending_domain_still_requires_dkim(self):
+        """github.com-like: real MX, strict SPF, DMARC p=reject, but no DKIM found -> capped at C."""
+        rs = _record_set(
+            mx=["1 aspmx.l.google.com."],
+            txt=['"v=spf1 include:_spf.google.com -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+        )
+        mail_profile = compute_mail_profile(rs, "v=spf1 include:_spf.google.com -all")
+        assert mail_profile == "sending"
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[], mail_profile=mail_profile)
+        assert grade == "C"
+        assert any("DKIM" in issue for issue in issues)
+
+    def test_no_spf_or_dmarc_at_all_is_worst_case_f_regardless_of_mail_profile(self):
+        rs = _record_set(mx=[])
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[], mail_profile="unknown")
+        assert grade == "F"
+        assert any("SPF" in issue for issue in issues)
+
+    def test_wildcard_dkim_still_caps_sending_domain_at_c(self):
+        rs = _record_set(
+            mx=["10 mail.example.com."],
+            txt=['"v=spf1 -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+            dkim_wildcard=True,
+        )
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[], mail_profile="sending")
+        assert grade == "C"
+        assert any("wildcard" in issue.lower() for issue in issues)
+
+    def test_wildcard_dkim_is_ignored_for_no_mail_domain(self):
+        # Should never actually happen together (a no-mail domain wouldn't
+        # have wildcard DKIM probing matter), but the grader must not apply
+        # the DKIM cap at all once mail_profile is "no-mail".
+        rs = _record_set(
+            mx=["0 ."],
+            txt=['"v=spf1 -all"'],
+            dmarc=['"v=DMARC1; p=reject"'],
+            dkim_wildcard=True,
+        )
+        grade, issues = compute_email_security_grade(rs, spf_warnings=[], dmarc_warnings=[], mail_profile="no-mail")
+        assert grade == "A"
+        assert issues == []

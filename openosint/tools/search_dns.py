@@ -54,6 +54,36 @@ class RecordSet(NamedTuple):
 
 _GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
 
+# Documented rubric behind compute_email_security_grade() below — kept as a
+# single source of truth; actors/domain-recon/README.md carries a copy of
+# this same table for end users and must be kept in sync with it by hand.
+GRADING_RUBRIC = """
+Email-security grade (A-F). Starting grade is A; each issue below caps the
+grade at its listed ceiling, and the WORST ceiling wins (rank A < B < C < D < F).
+
+SPF
+  - No SPF record at all                          -> caps at F
+  - SPF present but weak (+all or ~all)           -> caps at C
+  - SPF present and strict (-all)                 -> no cap
+
+DMARC
+  - No DMARC record at all                        -> caps at D
+  - DMARC p=none (monitor only, no enforcement)   -> caps at C
+  - DMARC p=quarantine (suspicious mail spammed)  -> caps at B
+  - DMARC p=reject (enforced)                     -> no cap
+
+DKIM — skipped entirely for a confirmed non-mail domain (mailProfile
+"no-mail": RFC 7505 null MX, or no MX record at all, combined with an SPF
+record that is "-all" with no mechanism authorizing any sender). Such a
+domain cannot send mail, so it has nothing for DKIM to sign.
+  - DKIM answers ANY selector (wildcard DNS)      -> caps at C (unverifiable)
+  - No DKIM record for any common selector        -> caps at C
+  - A real DKIM record found for at least one selector -> no cap
+
+A domain reaches grade A only when every check that applies to it (DKIM is
+skipped for "no-mail" domains) passes with no cap.
+"""
+
 
 def _query(resolver: dns.resolver.Resolver, domain: str, rdtype: str) -> list[str]:
     try:
@@ -139,33 +169,83 @@ def _analyze_dmarc(dmarc_records: list[str]) -> list[str]:
     return []
 
 
+_SPF_AUTHORIZING_MECHANISMS = {"a", "mx", "ip4", "ip6", "include", "exists", "ptr"}
+
+
+def _is_null_mx(mx_records: list[str]) -> bool:
+    """RFC 7505: a single MX record '0 .' declares the domain sends/receives no mail."""
+    if len(mx_records) != 1:
+        return False
+    parts = mx_records[0].split()
+    return len(parts) == 2 and parts[0] == "0" and parts[1] == "."
+
+
+def _spf_authorizes_senders(spf: str) -> bool:
+    """True if spf has any mechanism (a/mx/ip4/ip6/include/exists/ptr) that could authorize a sender."""
+    for token in spf.split()[1:]:  # drop the leading "v=spf1"
+        mechanism = token.lstrip("+-~?").split(":", 1)[0].split("/", 1)[0].lower()
+        if mechanism in _SPF_AUTHORIZING_MECHANISMS:
+            return True
+    return False
+
+
+def compute_mail_profile(rs: RecordSet, spf: str | None) -> str:
+    """
+    Classify a domain as "no-mail", "sending", or "unknown".
+
+    "no-mail": RFC 7505 null MX (or no MX at all) combined with an SPF
+    record that is strict ("-all") and authorizes no sender — this domain
+    provably neither sends nor receives mail, so it has no need for DKIM.
+    "sending": a real (non-null) MX record is present.
+    "unknown": neither signal is conclusive — graded as if mail could flow,
+    so DKIM absence still caps the grade.
+    """
+    if rs.mx and not _is_null_mx(rs.mx):
+        return "sending"
+    is_null_or_no_mx = not rs.mx or _is_null_mx(rs.mx)
+    if is_null_or_no_mx and spf and "-all" in spf and not _spf_authorizes_senders(spf):
+        return "no-mail"
+    return "unknown"
+
+
 def analyze_email_security(rs: RecordSet) -> dict:
     """
     Analyze SPF/DMARC/DKIM posture for a RecordSet and grade it A-F.
 
     Returns a dict with spf, dmarc (raw record strings, or None), the list of
-    DKIM selectors found, an overall `grade`, and the `issues` behind it.
+    DKIM selectors found, the `mailProfile` classification, an overall
+    `grade`, and the `issues` behind it.
     """
     spf, spf_warnings = _analyze_spf(rs.txt)
     dmarc_warnings = _analyze_dmarc(rs.dmarc)
-    grade, issues = compute_email_security_grade(rs, spf_warnings, dmarc_warnings)
+    mail_profile = compute_mail_profile(rs, spf)
+    grade, issues = compute_email_security_grade(rs, spf_warnings, dmarc_warnings, mail_profile=mail_profile)
     return {
         "spf": spf,
         "dmarc": rs.dmarc[0].strip('"') if rs.dmarc else None,
         "dkimSelectorsFound": rs.dkim_found,
         "dkimWildcard": rs.dkim_wildcard,
+        "mailProfile": mail_profile,
         "grade": grade,
         "issues": issues,
     }
 
 
-def compute_email_security_grade(rs: RecordSet, spf_warnings: list[str], dmarc_warnings: list[str]) -> tuple[str, list[str]]:
+def compute_email_security_grade(
+    rs: RecordSet,
+    spf_warnings: list[str],
+    dmarc_warnings: list[str],
+    mail_profile: str = "unknown",
+) -> tuple[str, list[str]]:
     """
     Return a simple A-F email-security grade plus the list of issues behind it.
 
-    Heuristic, not a substitute for a full email security audit: missing SPF
-    or DMARC caps the grade hardest, a weak/monitoring-only policy caps it
-    less, and missing DKIM caps it moderately.
+    See GRADING_RUBRIC above for the full rubric. Heuristic, not a substitute
+    for a full email security audit: missing SPF or DMARC caps the grade
+    hardest, a weak/monitoring-only policy caps it less, and missing DKIM
+    caps it moderately — except for a confirmed "no-mail" domain
+    (mail_profile == "no-mail"), which is graded on SPF+DMARC alone since it
+    has no need for DKIM.
     """
     issues: list[str] = []
     grade = "A"
@@ -195,15 +275,16 @@ def compute_email_security_grade(rs: RecordSet, spf_warnings: list[str], dmarc_w
             issues.append("DMARC policy is p=quarantine — suspicious mail is quarantined, not rejected.")
             _cap("B")
 
-    if rs.dkim_wildcard:
-        issues.append(
-            "DKIM cannot be verified — this domain's DNS answers any selector "
-            "(wildcard), so real key presence is unknown."
-        )
-        _cap("C")
-    elif not rs.dkim_found:
-        issues.append("No DKIM record found for common selectors.")
-        _cap("C")
+    if mail_profile != "no-mail":
+        if rs.dkim_wildcard:
+            issues.append(
+                "DKIM cannot be verified — this domain's DNS answers any selector "
+                "(wildcard), so real key presence is unknown."
+            )
+            _cap("C")
+        elif not rs.dkim_found:
+            issues.append("No DKIM record found for common selectors.")
+            _cap("C")
 
     return grade, issues
 
