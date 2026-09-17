@@ -1,0 +1,2 @@
+apify < 4.0.0
+openosint >= 2.29.0

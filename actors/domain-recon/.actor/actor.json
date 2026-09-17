@@ -1,0 +1,18 @@
+{
+    "actorSpecification": 1,
+    "name": "openosint-domain-recon",
+    "title": "OpenOSINT Domain Recon — Email Security & Attack Surface Check",
+    "description": "Given one or more domains, reports DNS records, SPF/DMARC/DKIM email-security grading, WHOIS registration data, and generated dork URLs. Native OSINT tool for AI agents via MCP.",
+    "version": "0.1",
+    "meta": {
+        "templateId": "python-start"
+    },
+    "input": "./input_schema.json",
+    "output": "./output_schema.json",
+    "dockerfile": "./Dockerfile",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "minMemoryMbytes": 256,
+    "maxMemoryMbytes": 1024
+}

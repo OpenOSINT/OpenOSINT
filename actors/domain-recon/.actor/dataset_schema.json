@@ -1,0 +1,53 @@
+{
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "domain": {
+                "type": "string",
+                "title": "Domain",
+                "description": "The domain that was checked.",
+                "example": "example.com"
+            },
+            "dnsA": { "type": "array", "title": "A records", "description": "IPv4 addresses.", "example": ["93.184.216.34"] },
+            "dnsAaaa": { "type": "array", "title": "AAAA records", "description": "IPv6 addresses.", "example": [] },
+            "dnsMx": { "type": "array", "title": "MX records", "description": "Mail exchange records.", "example": ["10 mail.example.com"] },
+            "dnsNs": { "type": "array", "title": "NS records", "description": "Authoritative name servers.", "example": ["a.iana-servers.net"] },
+            "dnsTxt": { "type": "array", "title": "TXT records", "description": "All TXT records on the apex.", "example": ["v=spf1 -all"] },
+            "dnsCname": { "type": "array", "title": "CNAME records", "description": "CNAME records, if any.", "example": [] },
+            "dnsSoa": { "type": "array", "title": "SOA record", "description": "Start-of-authority record.", "example": ["ns.icann.org. noc.dns.icann.org. ..."] },
+            "spfRecord": { "type": ["string", "null"], "title": "SPF record", "description": "Raw SPF record, or null if absent.", "example": "v=spf1 -all" },
+            "dmarcRecord": { "type": ["string", "null"], "title": "DMARC record", "description": "Raw DMARC record, or null if absent.", "example": "v=DMARC1; p=reject" },
+            "dkimSelectorsFound": { "type": "array", "title": "DKIM selectors found", "description": "Common DKIM selectors that resolved.", "example": ["default"] },
+            "emailSecurityGrade": { "type": "string", "title": "Email security grade", "description": "Simple A-F heuristic grade based on SPF/DMARC/DKIM posture.", "example": "B" },
+            "emailSecurityIssues": { "type": "array", "title": "Email security issues", "description": "Human-readable list of issues behind the grade.", "example": ["DMARC policy is p=quarantine — suspicious mail is quarantined, not rejected."] },
+            "whoisRegistrar": { "type": ["string", "null"], "title": "Registrar", "description": "Domain registrar name.", "example": "MarkMonitor Inc." },
+            "whoisCreatedDate": { "type": ["string", "null"], "title": "Created", "description": "ISO 8601 registration date.", "example": "1995-08-14T04:00:00" },
+            "whoisExpiresDate": { "type": ["string", "null"], "title": "Expires", "description": "ISO 8601 expiration date.", "example": "2026-08-13T04:00:00" },
+            "whoisNameServers": { "type": "array", "title": "WHOIS name servers", "description": "Name servers per the WHOIS record. Registrant personal fields are intentionally dropped.", "example": ["a.iana-servers.net"] },
+            "dorkUrls": { "type": "array", "title": "Dork URLs", "description": "Generated Google dork queries and URLs for this domain.", "example": [{"query": "\"example.com\" site:linkedin.com", "url": "https://www.google.com/search?q=..."}] },
+            "warnings": { "type": "array", "title": "Warnings", "description": "Partial-failure notes (e.g. WHOIS lookup failed) when part of the report couldn't be completed.", "example": [] },
+            "checkedAt": { "type": "string", "title": "Checked at", "description": "ISO 8601 timestamp when this domain was checked.", "example": "2026-09-17T12:00:00Z" }
+        },
+        "required": ["domain", "checkedAt"]
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": ["domain", "emailSecurityGrade", "whoisRegistrar", "whoisExpiresDate", "checkedAt"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "domain": { "label": "Domain" },
+                    "emailSecurityGrade": { "label": "Email grade" },
+                    "whoisRegistrar": { "label": "Registrar" },
+                    "whoisExpiresDate": { "label": "Expires" },
+                    "checkedAt": { "label": "Checked at" }
+                }
+            }
+        }
+    }
+}

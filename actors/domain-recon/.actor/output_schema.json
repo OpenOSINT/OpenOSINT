@@ -1,0 +1,13 @@
+{
+    "actorOutputSchemaVersion": 1,
+    "title": "OpenOSINT Domain Recon Output",
+    "description": "One report per requested domain: DNS records, email-security grade, WHOIS, and dork URLs.",
+    "properties": {
+        "domainReports": {
+            "type": "string",
+            "title": "Domain reports",
+            "description": "Dataset of domain reports, one item per domain.",
+            "template": "{{links.apiDefaultDatasetUrl}}/items"
+        }
+    }
+}

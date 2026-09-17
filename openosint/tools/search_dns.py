@@ -104,6 +104,25 @@ def _analyze_dmarc(dmarc_records: list[str]) -> list[str]:
     return []
 
 
+def analyze_email_security(rs: RecordSet) -> dict:
+    """
+    Analyze SPF/DMARC/DKIM posture for a RecordSet and grade it A-F.
+
+    Returns a dict with spf, dmarc (raw record strings, or None), the list of
+    DKIM selectors found, an overall `grade`, and the `issues` behind it.
+    """
+    spf, spf_warnings = _analyze_spf(rs.txt)
+    dmarc_warnings = _analyze_dmarc(rs.dmarc)
+    grade, issues = compute_email_security_grade(rs, spf_warnings, dmarc_warnings)
+    return {
+        "spf": spf,
+        "dmarc": rs.dmarc[0].strip('"') if rs.dmarc else None,
+        "dkimSelectorsFound": rs.dkim_found,
+        "grade": grade,
+        "issues": issues,
+    }
+
+
 def compute_email_security_grade(rs: RecordSet, spf_warnings: list[str], dmarc_warnings: list[str]) -> tuple[str, list[str]]:
     """
     Return a simple A-F email-security grade plus the list of issues behind it.
