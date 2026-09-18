@@ -3,7 +3,7 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>OSINT agent for security researchers and analysts: 20 investigation tools behind a natural-language interface.</p>
+  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 20 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
   <p><em>The AI issues hard-stop tool calls; your code executes the real binary — hallucinated findings are structurally impossible.</em></p>
 </div>
@@ -14,7 +14,6 @@ mcp-name: io.github.OpenOSINT/openosint
 [![PyPI](https://img.shields.io/pypi/v/openosint?style=flat-square)](https://pypi.org/project/openosint/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/openosint?style=flat-square&label=PyPI%20downloads)](https://pypi.org/project/openosint/)
 [![License MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/OpenOSINT/OpenOSINT?style=flat-square)](https://github.com/OpenOSINT/OpenOSINT/stargazers)
 [![MCP](https://img.shields.io/badge/protocol-MCP-blueviolet?style=flat-square)](https://modelcontextprotocol.io/)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-published-blueviolet?style=flat-square)](https://registry.modelcontextprotocol.io/servers/io.github.OpenOSINT/openosint)
 [![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)
@@ -23,18 +22,7 @@ mcp-name: io.github.OpenOSINT/openosint
 
 </div>
 
-## ☁️ OpenOSINT Cloud — zero install
-
-No Python, no binaries, no API keys. Pay per use. Works as MCP tools in Claude, Cursor, and Windsurf via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server).
-
-| Cloud tool | Input | Output | |
-|---|---|---|---|
-| OpenOSINT Email Recon | email address | linked social accounts, breach exposure, generated dorks | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
-<!-- Add one row per new Actor here as they ship -->
-
-[![Try OpenOSINT Cloud](https://img.shields.io/badge/Try-OpenOSINT%20Cloud-3fb950?style=for-the-badge)](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-badge)
-
-## 💻 Self-host (free, MIT)
+## Self-host (free, MIT)
 
 ```bash
 pip install openosint
@@ -151,7 +139,7 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | Tool | Powered by | What it investigates |
 |------|-----------|---------------------|
 | `search_email` | holehe | Social accounts linked to an email address |
-| `search_username` | sherlock | Username presence across 300+ platforms |
+| `search_username` | sherlock | Username presence across 400+ platforms |
 | `search_breach` | HaveIBeenPwned v3 API | Data breach exposure |
 | `search_whois` | python-whois | Domain registrant and DNS info |
 | `search_ip` | ipinfo.io | Geolocation, ASN, hostname |
@@ -190,7 +178,7 @@ openosint email target@example.com
 
 ### search_username
 
-Searches for a username across 300+ platforms using [sherlock](https://github.com/sherlock-project/sherlock).
+Searches for a username across 400+ platforms using [sherlock](https://github.com/sherlock-project/sherlock).
 
 ```bash
 openosint username johndoe99
@@ -564,8 +552,6 @@ upward search from that arbitrary cwd — but for a `pip install`ed
 client's own `env` block above, as shown, is the one option guaranteed to
 work regardless of how the host launches the process.
 
-Prefer zero setup? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) is also available as a hosted MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — no server to run, no config file to edit. Try for free.
-
 **Agentic use via Claude Code:**
 
 ```text
@@ -602,8 +588,6 @@ pip install -e .
 
 If a binary is absent, the corresponding tool returns a descriptive error. All other tools remain operational.
 
-Don't want to install these locally? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) runs email recon in Apify's cloud — zero dependencies, zero local setup.
-
 **Optional Python packages:**
 
 | Package | Purpose | Install |
@@ -625,25 +609,33 @@ Set `OPENOSINT_ENV_FILE=/path/to/.env` to point at an explicit file instead
 working directory). A real environment variable always takes priority over
 a value in `.env`.
 
+`Required` below means required for that specific tool to run, not for `openosint`
+itself — the app starts and every key-less tool works with zero configuration.
+
 | Variable | Tool | Required | Purpose |
 |----------|------|----------|---------|
-| `ANTHROPIC_API_KEY` | AI agent | Yes (or Ollama / OpenAI) | Anthropic API key |
+| `ANTHROPIC_API_KEY` | AI agent (REPL/Web UI) | Yes, unless using Ollama or an OpenAI-compatible endpoint | Anthropic API key |
 | `ANTHROPIC_MODEL` | AI agent | Optional | Model name to request (default: `claude-sonnet-5`). Replaces the deprecated `OPENOSINT_MODEL`. |
 | `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`) |
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
 | `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
-| `HIBP_API_KEY` | `search_breach` | Optional | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
-| `IPINFO_TOKEN` | `search_ip` | Optional | ipinfo.io higher rate limits |
-| `SHODAN_API_KEY` | `search_shodan` | Optional | Shodan API — [get one](https://account.shodan.io) |
-| `VIRUSTOTAL_API_KEY` | `search_virustotal` | Optional | VirusTotal API v3 — [get one](https://www.virustotal.com/gui/my-apikey) |
-| `IP2LOCATION_API_KEY` | `search_ip2location` | Optional | IP2Location.io — [get one](https://www.ip2location.io/pricing) *(sponsored)* |
-| `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Optional | Censys — [get one](https://censys.io/account) |
-| `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Optional | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
-| `GITHUB_TOKEN` | `search_github` | Optional | GitHub API — raises rate limit 60 → 5000 req/h — [get one](https://github.com/settings/tokens) |
-| `BRIGHTDATA_API_KEY` | `search_dorks_live`, `scrape_url`, `search_footprint` | Optional | Bright Data — [get one](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ (free tier: 5,000 req/month) |
-| `BRIGHTDATA_SERP_ZONE` | `search_dorks_live`, `search_footprint` | Optional | Your Bright Data SERP zone name (e.g. `serp_api1`) |
-| `BRIGHTDATA_UNLOCKER_ZONE` | `scrape_url` | Optional | Your Bright Data Web Unlocker zone name (e.g. `web_unlocker1`) |
+| `HIBP_API_KEY` | `search_breach` | Required for this tool | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
+| `IPINFO_TOKEN` | `search_ip` | Optional | Works without it; raises ipinfo.io rate limits |
+| `SHODAN_API_KEY` | `search_shodan` | Required for this tool | Shodan API — [get one](https://account.shodan.io) |
+| `VIRUSTOTAL_API_KEY` | `search_virustotal` | Required for this tool | VirusTotal API v3 — [get one](https://www.virustotal.com/gui/my-apikey) |
+| `IP2LOCATION_API_KEY` | `search_ip2location` | Required for this tool | IP2Location.io — [get one](https://www.ip2location.io/pricing) *(sponsored)* |
+| `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Required for this tool | Censys — [get one](https://censys.io/account) |
+| `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Required for this tool | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
+| `GITHUB_TOKEN` | `search_github` | Optional | Works without it (60 req/h); raises the limit to 5000 req/h — [get one](https://github.com/settings/tokens) |
+| `BRIGHTDATA_API_KEY` | `search_dorks_live`, `scrape_url`, `search_footprint` | Required for these tools | Bright Data — [get one](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ (free tier: 5,000 req/month) |
+| `BRIGHTDATA_SERP_ZONE` | `search_dorks_live`, `search_footprint` | Required for these tools | Your Bright Data SERP zone name (e.g. `serp_api1`) |
+| `BRIGHTDATA_UNLOCKER_ZONE` | `scrape_url` | Required for this tool | Your Bright Data Web Unlocker zone name (e.g. `web_unlocker1`) |
+
+On a fresh install with no keys at all, these still work: `generate_dorks`,
+`search_dns`, `search_whois`, `search_domain`, `search_email`, `search_username`,
+`search_paste`, `search_phone`, `search_ip` (rate-limited), `search_github`
+(rate-limited), and `search_gdelt_geo`.
 
 ## CLI Reference
 
@@ -660,8 +652,16 @@ a value in `.env`.
 | `openosint abuseipdb IP [-t N]` | AbuseIPDB reputation check |
 | `openosint github QUERY [-t N]` | GitHub profile/repo/email discovery |
 | `openosint dns DOMAIN [-t N]` | DNS records + email security analysis |
+| `openosint search-dorks-live TARGET [--max-dorks N] [-t N]` | Live Google dork results via Bright Data |
+| `openosint scrape URL [-t N]` | Fetch a URL via Bright Data Web Unlocker |
+| `openosint footprint TARGET [--max-queries N] [-t N]` | SERP footprint via Bright Data |
 | `openosint multi TARGETS` | Parallel multi-target investigation (max 10) |
+| `openosint playbook RECIPE TARGET` | Run a deterministic investigation playbook (no AI) |
 | `openosint history [--all] [open N] [clear]` | View/manage REPL session history |
+| `openosint proxy-test` | Verify the configured upstream proxy |
+| `openosint sponsors` | List current sponsors and featured integrations |
+| `openosint prompts` | Show info about the AI OSINT Prompt Pack |
+| `openosint shell` | Explicit alias for the default REPL |
 | `-v, --verbose` | Enable debug logging to stderr |
 | `-t, --timeout N` | Override subprocess timeout (seconds) |
 | `--api-key KEY` | Anthropic API key (overrides env var) |
@@ -710,6 +710,33 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | WHOIS (IANA) | https://www.iana.org/whois | `search_whois` | Community | None |
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
+
+## Limitations
+
+- **Authorized use only.** OpenOSINT queries public and semi-public sources.
+  It does not bypass authentication, exploit systems, or access anything you
+  aren't already entitled to see. You are responsible for complying with the
+  law and the terms of service of every source you query. See
+  [DISCLAIMER.md](DISCLAIMER.md).
+- **No aggregation guarantees.** Each tool reports what its upstream source
+  currently returns. A negative result (no breach found, no accounts found)
+  means the source didn't report a match — not that no exposure exists.
+- **Most tools depend on third-party services you don't control.** Nine of
+  the 20 tools hard-require an API key and are subject to that provider's
+  uptime, rate limits, and pricing (Shodan, VirusTotal, Censys, AbuseIPDB,
+  IP2Location, HaveIBeenPwned, and the three Bright Data–backed tools). Free
+  tiers are small; heavy use requires a paid plan with the provider, not with
+  OpenOSINT.
+- **Local binaries are unsandboxed subprocesses.** `holehe`, `sherlock`,
+  `sublist3r`, and `phoneinfoga` run as external processes on your machine.
+  Keep them updated yourself; OpenOSINT does not patch or vet them.
+- **The entity graph module (`openosint[graph]`) is additive, not
+  authoritative.** `same_as` links are scored candidates for human review,
+  not verified identity matches — see [docs/graph.md](docs/graph.md).
+- **The AI agent can only call the 20 tools above.** It cannot browse the
+  open web freely, run arbitrary code, or invent data — every finding comes
+  from a real tool call, but the agent's tool selection can still be wrong
+  or incomplete for a given target.
 
 ## Resources
 
