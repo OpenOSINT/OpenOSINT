@@ -675,6 +675,14 @@ On a fresh install with no keys at all, these still work: `generate_dorks`,
 | `--openai-api-key KEY` | API key for the endpoint (env: `OPENAI_API_KEY`) |
 | `--no-pdf` | Disable automatic PDF generation |
 
+Each `openosint multi` run saves its reports in a unique
+`reports/YYYY-MM-DD_HH-MM-SS_<unique-suffix>/` directory. Individual reports are
+numbered in input order (for example, `01_example.com_report.md`), with
+`summary.md` and, unless `--no-pdf` is set, `summary.pdf` in the same directory.
+Repeating a run or supplying targets with similar filenames does not overwrite
+earlier reports. Existing reports in the top-level `reports/` directory are left
+untouched.
+
 ## Docker
 
 ```bash
