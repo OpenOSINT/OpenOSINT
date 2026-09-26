@@ -49,7 +49,20 @@ openosint email target@example.com
 
 **[Try the live demo →](https://demo.openosint.tech)** — bring your own Anthropic / OpenRouter / Ollama key, no signup.
 
-**Cloud or self-host?** Cloud: zero setup, pay per call, hosted by us. Self-host: free forever, your own API keys, full control.
+## ☁️ OpenOSINT Cloud — no install, pay per use
+
+Run OpenOSINT tools with zero install as pay-per-use Apify Actors, in your browser or as MCP tools in Claude, Cursor, and Windsurf.
+
+| Actor | Input | Output | Price | |
+|---|---|---|---|---|
+| OpenOSINT Email Recon | an email address | linked accounts across 100+ services | from $0.015/run | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
+| OpenOSINT Username Recon | one or more usernames | every platform where each is registered | $0.04/username | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-username-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
+| OpenOSINT Domain Recon | one or more domains | A-F email-security grade, RDAP data, dork URLs | $0.02/domain | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-domain-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
+<!-- Add one row per new Actor here as they ship -->
+
+All three are also available as MCP tools with no server to run: `https://mcp.apify.com?tools=complete_analogy/openosint-email-recon,complete_analogy/openosint-username-recon,complete_analogy/openosint-domain-recon`
+
+**Cloud or self-host?** Cloud: zero setup, pay per call, hosted by us — cloud usage funds ongoing development of the self-hosted project. Self-host: free forever, your own API keys, full control.
 
 ### 📬 Agents & OSINT — the newsletter
 
