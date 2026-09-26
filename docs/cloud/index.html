@@ -108,7 +108,7 @@
 
 <h2 id="actors">ACTORS</h2>
 <div class="indent">
-<p><b>OpenOSINT Cloud</b> &mdash; run OpenOSINT tools from your browser or as MCP tools in Claude, Cursor, and Windsurf, with no Python, no binaries, and no API keys to manage. Pay per event via Apify.</p>
+<p><b>OpenOSINT Cloud</b> &mdash; run OpenOSINT tools from your browser or as MCP tools in Claude, Cursor, and Windsurf, with no Python, no binaries, and no API keys to manage. Pay per event via Apify. Every new Apify account gets free monthly platform credit, and every run can be exported as JSON, CSV, or Excel.</p>
 
 <table class="plan-table">
 <thead>
@@ -116,6 +116,7 @@
 <th>Cloud tool</th>
 <th>Input</th>
 <th>Output</th>
+<th>Price</th>
 <th></th>
 </tr>
 </thead>
@@ -123,15 +124,30 @@
 <tr>
 <td><b>OpenOSINT Email Recon</b></td>
 <td>email address</td>
-<td>linked social accounts, breach exposure, generated dorks</td>
+<td>linked accounts across 100+ services (service, exists, recovery email/phone where leaked)</td>
+<td>from $0.015/run</td>
 <td><a href="https://apify.com/complete_analogy/openosint-email-recon?utm_source=site&amp;utm_medium=cloud&amp;utm_campaign=actors-table">&#9654; Run on Apify</a></td>
 </tr>
 <!-- Add one row per new Actor here as they ship -->
+<tr>
+<td><b>OpenOSINT Username Recon</b></td>
+<td>one or more usernames</td>
+<td>every platform where each is registered</td>
+<td>$0.04/username</td>
+<td><a href="https://apify.com/complete_analogy/openosint-username-recon?utm_source=site&amp;utm_medium=cloud&amp;utm_campaign=actors-table">&#9654; Run on Apify</a></td>
+</tr>
+<tr>
+<td><b>OpenOSINT Domain Recon</b></td>
+<td>one or more domains</td>
+<td>A-F email-security grade, RDAP data, dork URLs</td>
+<td>$0.02/domain</td>
+<td><a href="https://apify.com/complete_analogy/openosint-domain-recon?utm_source=site&amp;utm_medium=cloud&amp;utm_campaign=actors-table">&#9654; Run on Apify</a></td>
+</tr>
 </tbody>
 </table>
 
-<a href="https://apify.com/complete_analogy/openosint-email-recon?utm_source=site&amp;utm_medium=cloud&amp;utm_campaign=actors-cta" class="cta-btn" target="_blank" rel="noopener noreferrer">Try OpenOSINT Cloud &rarr;</a>
-<p style="margin-top:10px;">Also available as an MCP tool via the <a href="https://apify.com/apify/actors-mcp-server" target="_blank" rel="noopener">Apify MCP Server</a> &mdash; no server to run, no config file to edit.</p>
+<a href="https://apify.com/complete_analogy?utm_source=site&amp;utm_medium=cloud&amp;utm_campaign=actors-cta" class="cta-btn" target="_blank" rel="noopener noreferrer">Try OpenOSINT Cloud &rarr;</a>
+<p style="margin-top:10px;">Also available as MCP tools &mdash; no server to run, no config file to edit: <code>https://mcp.apify.com?tools=complete_analogy/openosint-email-recon,complete_analogy/openosint-username-recon,complete_analogy/openosint-domain-recon</code></p>
 </div>
 
 <hr>

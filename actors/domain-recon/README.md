@@ -1,30 +1,56 @@
 # OpenOSINT Domain Recon — Email Security & Attack Surface Check
 
-Give it a domain, get back its DNS footprint, an A-F email-security grade, RDAP registration data, and ready-to-use dork URLs — built for security teams vetting vendors, partners, or their own infrastructure.
+Give it a domain, get back an A-F email-spoofing grade, its full DNS footprint, RDAP registration data, and ready-to-use dork URLs — **$0.02 per domain**, up to 50 domains per run, no API keys to configure. Nonexistent domains are reported but never charged.
 
-## What it does
+## ✨ What you get
 
-For each domain you provide, it:
+- DNS records: A, AAAA, MX, NS, TXT, CNAME, SOA (via [dnspython](https://www.dnspython.org/))
+- SPF, DMARC, and DKIM analysis, rolled into a single **A-F email-security grade**
+- RDAP registration data: registrar, creation/expiry dates, name servers, status codes
+- A set of Google dork URLs for further manual investigation
+- `domainExists` on every row, so a dead domain is a documented finding, not a silent gap
 
-- Enumerates DNS records (A, AAAA, MX, NS, TXT, CNAME, SOA) via [dnspython](https://www.dnspython.org/), and flags a nonexistent domain via `domainExists`
-- Analyzes SPF, DMARC, and DKIM (common selectors, with wildcard-DNS and revoked-key detection so a domain that answers every possible selector isn't misreported) and grades the domain's email-spoofing resistance A-F
-- Looks up RDAP registration data (registrar, creation/expiry dates, name servers, status codes only — no registrant contact data is ever read)
-- Generates a set of Google dork URLs for further manual investigation
+## 🏆 Why this Actor
 
-## Use cases
+Most domain-checker Actors on the Store stop at "here's the SPF record, figure out the rest yourself." This one grades it, and gets the grading right:
 
-- **Security & vendor due diligence** — check a third party's email-spoofing exposure before trusting their domain in your supply chain
-- **Fraud prevention** — a newly registered domain with no SPF/DMARC is a common phishing-infrastructure signature
-- **Brand protection** — monitor lookalike domains for how exposed they are to spoofing
-- **Attack surface mapping** — DNS + RDAP + dorks in one call for recon workflows
+- **A published A–F rubric**, not a black-box score — see the full table below, so you can defend the grade to a client or auditor
+- **`mailProfile`** — the fix for a real grading bug: a domain like `example.com` that explicitly declares it sends no mail (null MX + `SPF -all`) used to get capped at grade C for "missing DKIM." This Actor recognizes that pattern and grades non-mail domains on SPF + DMARC alone
+- **RDAP, not WHOIS** — structured JSON, no registrant contact data ever read or returned
+- **You don't pay for nothing** — a confirmed-nonexistent domain or a domain whose lookups fail on every retry is reported but not charged
 
-## Input
+## 🎯 Use cases
+
+- **Fraud & KYC checks** — a newly registered domain with no SPF/DMARC is a common phishing-infrastructure signature
+- **Vendor & third-party risk** — check a supplier's or partner's email-spoofing exposure before trusting their domain in your supply chain
+- **Brand protection** — monitor lookalike domains for how exposed they are to being used in spoofed mail against your customers
+- **MSP security audits** — batch-check every domain in a client's portfolio in one run, with a defensible grade per domain
+- **AI agents** — a predictable per-domain price an agent can budget against before it starts pulling on threads
+
+## 🚀 How to use it
+
+1. Open the Actor on Apify and paste in one or more domains (or call it via API/MCP — see below)
+2. Run it — Apify gives every new account free monthly platform credit, enough to try this Actor without paying out of pocket
+3. Read the graded report in the dataset, or export it as JSON/CSV/Excel
+
+## 💰 Pricing
+
+Pay per event — **`domain-report`: $0.02 per domain**, charged once per domain that produces a report.
+
+| Domains | Cost |
+|---|---|
+| 1 domain | $0.02 |
+| One full run (50 domains, the per-run max) | $1.00 |
+| ~500 domains | ~$10 |
+| ~5,000 domains | ~$100 |
+
+**Not charged:** a confirmed-nonexistent domain (`domainExists: false`), malformed input, or a domain whose lookups fail on every retry attempt.
+
+## 📥 Input
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `domains` | array | One or more domains to investigate (max 50 per run, duplicates removed). |
-
-## Example input
 
 ```json
 {
@@ -32,7 +58,7 @@ For each domain you provide, it:
 }
 ```
 
-## Example output
+## 📤 Output
 
 ```json
 {
@@ -60,9 +86,9 @@ For each domain you provide, it:
 }
 ```
 
-A domain that doesn't exist gets `"domainExists": false` and empty DNS/RDAP fields — still reported, but see Pricing below.
+A domain that doesn't exist gets `"domainExists": false` and empty DNS/RDAP fields — still reported, but see Pricing above.
 
-## Email security grading rubric
+### Email security grading rubric
 
 Grading starts at **A** and each issue below caps it at a ceiling — the worst ceiling that applies wins (rank A < B < C < D < F).
 
@@ -91,15 +117,49 @@ Every report includes a `mailProfile` field explaining how the grade was compute
 
 This distinction fixes a real grading bug: before it existed, a correctly locked-down non-mail domain like `example.com` (null MX, `SPF -all`, `DMARC p=reject`) was capped at grade C for "missing DKIM" — even though a domain that can't send mail has no use for DKIM in the first place.
 
-## Pricing
+## 🤖 Use with AI agents (MCP)
 
-Pay per event:
+This Actor is available as a hosted MCP tool — no server to run, no config file beyond the URL below:
 
-- **`domain-report`** — **$0.02** per domain, charged once per domain that produces a report, **except** a confirmed-nonexistent domain (`domainExists: false`) — that's reported but not charged. Nothing is charged for malformed input or a domain whose lookups fail on every retry attempt.
+```json
+{
+  "mcpServers": {
+    "openosint-domain-recon": {
+      "url": "https://mcp.apify.com?tools=complete_analogy/openosint-domain-recon"
+    }
+  }
+}
+```
 
-## Use with AI agents (MCP)
+Example prompt: *"Check example.com's email-spoofing grade and RDAP registration data before I approve it as a vendor domain."*
 
-This Actor is available as an MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — add it to Claude, Cursor, or Windsurf and the agent can call it directly, no local install required.
+## 🔌 Integrations
+
+- **Apify API** — call this Actor from any language via the [Apify API](https://docs.apify.com/api/v2) or client SDKs (Python, JS)
+- **Scheduled runs** — set up a recurring Apify schedule to re-check a vendor or brand-monitoring domain list on a cadence
+- **Webhooks** — fire a webhook to Zapier, Make, or n8n when a run finishes, to pipe graded results straight into a ticket, sheet, or Slack alert
+- **Google Sheets** — export runs directly to Sheets for a shareable vendor-risk tracker
+
+## ❓ FAQ
+
+**Is this legal to run against any domain?** Yes — everything here is public DNS and RDAP data, the same information any resolver or `whois`-equivalent client can fetch. No login, scraping, or bypass of access controls is involved.
+
+**Does this expose the domain owner's personal information?** No. RDAP status codes, registrar, and dates are returned — registrant name, email, and address fields are never read or returned, even when the registry exposes them.
+
+**How is this different from a free SPF/DMARC checker?** Most free checkers return raw records and leave the interpretation to you. This one applies a documented rubric, distinguishes non-mail domains so they aren't unfairly penalized for missing DKIM, and batches up to 50 domains per run with structured JSON/CSV/Excel export.
+
+**What if a domain returns no results?** A domain that doesn't resolve at all comes back with `domainExists: false` and isn't charged — you still see it in the dataset as "checked, doesn't exist."
+
+**What if my run has issues?** Check the run log first — most failures are a malformed domain in the input list. If something looks wrong with billing or output, open an issue on the [GitHub repo](https://github.com/OpenOSINT/OpenOSINT) or reach out via the Actor's Store page.
+
+## 🧰 More OpenOSINT Actors
+
+| Actor | Give it | Get back | Price |
+|---|---|---|---|
+| [OpenOSINT Email Recon](https://apify.com/complete_analogy/openosint-email-recon?utm_source=apify&utm_medium=actor-readme&utm_campaign=domain-recon-crosssell) | an email address | linked accounts across 100+ services | from $0.015/run |
+| [OpenOSINT Username Recon](https://apify.com/complete_analogy/openosint-username-recon?utm_source=apify&utm_medium=actor-readme&utm_campaign=domain-recon-crosssell) | a username | every platform where it's registered, false positives filtered out | $0.04/username |
+
+Chain them in one investigation: pull a domain from a discovered email's provider, or check the usernames found in a WHOIS/RDAP registrant history against Username Recon.
 
 ## Data sources
 
@@ -116,3 +176,7 @@ This Actor is part of the [OpenOSINT](https://openosint.tech) toolkit — an ope
 ## Acceptable Use
 
 For authorized security research, vetting your own domains or vendors, and fraud prevention with a legitimate legal basis only. Do not use this Actor for stalking, harassment, or doxxing. You are responsible for complying with applicable laws in your jurisdiction.
+
+---
+
+If this Actor was useful, a ⭐ review on the Store page helps other buyers find it.
