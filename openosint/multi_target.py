@@ -3,8 +3,8 @@
 Multi-target investigation support.
 
 Runs independent OSINT investigations for multiple targets in parallel
-via asyncio.gather().  Each target gets its own timestamped report file.
-A consolidated summary report is generated after all targets complete.
+via asyncio.gather(). Each run gets a unique directory with numbered target
+reports. A consolidated summary is generated after all targets complete.
 
 Maximum 10 targets per run.
 """
@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -46,7 +47,7 @@ async def _investigate_one(
     target: str,
     api_key: str | None,
     reports_dir: Path,
-    date_prefix: str,
+    report_index: int,
 ) -> tuple[str, AgentResponse]:
     """Run one investigation and persist its report."""
     agent = OpenOSINTAgent(api_key=api_key)
@@ -55,7 +56,7 @@ async def _investigate_one(
 
     if response.content and "##" in response.content and len(response.content) > 300:
         safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)
-        path = reports_dir / f"{date_prefix}_{safe}_report.md"
+        path = reports_dir / f"{report_index:02d}_{safe}_report.md"
         path.write_text(response.content, encoding="utf-8")
         logger.info("Saved: %s", path)
 
@@ -123,7 +124,8 @@ async def run_multi_target(
     Returns
     -------
     str
-        Markdown summary report (also written to ``reports/``).
+        Markdown summary report (also written to a unique run directory under
+        ``reports/`` alongside the individual target reports).
 
     Raises
     ------
@@ -140,14 +142,23 @@ async def run_multi_target(
 
     reports_dir = Path("reports")
     reports_dir.mkdir(exist_ok=True)
-    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    started_at = datetime.now()
+    date_prefix = started_at.strftime("%Y-%m-%d")
+    # Atomically reserve a directory even when concurrent runs share a timestamp.
+    run_dir = Path(
+        tempfile.mkdtemp(prefix=started_at.strftime("%Y-%m-%d_%H-%M-%S_"), dir=reports_dir)
+    )
 
-    tasks = [_investigate_one(target, api_key, reports_dir, date_prefix) for target in targets]
+    # Ordinals keep duplicate, sanitized, and case-insensitive names distinct.
+    tasks = [
+        _investigate_one(target, api_key, run_dir, index)
+        for index, target in enumerate(targets, start=1)
+    ]
     results: list[tuple[str, AgentResponse]] = await asyncio.gather(*tasks)
 
     summary = _build_summary(results, date_prefix)
 
-    summary_path = reports_dir / f"{date_prefix}_summary.md"
+    summary_path = run_dir / "summary.md"
     summary_path.write_text(summary, encoding="utf-8")
     logger.info("Summary report: %s", summary_path)
 
