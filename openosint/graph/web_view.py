@@ -20,7 +20,7 @@ from __future__ import annotations
 import re
 from collections.abc import Sequence
 
-from followthemoney.statement import Statement
+from openosint.graph.ftm_compat import Statement
 
 from openosint.graph.store.db_path import default_db_path
 from openosint.graph.store.graph_store import _MAX_DEPTH_CEILING, GraphStore

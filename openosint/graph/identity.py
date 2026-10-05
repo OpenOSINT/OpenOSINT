@@ -6,7 +6,9 @@ WHY: statements need a stable entity_id so that repeat observations of the
 same domain/username/email land on the same FtM entity instead of minting a
 new anonymous one every run. FollowTheMoney ships exactly this primitive —
 followthemoney.util.make_entity_id — a SHA1 hash of the given parts plus a
-key_prefix, so it is reused here rather than hand-rolled.
+key_prefix. It comes from openosint.graph.ftm_compat, which re-exports the real
+function when followthemoney is installed and otherwise a vendored copy that is
+tested to produce identical ids.
 
 WHY schema must be the key_prefix: without it, a Person and a UserAccount
 keyed on the same (service, username) pair would collide onto one entity id,
@@ -25,7 +27,7 @@ written as a `name` PROPERTY on an entity keyed some other way.
 
 from __future__ import annotations
 
-from followthemoney.util import make_entity_id
+from openosint.graph.ftm_compat import make_entity_id
 
 
 def entity_id_for(schema: str, *key_parts: str) -> str:
