@@ -422,11 +422,18 @@ openosint footprint johndoe99
 An additive [FollowTheMoney](https://followthemoney.tech/) entity graph —
 statement-level provenance, an append-only store, non-destructive same_as
 deduplication, and a human review queue — sits alongside the tools above
-without changing anything about them. Opt in with `pip install
-"openosint[graph]"` (Python 3.10+) or `"openosint[graph-dedup]"` (adds
-same_as scoring, needs Python 3.11+), then use it via three MCP tools:
-`graph_export`, `graph_neighbors`, `graph_review_candidates`. See
-[docs/graph.md](docs/graph.md) for the full guide and a worked example.
+without changing anything about them. The store, the `/graph` page, the
+`/api/graph/*` routes and the `graph_neighbors` / `graph_review_candidates`
+MCP tools work in a plain `uvx openosint web` install, with no compiler and no
+extra. The `graph` extra (`pip install "openosint[graph]"`, builds PyICU) adds
+the real FollowTheMoney library: `graph_export` and `.ftm` export. The
+`graph-dedup` extra (Python 3.11+) adds same_as scoring. Without the extra,
+ids are produced by a vendored copy that a CI test proves byte-identical to
+FollowTheMoney's, so a `graph.db` is readable either way. Nothing in the web
+UI or the agent writes to this store: it is filled through the Python API
+(see [docs/graph.md](docs/graph.md) for the full guide and a worked example);
+the GRAPH tab in the main UI is a separate, client-side view of the current
+chat.
 
 The same workflow is shown end to end — including the `.ftm` export that
 passes `ftm validate` — in the terminal demo in
@@ -631,7 +638,7 @@ Your browser opens automatically; if it doesn't, open <http://127.0.0.1:8080/>. 
 | Keep the browser closed | `uvx openosint web --no-browser` |
 | Find your data | Graph database and session history live in `~/.openosint/` (`%USERPROFILE%\.openosint` on Windows). Move it with `OPENOSINT_HOME=/path`; `OPENOSINT_GRAPH_DB` still overrides just `graph.db`. |
 | Find reports | CLI and REPL reports are written to `./reports/` in the directory you ran `openosint` from. The web UI writes none. |
-| Use the entity graph view | Needs the `graph` extra, which builds [PyICU](https://pypi.org/project/PyICU/) and so needs libicu and a C++ compiler first (Python 3.11+). Ubuntu: `sudo apt install libicu-dev pkg-config g++`. macOS: `brew install icu4c pkg-config` and `export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig"`. Then `uvx --from "openosint[graph]" openosint web`. On Windows, or to skip the build, use [Docker](#docker), which includes it. |
+| Use the entity graph store | Works with plain `uvx openosint web`, no compiler needed: the `/graph` page, `/api/graph/*`, and the `graph_neighbors` / `graph_review_candidates` MCP tools. `graph_export` (.ftm) needs the `graph` extra, which builds [PyICU](https://pypi.org/project/PyICU/) and so needs libicu and a C++ compiler first (Ubuntu: `sudo apt install libicu-dev pkg-config g++`; macOS: `brew install icu4c pkg-config` and `export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig"`), then `uvx --from "openosint[graph]" openosint web`; or use [Docker](#docker), which includes it. The store starts empty: it is filled through the Python API, not by the UI. |
 
 ### Alternatives
 
@@ -672,7 +679,25 @@ If a binary is absent, the corresponding tool returns a descriptive error. All o
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your keys. `.env` is read from the
+**Easiest:** open the web UI and use Settings → *Save keys to server* (or the
+first-run panel). Keys are written to `config.env` in the data directory
+(`~/.openosint/config.env`, or `$OPENOSINT_HOME/config.env`), never inside the
+installed package, with user-only permissions (`0600`) where the OS supports it.
+Values are never logged or sent back to the browser; the UI only shows which keys
+are configured and where each value came from.
+
+Precedence, highest first:
+
+1. real environment variables (a saved value cannot override one; the UI says so)
+2. `config.env` in the data directory
+3. a legacy `.env` (the locations below)
+
+An existing `.env` keeps working. If the file at the package root (a source
+checkout or Docker image) is the one that would be loaded, its known settings
+are copied into `config.env` once, with a notice on stderr that names keys but
+never values; the old file is left in place and now has lower priority.
+
+For a file you manage yourself, copy `.env.example` to `.env` and fill in your keys. `.env` is read from the
 **directory you run `openosint` from** (searched upward, like `git` finds
 `.git`) — it does not need to be at any particular "project root", and a
 regular `pip install` works the same way as running from a source checkout.
@@ -692,6 +717,7 @@ itself — the app starts and every key-less tool works with zero configuration.
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
 | `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
+| `OPENOSINT_SETUP_TOKEN` | Web UI | Optional | Lets the browser save keys when it is not on loopback (Docker). Send as `X-Setup-Token`; the UI has a field for it. Unset = saving from a non-loopback browser is off. Failed attempts are throttled. |
 | `HIBP_API_KEY` | `search_breach` | Required for this tool | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
 | `IPINFO_TOKEN` | `search_ip` | Optional | Works without it; raises ipinfo.io rate limits |
 | `SHODAN_API_KEY` | `search_shodan` | Required for this tool | Shodan API — [get one](https://account.shodan.io) |
@@ -758,6 +784,8 @@ docker compose run --rm openosint email target@example.com --json
 ```
 
 `.env` is optional: with no keys the web UI still starts at <http://localhost:8080>. To provide keys today, list them under `environment:` in `docker-compose.yml` (or in a `.env` next to it), or put a `.env` in the data volume (`/data/.env`). Reports are persisted to `./reports/`; the graph database and session history live in the `openosint-data` volume (`/data` in the container, via `OPENOSINT_HOME`). The image includes the graph view.
+
+**Saving keys from the browser in Docker.** The browser reaches the container over the Docker network, not loopback, so the UI cannot save keys by default and says so (it shows the reason instead of failing silently). Either set the keys in your compose environment or `.env`, or set a token and enter it in the UI's *Save keys to server* panel: `OPENOSINT_SETUP_TOKEN=choose-a-long-random-string docker compose up`. Saved keys go to `/data/config.env` in the `openosint-data` volume and survive restarts. Wrong tokens are throttled.
 
 The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSINT_ALLOWED_HOSTS` defaults to `localhost,127.0.0.1` in the compose file; extend it if you reach the UI by another name). To reach it from other machines on purpose, run `OPENOSINT_BIND=0.0.0.0 docker compose up`: the instance then runs in restricted mode (it never spends keys held on the server). **Security note:** the UI's setup endpoint accepts and stores API keys, so only do this on a network and behind a firewall or reverse proxy you trust.
 

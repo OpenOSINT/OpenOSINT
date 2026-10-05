@@ -194,7 +194,8 @@ already-computed resolution rows, never imports nomenklatura itself, and
 simply reports an empty review queue if `run_crossref()` has never run.
 
 ```bash
-pip install 'openosint[graph]'         # mapping, store, export, neighbors — 3.10+
+# The store, neighbors and the review queue work without any extra (3.10+).
+pip install 'openosint[graph]'         # + FollowTheMoney itself: .ftm export (builds PyICU)
 pip install 'openosint[graph-dedup]'   # + same_as scoring & review — needs Python 3.11+
 ```
 

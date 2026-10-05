@@ -9,6 +9,26 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+> **Behavior changes**
+> - Keys saved from the web UI now go to `$OPENOSINT_HOME/config.env` (default `~/.openosint/config.env`, user-only permissions) instead of `<package root>/.env`. Precedence is real environment > `config.env` > legacy `.env`. A legacy package-root `.env` that would have been loaded is copied once, with a stderr notice (keys named, never values); the old file stays and keeps working.
+> - A key saved in the UI while a real environment variable of the same name is set is stored but reported as not active (the environment wins on every start).
+> - `/api/setup` now throttles repeated non-loopback attempts (HTTP 429) and its 403 explains the Docker case. The loopback / `OPENOSINT_SETUP_TOKEN` rules are unchanged.
+> - Tool count is 21 (`search_rdap`).
+
+### Added
+- Graph store without native builds: `openosint.graph.ftm_compat` re-exports followthemoney when it imports and otherwise uses vendored `make_entity_id` / `Statement` / property types that produce byte-identical ids (enforced by a CI parity job against the real library). The `/graph` page, `/api/graph/*`, `graph_neighbors` and `graph_review_candidates` now work on a plain `uvx openosint web`; `graph_export` and dedup still need the `graph` / `graph-dedup` extras and say so.
+- `search_rdap`: keyless RDAP domain registration lookup (registrar, dates, name servers, status) in the agent, MCP server and web UI.
+- `GET /api/setup/status`, a settings catalog, a first-run panel (dismissible; what works with no keys, one-step AI provider, Ollama as the free local option) and a key form that lists every supported key, grouped, with where to get each.
+- `OPENOSINT_SETUP_TOKEN` is passed through `docker-compose.yml`; the UI has a token field.
+- CI: vendored-id parity job (`REQUIRE_FTM=1`, fails instead of skipping), key-survives-restart check on the `uvx` path, and Docker checks for the blocked-setup message and the token path.
+
+### Fixed
+- "Save to server" in the web UI did nothing: it iterated `this.apiKeys`, which was never defined. A 403 now shows the server's explanation instead of "Save failed".
+- Every credentialed tool now returns one structured message when its key is missing (`Scan error` line, `[key_required] VAR, VAR`, a link per key, where to put it) and names all missing variables at once (Censys ID+secret, Bright Data key+zone). Sponsor and referral links carry UTM parameters.
+- The keyless rate limiter now covers `search_github`, `search_email`, `search_username` and `search_domain`, and also guards `/api/stream/{tool}`, which bypassed it.
+- The web UI reported holehe/sherlock/sublist3r as unavailable when installed next to OpenOSINT (the `uvx` case) because it searched only `PATH`; it now uses the same lookup as the tools. Missing-binary messages give the exact `uv tool install` command.
+- Tests no longer read or write the developer's real `~/.openosint`.
+
 ## [2.30.0] — 2026-10-01
 
 One-command install (`uvx openosint web`), Docker fixes, and CI that now runs on Ubuntu, macOS and Windows.
