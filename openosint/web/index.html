@@ -185,6 +185,70 @@
       </button>
     </div>
 
+    <!-- LOCAL MODE (primary): keys are saved on this computer, through /api/setup, into the
+         data directory. The browser-only fields below become a secondary option. -->
+    <div x-show="saveToComputer" x-cloak data-testid="save-to-computer" class="mb-4">
+      <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">API keys</p>
+      <p class="text-muted text-xs leading-relaxed mb-3" data-testid="save-location-copy">
+        Saved on this computer in
+        <span class="font-mono text-secondary break-all" x-text="setupStatus?.config_path || 'the OpenOSINT data directory'"></span>,
+        readable only by you. Survives restarts. A real environment variable of the same name takes precedence.
+      </p>
+      <!-- This browser cannot save (typically Docker): say why, offer the token path. -->
+      <div x-show="setupStatus && !setupStatus.can_save" x-cloak
+           class="border border-app rounded-md p-3 space-y-2 mb-3" data-testid="setup-forbidden">
+        <p class="text-xs text-warning leading-relaxed" x-text="setupStatus?.forbidden_message"></p>
+        <label class="text-secondary text-xs block">Setup token (<span class="font-mono">OPENOSINT_SETUP_TOKEN</span>)</label>
+        <input type="password" x-model="setupToken" autocomplete="off" placeholder="Only if the server has one set"
+               class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
+      </div>
+      <div class="space-y-4" data-testid="server-keys">
+        <template x-for="g in setupGroups" :key="g.id">
+          <div class="space-y-3">
+            <p class="text-xs font-medium text-muted uppercase tracking-wider" x-text="g.title"></p>
+            <template x-for="k in g.fields" :key="k.key">
+              <div>
+                <div class="flex items-center justify-between mb-1 gap-2">
+                  <label class="text-secondary text-xs" x-text="k.label"></label>
+                  <a x-show="k.url" :href="k.url" target="_blank"
+                     :rel="(k.key === 'IP2LOCATION_API_KEY' || k.key.startsWith('BRIGHTDATA')) ? 'noopener sponsored' : 'noopener'"
+                     class="text-accent-blue hover:underline text-xs flex-none">Get a key ↗</a>
+                </div>
+                <input :type="k.secret ? 'password' : 'text'"
+                       x-model="setupData[k.key]"
+                       autocomplete="off"
+                       :placeholder="k.configured ? (k.secret ? '••••••••  configured — type to replace' : 'configured — type to replace') : k.key"
+                       class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
+                <p x-show="k.configured && !k.shadowed" class="text-accent text-xs mt-1" data-testid="configured-badge"
+                   x-text="'● configured (' + (k.source === 'config' ? 'saved on this computer' : k.source === 'environment' ? 'environment variable' : 'legacy .env file') + ')'"></p>
+                <p x-show="k.shadowed" class="text-warning text-xs mt-1" data-testid="shadowed-badge">
+                  ⚠ A saved value exists, but an environment variable of the same name overrides it. Unset the variable and restart to use the saved one.</p>
+                <p x-show="k.note" class="text-muted text-xs mt-1" x-text="k.note"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div class="flex items-center gap-3">
+          <button @click="saveApiKeys()" :disabled="setupBusy" data-testid="save-to-computer-button"
+                  class="bg-accent hover:bg-accent-80 text-bg rounded-md px-4 py-2 text-xs font-medium transition-colors disabled:opacity-50">
+            Save on this computer
+          </button>
+          <span x-show="setupMsg" x-text="setupMsg"
+                :class="setupOk ? 'text-accent' : 'text-error'"
+                class="text-xs font-mono break-words min-w-0"></span>
+        </div>
+      </div>
+      <button @click="showSessionOnly = !showSessionOnly" data-testid="session-only-toggle"
+              class="flex items-center gap-1.5 text-muted hover:text-secondary text-xs mt-5 transition-colors">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+             :class="showSessionOnly ? 'rotate-180' : ''" class="transition-transform"><polyline points="6 9 12 15 18 9"/></svg>
+        Use only for this browser session (not saved)
+      </button>
+    </div>
+
+    <!-- Browser-only keys (sessionStorage). The default on the public demo; secondary on a local install. -->
+    <div x-show="!saveToComputer || showSessionOnly" x-cloak data-testid="browser-only-keys"
+         :class="saveToComputer ? 'mt-3 pt-3 border-t border-app' : ''">
     <!-- LLM Provider (BYOK — stored in sessionStorage) -->
     <p class="text-xs font-medium text-muted uppercase tracking-wider mb-3">LLM Provider</p>
     <div class="flex gap-2 mb-4">
@@ -320,62 +384,6 @@
           </template>
         </div>
       </template>
-    </div>
-
-    <!-- Server-side key save (self-hosters). Fields come from /api/setup/status. -->
-    <div x-show="serverSideFallback">
-    <button @click="showAdvancedKeys = !showAdvancedKeys"
-            class="flex items-center gap-1.5 text-muted hover:text-secondary text-xs mt-4 transition-colors">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-           :class="showAdvancedKeys ? 'rotate-180' : ''"
-           class="transition-transform">
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>
-      Save keys to server (self-hosted only)
-    </button>
-    <div x-show="showAdvancedKeys" class="mt-3 space-y-4" data-testid="server-keys">
-      <p class="text-muted text-xs leading-relaxed">
-        Saved to <span class="font-mono text-secondary" x-text="setupStatus?.config_path || 'the server data directory'"></span>
-        with user-only permissions, never inside the app folder. A real environment variable of the same name takes precedence.
-      </p>
-      <!-- This browser cannot save (typically Docker): say why, offer the token path. -->
-      <div x-show="setupStatus && !setupStatus.can_save" x-cloak
-           class="border border-app rounded-md p-3 space-y-2" data-testid="setup-forbidden">
-        <p class="text-xs text-warning leading-relaxed" x-text="setupStatus?.forbidden_message"></p>
-        <label class="text-secondary text-xs block">Setup token (<span class="font-mono">OPENOSINT_SETUP_TOKEN</span>)</label>
-        <input type="password" x-model="setupToken" autocomplete="off" placeholder="Only if the server has one set"
-               class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
-      </div>
-      <template x-for="g in setupGroups" :key="g.id">
-        <div class="space-y-3">
-          <p class="text-xs font-medium text-muted uppercase tracking-wider" x-text="g.title"></p>
-          <template x-for="k in g.fields" :key="k.key">
-            <div>
-              <div class="flex items-center justify-between mb-1">
-                <label class="text-secondary text-xs" x-text="k.label"></label>
-                <a :href="k.url" target="_blank"
-                   :rel="(k.key === 'IP2LOCATION_API_KEY' || k.key.startsWith('BRIGHTDATA')) ? 'noopener sponsored' : 'noopener'"
-                   class="text-accent-blue hover:underline text-xs">Get a key ↗</a>
-              </div>
-              <input :type="k.secret ? 'password' : 'text'"
-                     x-model="setupData[k.key]"
-                     autocomplete="off"
-                     :placeholder="k.configured ? 'configured (' + k.source + ') — enter a value to replace' : k.key"
-                     class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
-              <p x-show="k.note" class="text-muted text-xs mt-1" x-text="k.note"></p>
-            </div>
-          </template>
-        </div>
-      </template>
-      <div class="flex items-center gap-3">
-        <button @click="saveApiKeys()" :disabled="setupBusy"
-                class="bg-accent hover:bg-accent-80 text-bg rounded-md px-4 py-2 text-xs font-medium transition-colors disabled:opacity-50">
-          Save to server
-        </button>
-        <span x-show="setupMsg" x-text="setupMsg"
-              :class="setupOk ? 'text-accent' : 'text-error'"
-              class="text-xs font-mono break-words min-w-0"></span>
-      </div>
     </div>
     </div>
 
@@ -564,7 +572,7 @@
             Not installed here: <span class="font-mono" x-text="toolSummary.needInstall.join(', ')"></span>
             — Settings shows the install command for each.</li>
         </ul>
-        <p class="text-secondary text-xs mt-3 mb-1.5">To chat with the agent, connect an AI provider — one step:</p>
+        <p class="text-secondary text-xs mt-3 mb-1.5">To chat with the agent, connect an AI provider — one step (saved on this computer, <button @click="showSettings = true" class="text-accent-blue hover:underline">all keys in Settings</button>):</p>
         <div x-show="!setupStatus || setupStatus.can_save" class="flex gap-2">
           <input type="password" x-model="firstRunKey" autocomplete="off" placeholder="Anthropic API key (sk-ant-…)"
                  @keydown.enter="saveFirstRunKey()"
@@ -579,9 +587,9 @@
         <p class="text-muted text-xs mt-3 leading-relaxed">
           No key? <a href="https://ollama.com" target="_blank" rel="noopener" class="text-accent-blue hover:underline">Ollama</a>
           runs models on your own machine for free —
-          <button @click="showSettings = true; byok.provider = 'ollama'; saveByok()"
+          <button @click="showSettings = true; showSessionOnly = true; byok.provider = 'ollama'; saveByok()"
                   class="text-accent-blue hover:underline">choose Ollama in Settings</button>.
-          Or <button @click="showSettings = true" class="text-accent-blue hover:underline">use a key from your browser only</button>.
+          Or <button @click="showSettings = true; showSessionOnly = true" class="text-accent-blue hover:underline">use a key for this browser session only</button>.
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
@@ -873,7 +881,8 @@ document.addEventListener('alpine:init', () => {
     isStreaming: false,
     aiBackend: 'none',
     showSettings: false,
-    showAdvancedKeys: false,
+    showSessionOnly: false,
+    clientReady: false, // setup-client.js module loaded
     setupMsg: '',
     setupOk: false,
     ollamaTestResult: '',
@@ -960,6 +969,7 @@ document.addEventListener('alpine:init', () => {
       // Guard for ES module race (amendment 5): modules may not be ready yet.
       const _onModulesReady = () => {
         this.agentLoopReady = true;
+        this.clientReady = !!window._setupClient;
         this.fetchSetupStatus();
         const container = document.getElementById('graph-container');
         if (container && window._graphFns) {
@@ -1503,13 +1513,24 @@ document.addEventListener('alpine:init', () => {
     },
 
     // Server-side key save
+    // Local install (not the public demo, not a restricted request): keys are saved on this
+    // computer by default. The public demo keeps browser-only BYOK.
+    get saveToComputer() {
+      return this.serverSideFallback && !(this.setupStatus && this.setupStatus.restricted);
+    },
+
+    // Getters read reactive state BEFORE checking the module: Alpine only tracks what a
+    // getter touches, so returning early on a not-yet-loaded module would leave it
+    // subscribed to nothing and it would never re-render once the data arrives.
     get setupGroups() {
-      return window._setupClient ? window._setupClient.groupFields(this.setupStatus?.keys) : [];
+      const keys = this.setupStatus?.keys;
+      return this.clientReady ? window._setupClient.groupFields(keys) : [];
     },
 
     get toolSummary() {
-      return window._setupClient
-        ? window._setupClient.summarizeTools(this.tools)
+      const tools = this.tools;
+      return this.clientReady
+        ? window._setupClient.summarizeTools(tools)
         : { working: [], needKey: [], needInstall: [] };
     },
 
