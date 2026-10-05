@@ -244,6 +244,19 @@ def _format_gdelt_results(feature_collection: dict, query: str, timespan: int) -
     return "\n".join(lines)
 
 
+SERVICE_UNAVAILABLE_MARKER = "[service_unavailable] search_gdelt_geo"
+
+
+def service_unavailable_message(reason: str) -> str:
+    """The one result returned when GDELT GEO fails; web/static/geo-extractor.js matches the marker."""
+    return (
+        "Scan error: GDELT GEO service unavailable, try again later.\n"
+        f"{SERVICE_UNAVAILABLE_MARKER}\n"
+        f"Reason: {reason}\n"
+        "Other tools are unaffected; the news layer on the globe stays empty until GDELT recovers."
+    )
+
+
 async def run_gdelt_geo_osint(
     query: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,
@@ -294,8 +307,11 @@ async def run_gdelt_geo_osint(
         logger.info("GDELT geo search complete for: %s", query)
         return result
     except OSINTError as exc:
+        # Covers timeouts, network errors and non-200s (ToolExecutionError is an
+        # OSINTError): GDELT GEO is the least reliable upstream we use, so every failure
+        # becomes one structured, human-readable result the UI can recognise.
         logger.warning("GDELT geo search failed: %s", exc)
-        return f"Scan error: {exc}"
+        return service_unavailable_message(str(exc))
     except Exception as exc:
         logger.exception("Unexpected error during GDELT geo search.")
         return f"Internal error: {exc}"

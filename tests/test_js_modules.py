@@ -14,9 +14,10 @@ INDEX = (ROOT / "openosint" / "web" / "index.html").read_text(encoding="utf-8")
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_setup_client_unit_tests_pass():
+@pytest.mark.parametrize("script", ["test_setup_client.mjs", "test_geo_status.mjs"])
+def test_node_unit_tests_pass(script):
     result = subprocess.run(
-        ["node", str(ROOT / "tests" / "test_setup_client.mjs")], capture_output=True, text=True, timeout=60
+        ["node", str(ROOT / "tests" / script)], capture_output=True, text=True, timeout=60
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
@@ -55,3 +56,10 @@ def test_first_run_panel_is_dismissible_and_mentions_ollama():
     assert 'data-testid="first-run"' in INDEX
     assert "dismissFirstRun()" in INDEX
     assert "ollama.com" in INDEX
+
+
+def test_globe_shows_a_notice_when_the_news_service_is_down():
+    assert 'data-testid="news-unavailable"' in INDEX
+    assert 'x-show="newsUnavailable"' in INDEX
+    assert "gdeltServiceStatus(tool, output)" in INDEX
+    assert "newsUnavailable: false" in INDEX

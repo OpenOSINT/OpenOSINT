@@ -90,11 +90,37 @@ def test_statement_with_stored_id_keeps_it():
     assert compat._VendoredStatement(**_statement_kwargs(id=stored)).id == stored
 
 
-def test_prop_type_table_matches_the_real_model():
+def test_prop_type_table_agrees_with_the_real_model():
+    # A newer followthemoney may ADD properties the table lacks; that is harmless (the
+    # mapping layer only emits the ones below). What must never happen is a disagreement.
     assert set(PROP_TYPES) == set(compat.VENDORED_SCHEMAS)
     for schema_name, props in PROP_TYPES.items():
         schema = model.get(schema_name)
-        assert props == {p: schema.get(p).type.name for p in schema.properties}
+        for prop, prop_type in props.items():
+            assert schema.get(prop) is not None, f"{schema_name}.{prop} no longer exists in followthemoney"
+            assert schema.get(prop).type.name == prop_type, f"{schema_name}.{prop} changed type"
+
+
+def test_every_property_the_mapping_layer_emits_is_in_the_table():
+    from datetime import datetime, timezone
+
+    from openosint.correlation import EntityType, make_entity
+    from openosint.graph.mapping import map_breach, map_github, map_whois
+
+    now = datetime(2026, 8, 25, tzinfo=timezone.utc)
+    github = "[GitHub] Login: octocat\n[GitHub] Name: The Octocat\n[GitHub] Company: @GitHub\n[GitHub] Email (profile): o@example.com\n"
+    whois = "WHOIS results for 'example.com':\n\n[+] Org: Example Corp\n[+] Registrant: Jane Doe\n"
+    breach = "Found in 1 breach(es) for 'jane@example.com':\n\n[+] Adobe (2013-10-04) — leaked: Emails, Passwords\n"
+    results = [
+        map_github(github, make_entity(EntityType.USERNAME, "octocat", 1.0), run_id="r", collected_at=now),
+        map_whois(whois, make_entity(EntityType.DOMAIN, "example.com", 1.0), run_id="r", collected_at=now),
+        map_breach(breach, make_entity(EntityType.EMAIL, "jane@example.com", 1.0), run_id="r", collected_at=now),
+    ]
+    emitted = {(s.schema, s.prop) for r in results for s in r.statements}
+
+    assert {s for s, _ in emitted} >= {"UserAccount", "Person", "LegalEntity"}, emitted
+    missing = {(schema, prop) for schema, prop in emitted if prop not in PROP_TYPES[schema]}
+    assert not missing, f"mapping emits properties missing from ftm_prop_types.py: {missing}"
 
 
 def test_vendored_prop_type_matches_real_for_every_table_entry():

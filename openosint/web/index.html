@@ -698,6 +698,11 @@
        class="absolute top-2 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
     Basemap imagery unavailable — points remain usable below.
   </div>
+  <!-- GDELT GEO is down: say so instead of showing an empty news layer with no explanation. -->
+  <div x-show="newsUnavailable" x-cloak data-testid="news-unavailable"
+       class="absolute top-10 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
+    News layer unavailable — the GDELT service is not responding. Try again later.
+  </div>
   <!-- Pivot popover (shown on point tap) -->
   <div x-show="globePivotFeature" x-cloak
        class="absolute bottom-4 right-4 bg-surface border border-app rounded-lg shadow-xl p-3 z-20 w-56 text-xs c-fadein">
@@ -889,6 +894,7 @@ document.addEventListener('alpine:init', () => {
     graphPivotNode: null,
     globePivotFeature: null,
     basemapUnavailable: false,
+    newsUnavailable: false,
     currentTarget: '',
 
     // Gate / notice bar state (initialized from localStorage in init())
@@ -1420,6 +1426,8 @@ document.addEventListener('alpine:init', () => {
     // already the full FeatureCollection for that query); every other tool
     // with geo output accumulates onto agent-findings one point at a time.
     _pushGeoFeatures(tool, target, output) {
+      const down = window._geoFns?.gdeltServiceStatus(tool, output);
+      if (down !== null && down !== undefined) this.newsUnavailable = down;
       if (!window._geoFns || !window._globeFns || !target) return;
       const features = window._geoFns.extractGeoFeatures(tool, target, output || '');
       if (!features.length) return;
@@ -1435,6 +1443,7 @@ document.addEventListener('alpine:init', () => {
       this.messages = []; this.chatHistory = [];
       this.hasGraphData = false; this.graphNodeCapHit = false;
       this.graphPivotNode = null; this.globePivotFeature = null; this.currentTarget = '';
+      this.newsUnavailable = false;
       if (window._graphFns) window._graphFns.clearGraph();
       if (window._globeFns) {
         window._globeFns.clearFindings();
@@ -1720,7 +1729,7 @@ document.addEventListener('alpine:init', () => {
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';
   import { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox } from '/static/graph-renderer.js';
   import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo } from '/static/globe-renderer.js';
-  import { extractGeoFeatures } from '/static/geo-extractor.js';
+  import { extractGeoFeatures, gdeltServiceStatus } from '/static/geo-extractor.js';
   import { safeHttpUrl } from '/static/url-safety.js';
   import * as setupClient from '/static/setup-client.js';
   window._runAgentLoop    = runAgentLoop;
@@ -1728,7 +1737,7 @@ document.addEventListener('alpine:init', () => {
   window._extractEntities = extractEntities;
   window._graphFns        = { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox };
   window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo };
-  window._geoFns          = { extractGeoFeatures };
+  window._geoFns          = { extractGeoFeatures, gdeltServiceStatus };
   window._urlSafety       = { safeHttpUrl };
   window._setupClient     = setupClient;
   window._agentLoopReady  = true;
