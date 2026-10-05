@@ -67,6 +67,7 @@ from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
 from openosint.tools.search_phone import run_phone_osint
+from openosint.tools.search_rdap import run_rdap_osint
 from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
@@ -289,6 +290,7 @@ _KEYLESS_TOOLS: frozenset[str] = frozenset(
         "generate_dorks",
         "search_ip",
         "search_paste",
+        "search_rdap",
         "search_gdelt_geo",
         "search_github",
         "search_email",
@@ -566,6 +568,17 @@ _TOOL_CATALOG: list[dict] = [
         "env_hints": {"ABUSEIPDB_API_KEY": "abuseipdb.com/account/api"},
     },
     {
+        "name": "search_rdap",
+        "description": "Structured domain registration data (registrar, dates, name servers) via RDAP.",
+        "input_label": "Domain",
+        "input_placeholder": "example.com",
+        "category": "Network",
+        "icon": "🗂️",
+        "tool_type": "A",
+        "requires_binary": [],
+        "requires_env": [],
+    },
+    {
         "name": "search_gdelt_geo",
         "description": "Search worldwide geolocated news coverage via the GDELT GEO 2.0 API.",
         "input_label": "Keywords",
@@ -736,6 +749,7 @@ _RUNNERS: dict[str, object] = {
         v, timeout_seconds=t, api_key=(keys or {}).get("IP2LOCATION_API_KEY")
     ),
     "search_dns": lambda v, t, keys=None: run_dns_osint(v, timeout_seconds=t),
+    "search_rdap": lambda v, t, keys=None: run_rdap_osint(v, timeout_seconds=t),
     "search_gdelt_geo": lambda v, t, keys=None: run_gdelt_geo_osint(v, timeout_seconds=t),
     "search_abuseipdb": lambda v, t, keys=None: run_abuseipdb_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("ABUSEIPDB_API_KEY")

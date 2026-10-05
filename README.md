@@ -3,7 +3,7 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 20 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
+  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 21 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
   <p><em>The AI issues hard-stop tool calls; your code executes the real binary — hallucinated findings are structurally impossible.</em></p>
 </div>
@@ -133,9 +133,9 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 20 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
+| 21 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | All 20 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
+| Native MCP server | All 21 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -167,6 +167,7 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | `search_abuseipdb` | AbuseIPDB v2 API | IP abuse reputation: confidence score, reports, country, ISP |
 | `search_github` | GitHub REST API | Profile, repos, commit-discovered emails, username/keyword search |
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
+| `search_rdap` | RDAP (IANA bootstrap, keyless) | Registrar, registration/expiry dates, name servers, status; registrant contacts redacted by policy |
 | `search_gdelt_geo` | GDELT GEO 2.0 API | Worldwide geolocated news coverage, GeoJSON output |
 | `search_dorks_live` | Bright Data SERP API | Live Google search results for dork queries (title, URL, snippet) |
 | `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown |
@@ -368,6 +369,16 @@ openosint dns example.com
 [DNS] SPF: v=spf1 include:_spf.google.com ~all
 ```
 
+### search_rdap
+
+Looks up a domain's registrar, registration and expiry dates, name servers and status codes over [RDAP](https://about.rdap.org), the machine-readable successor to WHOIS. Keyless: it asks the IANA bootstrap registry which server owns the TLD, then queries that server. Registrant contact details are redacted by registry policy and are never returned.
+
+```text
+[+] Registrar: RESERVED-Internet Assigned Numbers Authority
+[+] Registered: 1995-08-14T04:00:00Z
+[+] Name servers: elliott.ns.cloudflare.com, hera.ns.cloudflare.com
+```
+
 ### search_dorks_live
 
 Executes live Google dork queries through the [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call. Requires `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE`.
@@ -541,7 +552,7 @@ Full per-tool reference, CLI flags, and configuration options at [openosint.tech
 
 ### MCP Server
 
-Expose all 20 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 20 tools during conversations.
+Expose all 21 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 21 tools during conversations.
 
 **Claude Code:**
 
@@ -785,7 +796,7 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
   currently returns. A negative result (no breach found, no accounts found)
   means the source didn't report a match — not that no exposure exists.
 - **Most tools depend on third-party services you don't control.** Nine of
-  the 20 tools hard-require an API key and are subject to that provider's
+  the 21 tools hard-require an API key and are subject to that provider's
   uptime, rate limits, and pricing (Shodan, VirusTotal, Censys, AbuseIPDB,
   IP2Location, HaveIBeenPwned, and the three Bright Data–backed tools). Free
   tiers are small; heavy use requires a paid plan with the provider, not with
@@ -796,7 +807,7 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
 - **The entity graph module (`openosint[graph]`) is additive, not
   authoritative.** `same_as` links are scored candidates for human review,
   not verified identity matches — see [docs/graph.md](docs/graph.md).
-- **The AI agent can only call the 20 tools above.** It cannot browse the
+- **The AI agent can only call the 21 tools above.** It cannot browse the
   open web freely, run arbitrary code, or invent data — every finding comes
   from a real tool call, but the agent's tool selection can still be wrong
   or incomplete for a given target.
