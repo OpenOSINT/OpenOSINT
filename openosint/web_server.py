@@ -73,9 +73,12 @@ from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 from openosint import __version__ as _VERSION
+from openosint.config_store import config_path, validate_pair, write_config
+from openosint.env import value_source
 from openosint.paths import home_dir
 from openosint.regexes import EMAIL_FIND_RE
 from openosint.request_guard import RequestGuardMiddleware
+from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -357,6 +360,22 @@ def _setup_request_is_authorized(request: "Request") -> bool:
         return False
     supplied = request.headers.get("X-Setup-Token", "")
     return secrets.compare_digest(supplied, expected)
+
+
+_SETUP_FORBIDDEN_MESSAGE = (
+    "Saving keys from the browser is only allowed from localhost, or with the setup token "
+    "(set OPENOSINT_SETUP_TOKEN on the server and enter it here). In Docker the browser "
+    "does not reach the server over loopback: set the keys in your compose environment or "
+    ".env file, or set OPENOSINT_SETUP_TOKEN."
+)
+_SETUP_RL_MAX = 10
+_SETUP_RL_WINDOW_SECS = 60.0
+_SETUP_ATTEMPTS: dict[str, "_deque[float]"] = {}
+
+
+def _check_setup_attempt_limit(ip: str) -> bool:
+    """Throttle non-loopback /api/setup callers so the token cannot be brute-forced."""
+    return _sliding_window_allow(_SETUP_ATTEMPTS, ip, _SETUP_RL_MAX, _SETUP_RL_WINDOW_SECS, _MAX_IP_BUCKETS)
 
 
 def _get_client_ip(request: "Request") -> str:
@@ -779,31 +798,13 @@ def _check_available(meta: dict) -> tuple[bool, str | None]:
     return True, None
 
 
-_KNOWN_ENV_KEYS = [
-    "ANTHROPIC_API_KEY",
-    "HIBP_API_KEY",
-    "IPINFO_TOKEN",
-    "IP2LOCATION_API_KEY",
-    "CENSYS_API_ID",
-    "CENSYS_SECRET",
-    "SHODAN_API_KEY",
-    "VIRUSTOTAL_API_KEY",
-    "ABUSEIPDB_API_KEY",
-    "GITHUB_TOKEN",
-    "BRIGHTDATA_API_KEY",
-    "BRIGHTDATA_SERP_ZONE",
-    "BRIGHTDATA_UNLOCKER_ZONE",
-]
+_KNOWN_ENV_KEYS = sorted(SETTING_NAMES)
 
-# Keys /api/setup is allowed to write. Anything else in the request body is
-# dropped — GHSA-cqr4-hcfp-m6m4 let a caller set arbitrary env vars (e.g.
-# OPENAI_BASE_URL) this way, redirecting outbound chat traffic and its auth
-# header to attacker infra.
-_SETUP_ALLOWED_KEYS: frozenset[str] = frozenset(_KNOWN_ENV_KEYS) | {
-    "OPENAI_BASE_URL",
-    "OPENAI_MODEL",
-    "OPENAI_API_KEY",
-}
+# Keys /api/setup is allowed to write (the catalog's settings plus the OpenAI-
+# compatible trio). Anything else in the request body is dropped —
+# GHSA-cqr4-hcfp-m6m4 let a caller set arbitrary env vars (e.g. OPENAI_BASE_URL)
+# this way, redirecting outbound chat traffic and its auth header to attacker infra.
+_SETUP_ALLOWED_KEYS: frozenset[str] = SAVEABLE_NAMES
 
 # Keys whose value must be a well-formed http(s) URL — prevents javascript:/
 # file:/gopher: schemes or bare hostnames sneaking into a *_BASE_URL var that
@@ -817,7 +818,7 @@ def _is_valid_base_url(value: str) -> bool:
 
 
 def _is_setup_complete() -> bool:
-    if (_ROOT / ".env").exists():
+    if config_path().exists() or (_ROOT / ".env").exists():
         return True
     return any(os.environ.get(k, "").strip() for k in _KNOWN_ENV_KEYS)
 
@@ -2085,14 +2086,17 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     @app.post("/api/setup")
     async def setup(request: Request):
         # GHSA-cqr4-hcfp-m6m4: this endpoint writes to live process env vars
-        # and .env, so it must never be reachable from the network. Loopback
-        # callers are always allowed; anyone else needs OPENOSINT_SETUP_TOKEN.
+        # and the config file, so it must never be reachable from the network.
+        # Loopback callers are always allowed; anyone else needs OPENOSINT_SETUP_TOKEN.
+        client_ip = request.client.host if request.client else "unknown"
+        if not _is_loopback_request(request) and not _check_setup_attempt_limit(client_ip):
+            return JSONResponse(
+                {"status": "error", "message": "Too many setup attempts. Wait a minute and retry."},
+                status_code=429,
+            )
         if not _setup_request_is_authorized(request):
             return JSONResponse(
-                {
-                    "status": "error",
-                    "message": "Setup is only allowed from localhost, or with a valid X-Setup-Token.",
-                },
+                {"status": "error", "message": _SETUP_FORBIDDEN_MESSAGE},
                 status_code=403,
             )
 
@@ -2102,17 +2106,14 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                 status_code=415,
             )
 
-        body: dict = await request.json()
-        env_path = _ROOT / ".env"
-        existing: dict[str, str] = {}
-        if env_path.exists():
-            for raw in env_path.read_text().splitlines():
-                line = raw.strip()
-                if "=" in line and not line.startswith("#"):
-                    k, _, v = line.partition("=")
-                    existing[k.strip()] = v.strip()
+        body = await request.json()
+        if not isinstance(body, dict):
+            return JSONResponse(
+                {"status": "error", "message": "Body must be a JSON object of KEY: value pairs."},
+                status_code=400,
+            )
 
-        applied: list[str] = []
+        accepted: dict[str, str] = {}
         rejected: list[str] = []
         for k, v in body.items():
             key = str(k).strip()
@@ -2125,12 +2126,62 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
             if key in _SETUP_URL_KEYS and not _is_valid_base_url(v_str):
                 rejected.append(key)
                 continue
-            existing[key] = v_str
-            os.environ[key] = v_str
-            applied.append(key)
+            try:
+                validate_pair(key, v_str)
+            except ValueError:
+                rejected.append(key)
+                continue
+            accepted[key] = v_str
 
-        env_path.write_text("\n".join(f"{k}={v}" for k, v in existing.items()) + "\n")
-        return {"status": "ok", "applied": applied, "rejected": rejected}
+        # A real environment variable outranks the config file on every future start,
+        # so saving over one would only look like it worked until the next restart.
+        shadowed = sorted(k for k in accepted if value_source(k) == "environment")
+        try:
+            if accepted:
+                write_config(accepted)
+        except OSError as exc:
+            logging.getLogger(__name__).error("Could not write %s: %s", config_path(), exc)
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "message": f"Could not save to {config_path()}: {exc.strerror or 'write failed'}.",
+                },
+                status_code=500,
+            )
+        for key, value in accepted.items():
+            if key not in shadowed:
+                os.environ[key] = value
+        applied = [k for k in accepted if k not in shadowed]
+        return {
+            "status": "ok",
+            "applied": applied,
+            "rejected": rejected,
+            "shadowed_by_environment": shadowed,
+            "saved_to": str(config_path()),
+        }
+
+    # ------------------------------------------------------------------
+    # GET /api/setup/status  — the key form's field list + what is configured
+    # ------------------------------------------------------------------
+
+    @app.get("/api/setup/status")
+    async def setup_status(request: Request):
+        restricted, _ = _request_restriction(request)
+        can_save = _is_loopback_request(request)
+        fields = public_catalog()
+        if not restricted:
+            for field in fields:
+                source = value_source(field["key"])
+                field["configured"] = source is not None
+                field["source"] = source
+        return {
+            "status": "ok",
+            "can_save": can_save,
+            "restricted": restricted,
+            "forbidden_message": None if can_save else _SETUP_FORBIDDEN_MESSAGE,
+            "config_path": str(config_path()) if can_save else None,
+            "keys": fields,
+        }
 
     # ------------------------------------------------------------------
     # POST /api/demo/chat  — pre-scripted demo stream, no API key needed
