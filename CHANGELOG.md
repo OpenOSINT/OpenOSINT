@@ -22,6 +22,9 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `OPENOSINT_SETUP_TOKEN` is passed through `docker-compose.yml`; the UI has a token field.
 - CI: vendored-id parity job (`REQUIRE_FTM=1`, fails instead of skipping), key-survives-restart check on the `uvx` path, and Docker checks for the blocked-setup message and the token path.
 
+### Changed
+- Web UI Settings on a local install now leads with "Save on this computer" (all keys, grouped, including the OpenAI-compatible endpoint), which writes through `/api/setup` to `config.env`; the browser-only provider and tool-key fields moved behind "Use only for this browser session (not saved)". Each key shows whether it is configured (never its value) and whether an environment variable overrides a saved value. The public demo keeps browser-only keys and its copy unchanged.
+
 ### Fixed
 - "Save to server" in the web UI did nothing: it iterated `this.apiKeys`, which was never defined. A 403 now shows the server's explanation instead of "Save failed".
 - Every credentialed tool now returns one structured message when its key is missing (`Scan error` line, `[key_required] VAR, VAR`, a link per key, where to put it) and names all missing variables at once (Censys ID+secret, Bright Data key+zone). Sponsor and referral links carry UTM parameters.

@@ -679,8 +679,10 @@ If a binary is absent, the corresponding tool returns a descriptive error. All o
 
 ## Configuration
 
-**Easiest:** open the web UI and use Settings → *Save keys to server* (or the
-first-run panel). Keys are written to `config.env` in the data directory
+**Easiest:** open the web UI. On a local install, Settings saves your keys on this
+computer by default ("Save on this computer"), as does the first-run panel; "Use only
+for this browser session" is a secondary option that keeps a key in the tab only. On the
+public demo, keys stay in the browser. Keys are written to `config.env` in the data directory
 (`~/.openosint/config.env`, or `$OPENOSINT_HOME/config.env`), never inside the
 installed package, with user-only permissions (`0600`) where the OS supports it.
 Values are never logged or sent back to the browser; the UI only shows which keys
