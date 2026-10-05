@@ -24,7 +24,6 @@ import logging
 import os
 import re
 import secrets
-import shutil
 import socket
 import sys
 import time
@@ -79,6 +78,7 @@ from openosint.paths import home_dir
 from openosint.regexes import EMAIL_FIND_RE
 from openosint.request_guard import RequestGuardMiddleware
 from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
+from openosint.utils import find_binary
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -279,9 +279,22 @@ _MAX_IP_BUCKETS: int = int(os.getenv("RATE_LIMIT_MAX_IPS", "10000"))
 _RL_WINDOW_SECS: float = float(os.getenv("RATE_LIMIT_WINDOW", "60"))
 _RL_MAX_REQS: int = int(os.getenv("RATE_LIMIT_MAX", "30"))
 
-# Tools that need no API key and are therefore cheaply spammable
+# Tools that need no API key and are therefore cheaply spammable. The binary-backed
+# ones (holehe/sherlock/sublist3r) are the most expensive: each call fans out to
+# dozens of third-party sites or a subprocess.
 _KEYLESS_TOOLS: frozenset[str] = frozenset(
-    {"search_whois", "search_dns", "generate_dorks", "search_ip", "search_paste", "search_gdelt_geo"}
+    {
+        "search_whois",
+        "search_dns",
+        "generate_dorks",
+        "search_ip",
+        "search_paste",
+        "search_gdelt_geo",
+        "search_github",
+        "search_email",
+        "search_username",
+        "search_domain",
+    }
 )
 
 # ---------------------------------------------------------------------------
@@ -456,7 +469,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["holehe"],
         "requires_env": [],
-        "binary_hints": {"holehe": "pip install holehe"},
+        "binary_hints": {"holehe": "uv tool install holehe (or: pip install holehe)"},
     },
     {
         "name": "search_username",
@@ -468,7 +481,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sherlock"],
         "requires_env": [],
-        "binary_hints": {"sherlock": "pip install sherlock-project"},
+        "binary_hints": {"sherlock": "uv tool install sherlock-project (or: pip install sherlock-project)"},
     },
     {
         "name": "search_breach",
@@ -515,7 +528,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sublist3r"],
         "requires_env": [],
-        "binary_hints": {"sublist3r": "pip install sublist3r"},
+        "binary_hints": {"sublist3r": "uv tool install sublist3r (or: pip install sublist3r)"},
     },
     {
         "name": "search_ip2location",
@@ -787,9 +800,9 @@ _CLAUDE_TOOLS: list[dict] = [
 def _check_available(meta: dict) -> tuple[bool, str | None]:
     """Return (is_available, reason_if_not) for a tool."""
     for binary in meta.get("requires_binary", []):
-        if not shutil.which(binary):
+        if not find_binary(binary):
             hint = meta.get("binary_hints", {}).get(binary, f"install {binary}")
-            return False, f"{binary} not in PATH — {hint}"
+            return False, f"{binary} is not installed — {hint}"
     for key in meta.get("requires_env", []):
         if not os.environ.get(key, "").strip():
             hint = meta.get("env_hints", {}).get(key, "")
@@ -1880,6 +1893,14 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         # so every credentialed tool (and breach unconditionally) is blocked
         # here outright rather than gated. Use POST /api/tools/{tool}/run with
         # a caller-supplied key instead.
+        if tool_name in _KEYLESS_TOOLS and not _check_rate_limit(_get_client_ip(request)):
+
+            async def _limited() -> AsyncIterator[dict]:
+                yield {"data": json.dumps({"line": "Rate limit exceeded. Please wait before retrying.", "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_limited(), ping=15)
+
         restricted, restriction_reason = _request_restriction(request)
         _meta = next((m for m in _TOOL_CATALOG if m["name"] == tool_name), None)
         _needs_operator_key = bool(

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 _BINARY = "sublist3r"
 _DEFAULT_TIMEOUT = 120
-_INSTALL_HINT = "Install it with: pip install sublist3r"
+_INSTALL_HINT = "Install it with: uv tool install sublist3r (or: pip install sublist3r)"
 
 
 async def _run_sublist3r(domain: str, timeout_seconds: int) -> str:

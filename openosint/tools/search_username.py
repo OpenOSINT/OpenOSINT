@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 _BINARY = "sherlock"
 _DEFAULT_TIMEOUT = 180  # overall subprocess timeout for the CLI-invoking run_username_osint() below
-_INSTALL_HINT = "Install it with: pip install sherlock-project"
+_INSTALL_HINT = "Install it with: uv tool install sherlock-project (or: pip install sherlock-project)"
 _PER_SITE_TIMEOUT = "3"  # seconds per site, passed to sherlock --timeout (CLI path)
 
 # Per-HTTP-request timeout passed to sherlock's own sherlock() call (library path,
