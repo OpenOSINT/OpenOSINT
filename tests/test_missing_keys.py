@@ -73,8 +73,9 @@ def test_catalog_form_lists_the_ai_provider_first_and_every_key_has_a_link():
     fields = public_catalog()
 
     assert fields[0]["key"] == "ANTHROPIC_API_KEY"
-    assert all(f["url"].startswith("https://") for f in fields)
-    assert len(fields) == 13
+    assert all(f["url"].startswith("https://") for f in fields if f["url"])
+    assert all(f["url"] for f in fields if f["key"] not in {"OPENAI_BASE_URL", "OPENAI_MODEL", "OPENAI_API_KEY"})
+    assert len(fields) == 16
 
 
 def test_sponsor_and_referral_links_carry_utm_parameters():

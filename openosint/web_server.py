@@ -73,7 +73,7 @@ from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 from openosint import __version__ as _VERSION
-from openosint.config_store import config_path, validate_pair, write_config
+from openosint.config_store import config_path, read_config, validate_pair, write_config
 from openosint.env import mark_saved, value_source
 from openosint.paths import home_dir
 from openosint.regexes import EMAIL_FIND_RE
@@ -2206,10 +2206,14 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         can_save = _is_loopback_request(request)
         fields = public_catalog()
         if not restricted:
+            saved = set(read_config())  # names only; values never leave config_store
             for field in fields:
                 source = value_source(field["key"])
                 field["configured"] = source is not None
                 field["source"] = source
+                field["saved_in_config"] = field["key"] in saved
+                # Saved to config.env, but a real environment variable wins on every start.
+                field["shadowed"] = field["saved_in_config"] and source == "environment"
         return {
             "status": "ok",
             "can_save": can_save,

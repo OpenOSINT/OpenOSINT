@@ -139,6 +139,7 @@ class TestSaveToDataDirectory:
 
     async def test_every_catalog_key_is_saveable(self):
         payload = {s.key: f"value-{i}" for i, s in enumerate(SETTINGS)}
+        payload["OPENAI_BASE_URL"] = "http://localhost:4000/v1"  # validated as a URL
         async with client() as c:
             resp = await c.post("/api/setup", json=payload)
 
@@ -200,7 +201,7 @@ class TestSetupStatus:
         keys = body["keys"]
         assert {k["key"] for k in keys} == {s.key for s in SETTINGS}
         assert keys[0]["group"] == "ai"
-        assert all(k["url"].startswith("https://") for k in keys)
+        assert all(k["url"].startswith("https://") for k in keys if k["url"])
         assert [k["group"] for k in keys] == sorted((k["group"] for k in keys), key=lambda g: g != "ai")
 
     async def test_reports_configured_without_returning_values(self, monkeypatch):
@@ -237,3 +238,43 @@ class TestSetupStatus:
 
         assert body["restricted"] is True
         assert all("configured" not in k for k in body["keys"])
+
+
+class TestStatusFlagsForTheSettingsPanel:
+    async def test_a_saved_key_is_flagged_and_masked_values_never_returned(self):
+        async with client() as c:
+            await c.post("/api/setup", json={"SHODAN_API_KEY": "sk-secret-value"})
+            resp = await c.get("/api/setup/status")
+
+        by_key = {k["key"]: k for k in resp.json()["keys"]}
+        assert by_key["SHODAN_API_KEY"]["saved_in_config"] is True
+        assert by_key["SHODAN_API_KEY"]["shadowed"] is False
+        assert by_key["HIBP_API_KEY"]["saved_in_config"] is False
+        assert "sk-secret-value" not in resp.text
+
+    async def test_a_saved_key_overridden_by_a_real_env_var_is_reported_as_shadowed(self, monkeypatch):
+        monkeypatch.setenv("SHODAN_API_KEY", "from-real-env")
+        async with client() as c:
+            await c.post("/api/setup", json={"SHODAN_API_KEY": "from-ui"})
+            resp = await c.get("/api/setup/status")
+
+        entry = next(k for k in resp.json()["keys"] if k["key"] == "SHODAN_API_KEY")
+        assert entry["shadowed"] is True and entry["source"] == "environment"
+        assert "from-real-env" not in resp.text and "from-ui" not in resp.text
+
+    async def test_openai_compatible_settings_are_in_the_form_and_saveable(self):
+        async with client() as c:
+            resp = await c.post(
+                "/api/setup",
+                json={"OPENAI_BASE_URL": "http://localhost:4000/v1", "OPENAI_MODEL": "m", "OPENAI_API_KEY": "k"},
+            )
+            keys = {k["key"] for k in (await c.get("/api/setup/status")).json()["keys"]}
+
+        assert sorted(resp.json()["applied"]) == ["OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL"]
+        assert {"OPENAI_BASE_URL", "OPENAI_MODEL", "OPENAI_API_KEY"} <= keys
+
+    async def test_shadow_flags_are_absent_on_a_restricted_instance(self):
+        async with client(host="0.0.0.0") as c:
+            body = (await c.get("/api/setup/status")).json()
+
+        assert all("saved_in_config" not in k and "shadowed" not in k for k in body["keys"])

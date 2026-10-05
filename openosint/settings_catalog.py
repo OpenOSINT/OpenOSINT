@@ -41,6 +41,31 @@ SETTINGS: tuple[SettingKey, ...] = (
         note="Powers the chat. Alternatives: an OpenAI-compatible server (Settings) or free local Ollama.",
     ),
     SettingKey(
+        "OPENAI_BASE_URL",
+        "OpenAI-compatible endpoint: base URL",
+        GROUP_AI,
+        "",
+        used_by=("chat",),
+        secret=False,
+        note="Alternative to Anthropic: OpenRouter, LiteLLM, vLLM, llama.cpp… e.g. https://openrouter.ai/api/v1 or http://localhost:4000/v1",
+    ),
+    SettingKey(
+        "OPENAI_MODEL",
+        "OpenAI-compatible endpoint: model",
+        GROUP_AI,
+        "",
+        used_by=("chat",),
+        secret=False,
+    ),
+    SettingKey(
+        "OPENAI_API_KEY",
+        "OpenAI-compatible endpoint: API key",
+        GROUP_AI,
+        "",
+        used_by=("chat",),
+        note="Local servers may not need one.",
+    ),
+    SettingKey(
         "HIBP_API_KEY",
         "Have I Been Pwned API key",
         GROUP_TOOLS,
@@ -144,13 +169,9 @@ SETTINGS: tuple[SettingKey, ...] = (
     ),
 )
 
-# Settings that are not shown in the key form (the Settings panel handles them) but
-# may still be saved.
-_EXTRA_SAVEABLE = frozenset({"OPENAI_BASE_URL", "OPENAI_MODEL", "OPENAI_API_KEY"})
-
 _BY_KEY = {s.key: s for s in SETTINGS}
 SETTING_NAMES: frozenset[str] = frozenset(_BY_KEY)
-SAVEABLE_NAMES: frozenset[str] = SETTING_NAMES | _EXTRA_SAVEABLE
+SAVEABLE_NAMES: frozenset[str] = SETTING_NAMES
 
 
 def setting(key: str) -> SettingKey | None:
