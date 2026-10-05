@@ -13,6 +13,9 @@ services:
       OPENOSINT_PUBLISHED_BIND: "${OPENOSINT_BIND:-127.0.0.1}"
       # Host-header check (DNS rebinding protection). Add names you reach it by.
       OPENOSINT_ALLOWED_HOSTS: "${OPENOSINT_ALLOWED_HOSTS:-localhost,127.0.0.1}"
+      # Lets the browser save API keys (the browser reaches the container over the Docker
+      # bridge, not loopback). Unset = saving from the UI is off; set it in .env or inline.
+      OPENOSINT_SETUP_TOKEN: "${OPENOSINT_SETUP_TOKEN:-}"
     # .env is optional: the web UI starts with no keys configured.
     env_file:
       - path: .env

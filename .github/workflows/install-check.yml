@@ -145,6 +145,18 @@ jobs:
             echo "unexpected 'Loaded .env' line on a fresh install"; docker compose logs; exit 1
           fi
           docker compose exec -T openosint python -c "import followthemoney, icu"
+          # The browser reaches the container over the Docker bridge, not loopback: the UI
+          # must say so (and how to fix it) instead of failing silently.
+          python3 scripts/ci/check_guard.py http://localhost:8080 --expect-setup-blocked
+          docker compose down -v
+      - name: Setup token saves a key that survives a restart
+        run: |
+          OPENOSINT_SETUP_TOKEN=ci-setup-token docker compose up -d
+          bash "$RUNNER_TEMP/wait.sh"
+          python3 scripts/ci/check_guard.py http://localhost:8080 --save-with-token ci-setup-token
+          docker compose restart
+          bash "$RUNNER_TEMP/wait.sh"
+          python3 scripts/ci/check_guard.py http://localhost:8080 --expect-configured SHODAN_API_KEY
           docker compose down -v
       - name: OPENOSINT_BIND=0.0.0.0 stays restricted
         run: |

@@ -7,7 +7,9 @@ empty temp directory, from an empty working directory. It then checks that:
   1. the web UI answers (/api/health and /) and prints its real URL,
   2. a foreign Host header and a cross-site POST to /api/setup are rejected (403),
   3. a second instance on the same port fails with a message naming --port,
-  4. `openosint-mcp` starts, reports the wheel's version and lists the tools.
+  4. a key saved through /api/setup lands in the isolated data directory (user-only
+     permissions) and is still configured after the server restarts,
+  5. `openosint-mcp` starts, reports the wheel's version and lists the tools.
 
 Usage: python scripts/ci/smoke_install.py dist/openosint-X.Y.Z-py3-none-any.whl [--extra graph]
 """
@@ -144,6 +146,51 @@ def check_web(runner: list[str], env: dict, work: Path) -> None:
         stop(first)
 
 
+def post_json(url: str, body: dict) -> tuple[int, dict]:
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode(),
+        method="POST",
+        headers={"Content-Type": "application/json"},
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return resp.status, json.load(resp)
+
+
+def check_key_persists(runner: list[str], env: dict, work: Path, home: Path) -> None:
+    """Save a key from the loopback UI, restart, and find it configured from the data dir."""
+    config = home / ".openosint" / "config.env"
+    assert not config.exists(), "data directory was not empty before the save"
+    port = free_port()
+    url = f"http://127.0.0.1:{port}"
+    cmd = [*runner, "openosint", "web", "--no-browser", "--port", str(port)]
+
+    first = spawn(cmd, env, work, work / "persist1.log")
+    try:
+        wait_for_health(url, first, work / "persist1.log")
+        status, body = post_json(f"{url}/api/setup", {"SHODAN_API_KEY": "smoke-key-123"})
+        assert status == 200 and body["applied"] == ["SHODAN_API_KEY"], f"save failed: {body}"
+        assert "smoke-key-123" not in json.dumps(body), "response echoed the key"
+    finally:
+        stop(first)
+    assert config.is_file(), f"key was not written to {config}"
+    if os.name == "posix":
+        assert (config.stat().st_mode & 0o077) == 0, "config.env is readable by other users"
+
+    second = spawn(cmd, env, work, work / "persist2.log")
+    try:
+        wait_for_health(url, second, work / "persist2.log")
+        _, status_body = fetch(f"{url}/api/setup/status")
+        entry = next(k for k in json.loads(status_body)["keys"] if k["key"] == "SHODAN_API_KEY")
+        assert entry["configured"] and entry["source"] == "config", (
+            f"not configured after restart: {entry}"
+        )
+        assert "smoke-key-123" not in status_body, "status endpoint leaked the key"
+    finally:
+        stop(second)
+    print("ok  a key saved from the UI survives a restart (data directory, user-only)")
+
+
 def check_mcp(runner: list[str], env: dict, work: Path, expected_version: str) -> None:
     requests = [
         {
@@ -240,6 +287,7 @@ def main() -> None:
         work.mkdir()
         env = clean_env(home)
         check_web(runner, env, work)
+        check_key_persists(runner, env, work, home)
         check_mcp(runner, env, work, version)
         leftovers = sorted(p.name for p in work.iterdir() if p.suffix != ".log")
         assert not leftovers, f"startup wrote files into the working directory: {leftovers}"
