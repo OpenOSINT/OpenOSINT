@@ -2411,7 +2411,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     async def graph_page():
         page = _WEB_DIR / "graph.html"
         if page.exists():
-            return HTMLResponse(page.read_text())
+            return HTMLResponse(page.read_text(encoding="utf-8"))
         return HTMLResponse("<h1>graph.html not found</h1>", status_code=404)
 
     # ------------------------------------------------------------------
@@ -2430,7 +2430,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     async def serve_frontend(full_path: str):
         index = _WEB_DIR / "index.html"
         if index.exists():
-            return HTMLResponse(index.read_text())
+            return HTMLResponse(index.read_text(encoding="utf-8"))
         return HTMLResponse(
             "<h1>OpenOSINT</h1>"
             "<p><strong>web/index.html not found.</strong></p>"
