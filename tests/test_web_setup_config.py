@@ -23,13 +23,12 @@ def _clean(monkeypatch, tmp_path):
     monkeypatch.setattr(env_module, "_origins", {})
     monkeypatch.setattr(ws, "_SETUP_ATTEMPTS", {})
     monkeypatch.delenv("OPENOSINT_SETUP_TOKEN", raising=False)
-    owned = [s.key for s in SETTINGS]
-    for key in owned:
-        monkeypatch.delenv(key, raising=False)
+    saved = dict(os.environ)  # /api/setup writes os.environ directly; monkeypatch cannot undo that
+    for setting in SETTINGS:
+        os.environ.pop(setting.key, None)
     yield
-    # /api/setup writes os.environ directly, which monkeypatch cannot undo.
-    for key in owned:
-        os.environ.pop(key, None)
+    os.environ.clear()
+    os.environ.update(saved)
 
 
 def client(peer=None, host="127.0.0.1"):
@@ -116,10 +115,20 @@ class TestSaveToDataDirectory:
         assert os.environ["SHODAN_API_KEY"] == "from-real-env"
         assert config_store.read_config() == {"SHODAN_API_KEY": "from-ui"}
 
+    async def test_a_key_saved_earlier_can_be_changed_again_in_the_same_process(self):
+        async with client() as c:
+            await c.post("/api/setup", json={"SHODAN_API_KEY": "first"})
+            resp = await c.post("/api/setup", json={"SHODAN_API_KEY": "second"})
+
+        assert resp.json()["shadowed_by_environment"] == []
+        assert resp.json()["applied"] == ["SHODAN_API_KEY"]
+        assert os.environ["SHODAN_API_KEY"] == "second"
+        assert config_store.read_config() == {"SHODAN_API_KEY": "second"}
+
     async def test_saved_key_is_seen_after_a_restart(self, monkeypatch, tmp_path):
         async with client() as c:
             await c.post("/api/setup", json={"VIRUSTOTAL_API_KEY": "vt-key"})
-        monkeypatch.delenv("VIRUSTOTAL_API_KEY", raising=False)  # new process: no env yet
+        os.environ.pop("VIRUSTOTAL_API_KEY", None)  # new process: no env yet
         monkeypatch.setattr(env_module, "_load_attempted", False)
         monkeypatch.setattr(env_module, "_loaded_path", None)
         monkeypatch.chdir(tmp_path)
@@ -127,7 +136,6 @@ class TestSaveToDataDirectory:
         env_module.load_env()
 
         assert os.environ["VIRUSTOTAL_API_KEY"] == "vt-key"
-        monkeypatch.delenv("VIRUSTOTAL_API_KEY", raising=False)
 
     async def test_every_catalog_key_is_saveable(self):
         payload = {s.key: f"value-{i}" for i, s in enumerate(SETTINGS)}
@@ -135,8 +143,6 @@ class TestSaveToDataDirectory:
             resp = await c.post("/api/setup", json=payload)
 
         assert sorted(resp.json()["applied"]) == sorted(payload)
-        for key in payload:
-            os.environ.pop(key, None)
 
 
 class TestTokenPath:
@@ -159,7 +165,6 @@ class TestTokenPath:
 
         assert resp.status_code == 200
         assert config_store.read_config() == {"SHODAN_API_KEY": "via-token"}
-        os.environ.pop("SHODAN_API_KEY", None)
 
     async def test_repeated_wrong_tokens_are_throttled(self, monkeypatch):
         monkeypatch.setenv("OPENOSINT_SETUP_TOKEN", TOKEN)

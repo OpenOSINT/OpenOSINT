@@ -16,7 +16,7 @@ import re
 
 import aiohttp
 
-from openosint.env import missing_var_message
+from openosint.settings_catalog import missing_keys_message
 from openosint.proxy import get_aiohttp_connector, get_aiohttp_proxy
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ ABUSE_SCORE_THRESHOLD = 50
 
 
 def _missing_key_error() -> str:
-    return f"{missing_var_message('ABUSEIPDB_API_KEY')} Get a key at https://www.abuseipdb.com/account/api"
+    return missing_keys_message("search_abuseipdb", ["ABUSEIPDB_API_KEY"])
 
 _IP_RE = re.compile(
     r"^("

@@ -68,6 +68,15 @@ def value_source(name: str) -> str | None:
     return _origins.get(name, "environment")
 
 
+def mark_saved(name: str) -> None:
+    """Record that *name* now holds a value this process saved to the config file.
+
+    Without this, a key saved from the UI would later look like a real
+    environment variable and block the user from changing it again.
+    """
+    _origins[name] = "config"
+
+
 def _load_file(path: str | Path, origin: str) -> None:
     before = set(os.environ)
     load_dotenv(dotenv_path=path, override=False)

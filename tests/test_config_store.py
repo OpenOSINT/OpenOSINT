@@ -11,6 +11,18 @@ from dotenv import dotenv_values
 
 import openosint.env as env_module
 from openosint import config_store
+from openosint.settings_catalog import SETTINGS
+
+
+@pytest.fixture(autouse=True)
+def _restore_environ():
+    """load_env() writes os.environ directly, which monkeypatch cannot undo."""
+    saved = dict(os.environ)
+    for setting in SETTINGS:
+        os.environ.pop(setting.key, None)  # a developer's real shell keys must not leak in
+    yield
+    os.environ.clear()
+    os.environ.update(saved)
 
 
 @pytest.fixture
@@ -98,8 +110,6 @@ class TestPrecedence:
         (cwd / ".env").write_text("PREC_BOTH=legacy\nPREC_REAL=legacy\nPREC_ONLY_LEGACY=legacy\n")
         config_store.write_config({"PREC_BOTH": "config", "PREC_REAL": "config", "PREC_ONLY_CONFIG": "config"})
         monkeypatch.setenv("PREC_REAL", "real")
-        for name in ("PREC_BOTH", "PREC_ONLY_LEGACY", "PREC_ONLY_CONFIG"):
-            monkeypatch.delenv(name, raising=False)
 
         env_module.load_env()
 
@@ -107,16 +117,12 @@ class TestPrecedence:
         assert os.environ["PREC_BOTH"] == "config"
         assert os.environ["PREC_ONLY_CONFIG"] == "config"
         assert os.environ["PREC_ONLY_LEGACY"] == "legacy"
-        for name in ("PREC_BOTH", "PREC_ONLY_LEGACY", "PREC_ONLY_CONFIG"):
-            monkeypatch.delenv(name, raising=False)
 
     def test_value_source_reports_where_each_value_came_from(self, tmp_path, monkeypatch, home, fresh_env):
         cwd = self._loaded(tmp_path, monkeypatch, home)
         (cwd / ".env").write_text("SRC_LEGACY=1\n")
         config_store.write_config({"SRC_CONFIG": "1"})
         monkeypatch.setenv("SRC_REAL", "1")
-        for name in ("SRC_CONFIG", "SRC_LEGACY"):
-            monkeypatch.delenv(name, raising=False)
 
         env_module.load_env()
 
@@ -124,18 +130,15 @@ class TestPrecedence:
         assert env_module.value_source("SRC_CONFIG") == "config"
         assert env_module.value_source("SRC_LEGACY") == "legacy"
         assert env_module.value_source("SRC_NOTHING") is None
-        for name in ("SRC_CONFIG", "SRC_LEGACY"):
-            monkeypatch.delenv(name, raising=False)
 
     def test_a_saved_value_survives_a_restart(self, tmp_path, monkeypatch, home, fresh_env):
         self._loaded(tmp_path, monkeypatch, home)
         config_store.write_config({"RESTART_KEY": "persisted"})
-        monkeypatch.delenv("RESTART_KEY", raising=False)  # a new process starts without it
+        os.environ.pop("RESTART_KEY", None)  # a new process starts without it
 
         env_module.load_env()
 
         assert os.environ["RESTART_KEY"] == "persisted"
-        monkeypatch.delenv("RESTART_KEY", raising=False)
 
 
 class TestLegacyMigration:
@@ -152,7 +155,6 @@ class TestLegacyMigration:
     def test_package_root_env_is_copied_once_with_a_notice(self, package_root, home, capsys, monkeypatch):
         legacy = package_root / ".env"
         legacy.write_text("SHODAN_API_KEY=legacy-secret\nUNRELATED_VAR=keep-out\nHIBP_API_KEY=\n")
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
         env_module.load_env()
 
@@ -161,7 +163,6 @@ class TestLegacyMigration:
         err = capsys.readouterr().err
         assert "Copied 1 saved setting(s) (SHODAN_API_KEY)" in err
         assert "legacy-secret" not in err
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
     def test_second_start_does_not_migrate_again(self, package_root, home, capsys, monkeypatch):
         (package_root / ".env").write_text("SHODAN_API_KEY=first\n")
@@ -169,24 +170,19 @@ class TestLegacyMigration:
         capsys.readouterr()
         (package_root / ".env").write_text("SHODAN_API_KEY=changed-later\n")
         monkeypatch.setattr(env_module, "_load_attempted", False)
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
         env_module.load_env()
 
         assert config_store.read_config() == {"SHODAN_API_KEY": "first"}
         assert "Copied" not in capsys.readouterr().err
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
     def test_existing_config_is_never_overwritten(self, package_root, home, monkeypatch):
         config_store.write_config({"SHODAN_API_KEY": "from-ui"})
         (package_root / ".env").write_text("SHODAN_API_KEY=legacy\nHIBP_API_KEY=legacy-too\n")
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
         env_module.load_env()
 
         assert config_store.read_config() == {"SHODAN_API_KEY": "from-ui"}
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
-        monkeypatch.delenv("HIBP_API_KEY", raising=False)
 
     def test_no_migration_when_a_cwd_env_is_the_one_loaded(self, package_root, home, tmp_path, monkeypatch):
         (package_root / ".env").write_text("SHODAN_API_KEY=package\n")
@@ -194,22 +190,18 @@ class TestLegacyMigration:
         work.mkdir()
         (work / ".env").write_text("SHODAN_API_KEY=cwd\n")
         monkeypatch.chdir(work)
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
         env_module.load_env()
 
         assert not (home / "config.env").exists()
         assert os.environ["SHODAN_API_KEY"] == "cwd"
-        monkeypatch.delenv("SHODAN_API_KEY", raising=False)
 
     def test_legacy_without_known_keys_creates_nothing(self, package_root, home, monkeypatch):
         (package_root / ".env").write_text("RATE_LIMIT_MAX=5\n")
-        monkeypatch.delenv("RATE_LIMIT_MAX", raising=False)
 
         env_module.load_env()
 
         assert not (home / "config.env").exists()
-        monkeypatch.delenv("RATE_LIMIT_MAX", raising=False)
 
     def test_oversized_legacy_file_is_not_migrated(self, package_root, home):
         (package_root / ".env").write_text("SHODAN_API_KEY=x\n" + "#" * (config_store._MAX_LEGACY_BYTES + 1))

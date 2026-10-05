@@ -113,6 +113,7 @@ SETTINGS: tuple[SettingKey, ...] = (
         BRIGHTDATA_LINK_WEB,
         used_by=("search_dorks_live", "search_footprint"),
         secret=False,
+        note="Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard.",
     ),
     SettingKey(
         "BRIGHTDATA_UNLOCKER_ZONE",
@@ -121,6 +122,7 @@ SETTINGS: tuple[SettingKey, ...] = (
         BRIGHTDATA_LINK_WEB,
         used_by=("scrape_url",),
         secret=False,
+        note="Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard.",
     ),
     SettingKey(
         "IPINFO_TOKEN",
@@ -178,7 +180,7 @@ def missing_keys_message(tool: str, missing: list[str]) -> str:
     entries = [setting(name) for name in missing]
     labels = [e.label if e else name for e, name in zip(entries, missing)]
     lines = [
-        f"Scan error: {tool} needs {_join(labels)} to run (not set).",
+        f"Scan error: {tool} cannot run: {_join(labels)} not set.",
         f"[key_required] {', '.join(missing)}",
     ]
     seen_urls: list[str] = []

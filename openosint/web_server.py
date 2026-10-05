@@ -74,7 +74,7 @@ from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 from openosint import __version__ as _VERSION
 from openosint.config_store import config_path, validate_pair, write_config
-from openosint.env import value_source
+from openosint.env import mark_saved, value_source
 from openosint.paths import home_dir
 from openosint.regexes import EMAIL_FIND_RE
 from openosint.request_guard import RequestGuardMiddleware
@@ -2151,6 +2151,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         for key, value in accepted.items():
             if key not in shadowed:
                 os.environ[key] = value
+                mark_saved(key)
         applied = [k for k in accepted if k not in shadowed]
         return {
             "status": "ok",

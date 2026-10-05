@@ -30,8 +30,7 @@ import re
 
 import requests
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
-from openosint.env import missing_var_message
+from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -39,22 +38,6 @@ logger = logging.getLogger(__name__)
 _API_URL = "https://api.brightdata.com/request"
 _DEFAULT_TIMEOUT = 60
 _URL_RE = re.compile(r"^https?://", re.IGNORECASE)
-
-
-def _missing_key_msg() -> str:
-    return (
-        f"{missing_var_message('BRIGHTDATA_API_KEY')} "
-        "A free tier (5,000 requests/month) is available — "
-        f"sign up at {BRIGHTDATA_LINK_CLI}"
-    )
-
-
-def _missing_zone_msg() -> str:
-    return (
-        f"{missing_var_message('BRIGHTDATA_UNLOCKER_ZONE')} "
-        "Set it to your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'). "
-        f"Create a zone at {BRIGHTDATA_LINK_CLI}"
-    )
 
 
 def _is_valid_url(url: str) -> bool:
@@ -116,13 +99,11 @@ async def run_scrape_url_osint(
         Markdown content with a URL header line, or descriptive error message.
     """
     _k = api_keys or {}
-    api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ.get("BRIGHTDATA_API_KEY", "")
-    if not api_key:
-        return _missing_key_msg()
-
-    zone = _k.get("BRIGHTDATA_UNLOCKER_ZONE") or os.environ.get("BRIGHTDATA_UNLOCKER_ZONE", "")
-    if not zone:
-        return _missing_zone_msg()
+    missing = missing_from(["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"], _k, os.environ)
+    if missing:
+        return missing_keys_message("scrape_url", missing)
+    api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ["BRIGHTDATA_API_KEY"]
+    zone = _k.get("BRIGHTDATA_UNLOCKER_ZONE") or os.environ["BRIGHTDATA_UNLOCKER_ZONE"]
 
     url = url.strip()
     if not _is_valid_url(url):
