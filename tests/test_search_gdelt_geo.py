@@ -362,3 +362,17 @@ async def test_opt_in_env_var_restores_proxy(monkeypatch, _proxy_clean):
 
 def test_fence_helper_passes_other_tools_through_unchanged():
     assert geo.split_geojson_fence("[+] something") == ("[+] something", None)
+
+
+async def test_backticks_in_a_headline_cannot_end_the_fence_early(monkeypatch):
+    serve(
+        monkeypatch,
+        row(url="https://ok.example/x", title="Use ```code``` and `ticks`", places=KYIV),
+    )
+
+    result = await geo.run_gdelt_geo_osint("*")
+
+    text, raw = geo.split_geojson_fence(result)
+    assert raw is not None and "[1 geo point(s) → globe]" in text
+    assert json.loads(raw)["features"][0]["properties"]["title"] == "Use ```code``` and `ticks`"
+    assert result.count("```") == 2  # only the fence's own opening and closing

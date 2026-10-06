@@ -32,6 +32,7 @@ import threading
 import time
 import zipfile
 import zlib
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import NamedTuple
@@ -63,6 +64,7 @@ MAX_LINE_BYTES = 4 * 1024 * 1024
 _CONNECT_TIMEOUT_SECONDS = 5
 _READ_TIMEOUT_SECONDS = 30
 _CHUNK_BYTES = 64 * 1024
+_TOTAL_DEADLINE_SECONDS = 60  # wall clock per download; the read timeout is per chunk
 
 # Field caps applied while parsing (everything here is third-party text).
 MAX_TITLE_CHARS = 200
@@ -79,6 +81,7 @@ _KEPT_LOCATION_TYPES = frozenset({2, 3, 4, 5})
 # Polite polling.
 _POLL_INTERVAL_SECONDS = 300  # lastupdate.txt changes every 15 min
 _FAILURE_BACKOFF_SECONDS = 60
+_SLOT_RETRY_SECONDS = 900  # a slot GDELT skipped (404) is not asked for again this soon
 _BACKFILL_PAUSE_SECONDS = 0.5
 _BACKFILL_MAX_FAILURES = 3
 STALE_LIMIT_MINUTES = 120  # keep serving old data this long if refreshes fail
@@ -205,7 +208,10 @@ def _download(url: str, max_bytes: int, timeout_seconds: int) -> bytes:
             if declared.isdigit() and int(declared) > max_bytes:
                 raise GkgError("GDELT file is larger than the allowed size.")
             body = bytearray()
+            deadline = time.monotonic() + _TOTAL_DEADLINE_SECONDS
             for chunk in response.iter_content(_CHUNK_BYTES):
+                if time.monotonic() > deadline:
+                    raise GkgError("GDELT file download is too slow.")
                 body.extend(chunk)
                 if len(body) > max_bytes:
                     raise GkgError("GDELT file is larger than the allowed size.")
@@ -340,7 +346,7 @@ def _iter_lines(member, cap: int):
 
 def parse_gkg_zip(data: bytes, slot: str, limit: int | None = None) -> tuple[Article, ...]:
     """Parse a GKG .zip into articles. Raises GkgError on any malformed/oversized input."""
-    articles: list[Article] = []
+    articles: deque[Article] = deque(maxlen=limit)  # the cap holds while parsing, not after
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as archive:
             names = archive.namelist()
@@ -353,7 +359,7 @@ def parse_gkg_zip(data: bytes, slot: str, limit: int | None = None) -> tuple[Art
                         articles.append(article)
     except (zipfile.BadZipFile, zlib.error, OSError, EOFError) as exc:
         raise GkgError(f"GDELT file is not a valid zip: {exc}") from exc
-    return tuple(articles[-limit:] if limit else articles)
+    return tuple(articles)
 
 
 # --------------------------------------------------------------------------
@@ -372,6 +378,7 @@ class GkgWindow:
         self._last_poll = _NEVER  # time.monotonic() can be tiny right after boot
         self._retry_after = 0.0
         self._backfill_retry_after = 0.0
+        self._attempted: dict[str, float] = {}  # slot -> last backfill attempt
         self._last_error = ""
 
     def snapshot(self, timeout_seconds: int = _READ_TIMEOUT_SECONDS) -> Window:
@@ -395,6 +402,7 @@ class GkgWindow:
             self._last_poll = _NEVER
             self._retry_after = self._backfill_retry_after = 0.0
             self._last_error = ""
+            self._attempted = {}
 
     # -- refresh ---------------------------------------------------------
 
@@ -443,10 +451,10 @@ class GkgWindow:
         for slot in sorted(files, reverse=True):  # newest slots get the budget first
             if slot < oldest_kept:
                 continue
-            kept = files[slot][-budget:] if budget > 0 else ()
-            if kept:
-                trimmed[slot] = kept
-            budget -= len(kept)
+            if budget <= 0:
+                continue  # over the hard cap: oldest slots are dropped
+            trimmed[slot] = files[slot][-budget:]  # empty slots stay, so they are not "missing"
+            budget -= len(trimmed[slot])
         return trimmed
 
     # -- backfill --------------------------------------------------------
@@ -459,12 +467,20 @@ class GkgWindow:
                 or time.monotonic() < self._backfill_retry_after
             ):
                 return
+            if sum(len(arts) for arts in self._files.values()) >= max_articles():
+                return  # the cap is full: older slots would be downloaded only to be dropped
+            now = time.monotonic()
             newest = _slot_dt(max(self._files))
             wanted = (
                 _slot_str(newest - timedelta(minutes=SLOT_MINUTES * i))
                 for i in range(1, window_hours() * 60 // SLOT_MINUTES)
             )
-            missing = [slot for slot in wanted if slot not in self._files]
+            missing = [
+                slot
+                for slot in wanted
+                if slot not in self._files
+                and now - self._attempted.get(slot, _NEVER) >= _SLOT_RETRY_SECONDS
+            ]
             if not missing:
                 return
             self._backfilling = True
@@ -476,6 +492,10 @@ class GkgWindow:
         failures = 0
         try:
             for slot in slots:
+                with self._state_lock:
+                    if sum(len(arts) for arts in self._files.values()) >= max_articles():
+                        break
+                    self._attempted[slot] = time.monotonic()
                 try:
                     if self._load_slot(slot, timeout_seconds):
                         time.sleep(_BACKFILL_PAUSE_SECONDS)

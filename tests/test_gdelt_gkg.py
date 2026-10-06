@@ -470,3 +470,75 @@ def test_old_slots_fall_out_of_the_window(monkeypatch):
     wait_for_backfill(window)
 
     assert old not in window._files
+
+
+# --- review regressions ----------------------------------------------------
+
+
+def test_parse_cap_holds_while_parsing_and_keeps_the_newest_rows():
+    payload = "\n".join(row(url=f"https://n.example/{i}") for i in range(50)).encode()
+
+    articles = gkg.parse_gkg_zip(make_zip(payload), "s", limit=10)
+
+    assert len(articles) == 10
+    assert articles[-1].url == "https://n.example/49"
+
+
+def test_a_slow_drip_download_hits_the_wall_clock_deadline(monkeypatch):
+    monkeypatch.setattr(gkg, "_TOTAL_DEADLINE_SECONDS", -1)
+    monkeypatch.setattr(gkg.requests, "get", lambda *_a, **_k: _Response(body=b"x" * 10))
+
+    with pytest.raises(gkg.GkgError, match="too slow"):
+        gkg._download(gkg.LASTUPDATE_URL, 1000, 5)
+
+
+def test_slots_dropped_by_the_cap_are_not_downloaded_again_on_later_queries(monkeypatch):
+    monkeypatch.setattr(gkg, "max_articles", lambda: 40)  # one file is ~36 articles
+    upstream = FakeUpstream(slot_now())
+    monkeypatch.setattr(gkg, "_download", upstream)
+    window = gkg.GkgWindow()
+    window.snapshot()
+    wait_for_backfill(window)
+    window._last_poll = float("-inf")
+    window._backfill_retry_after = 0
+    seen = len(upstream.downloads())
+
+    for _ in range(5):
+        window.snapshot()
+        wait_for_backfill(window)
+
+    assert len(upstream.downloads()) == seen
+    assert seen < 24  # it stopped early instead of fetching slots only to drop them
+
+
+def test_a_slot_gdelt_skipped_is_not_requested_on_every_query(monkeypatch):
+    newest = slot_now()
+    skipped = slot_minus(newest, 30)
+    upstream = FakeUpstream(newest, missing={skipped})
+    monkeypatch.setattr(gkg, "_download", upstream)
+    window = gkg.GkgWindow()
+    window.snapshot()
+    wait_for_backfill(window)
+    asked = sum(skipped in url for url in upstream.downloads())
+
+    for _ in range(5):
+        window.snapshot()
+        wait_for_backfill(window)
+
+    assert asked == 1
+    assert sum(skipped in url for url in upstream.downloads()) == 1
+
+
+def test_empty_slots_stay_in_the_window_and_are_not_refetched(monkeypatch):
+    upstream = FakeUpstream(slot_now())
+    upstream.zip_bytes = make_zip(b"garbage\n")  # parses fine, zero usable articles
+    monkeypatch.setattr(gkg, "_download", upstream)
+    window = gkg.GkgWindow()
+    window.snapshot()
+    wait_for_backfill(window)
+    first = len(upstream.downloads())
+
+    window.snapshot()
+    wait_for_backfill(window)
+
+    assert len(upstream.downloads()) == first == 24

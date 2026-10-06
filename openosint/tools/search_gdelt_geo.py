@@ -249,7 +249,9 @@ def _format_results(fc: dict, query: str, coverage: dict) -> str:
         lines.append(f"[+] {props['name']} ({lat}, {lon}) — {props['count']} article(s)")
     if len(features) > _SAMPLE_LINES:
         lines.append(f"\n... and {len(features) - _SAMPLE_LINES} more.")
-    lines += ["", "```geojson", json.dumps({**fc, "coverage": coverage}), "```"]
+    # A backtick inside a headline must not end the fence early: escape it in the JSON.
+    payload = json.dumps({**fc, "coverage": coverage}).replace("`", "\\u0060")
+    lines += ["", "```geojson", payload, "```"]
     return "\n".join(lines)
 
 
