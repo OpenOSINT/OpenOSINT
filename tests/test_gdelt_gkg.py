@@ -58,8 +58,12 @@ def _fresh_window(monkeypatch):
 class FakeUpstream:
     """Stands in for gkg._download; records every URL requested."""
 
-    def __init__(self, newest_slot: str, missing: set[str] | None = None):
+    def __init__(
+        self, newest_slot: str, missing: set[str] | None = None, only_newest: bool = False
+    ):
         self.newest_slot = newest_slot
+        self.only_newest = only_newest  # every older slot 404s
+        self.gate: threading.Event | None = None  # when set, older slots wait for it
         self.zip_bytes = make_zip()
         self.missing = missing or set()
         self.calls: list[str] = []
@@ -70,7 +74,11 @@ class FakeUpstream:
             self.calls.append(url)
         if url == gkg.LASTUPDATE_URL:
             return f"1 a http://data.gdeltproject.org/gdeltv2/{self.newest_slot}.gkg.csv.zip\n".encode()
-        if any(slot in url for slot in self.missing):
+        if self.gate is not None and self.newest_slot not in url:
+            self.gate.wait(10)
+        if any(slot in url for slot in self.missing) or (
+            self.only_newest and self.newest_slot not in url
+        ):
             raise gkg.GkgError("GDELT file server returned HTTP 404.")
         return self.zip_bytes
 
