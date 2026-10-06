@@ -35,6 +35,7 @@ Keys saved on this computer from the web UI, a first-run panel, clear messages f
 - The keyless rate limiter now covers `search_github`, `search_email`, `search_username` and `search_domain`, and also guards `/api/stream/{tool}`, which bypassed it.
 - The web UI reported holehe/sherlock/sublist3r as unavailable when installed next to OpenOSINT (the `uvx` case) because it searched only `PATH`; it now uses the same lookup as the tools. Missing-binary messages give the exact `uv tool install` command.
 - Tests no longer read or write the developer's real `~/.openosint`.
+- `search_gdelt_geo` now returns a clear "service unavailable" result when the GDELT GEO API fails (404, 429, 5xx, timeouts, malformed responses), and the globe shows a notice instead of failing silently.
 
 ## [2.30.0] — 2026-10-01
 
