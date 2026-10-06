@@ -45,7 +45,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from openosint.agent import default_anthropic_model
@@ -80,6 +80,7 @@ from openosint.regexes import EMAIL_FIND_RE
 from openosint.request_guard import RequestGuardMiddleware
 from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
 from openosint.utils import find_binary
+
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -171,7 +172,10 @@ TRUSTED_PROXY: bool = os.getenv("TRUSTED_PROXY", "").lower() in ("1", "true", "y
 # access for anyone the proxy relays, so it gets its own explicit opt-in.
 # See the README's deployment-guidance section.
 OPENOSINT_TRUSTED_PROXY: bool = os.getenv("OPENOSINT_TRUSTED_PROXY", "").strip().lower() in (
-    "1", "true", "yes", "on",
+    "1",
+    "true",
+    "yes",
+    "on",
 )
 
 # Headers whose mere presence means "a proxy sits in front of this
@@ -181,7 +185,11 @@ OPENOSINT_TRUSTED_PROXY: bool = os.getenv("OPENOSINT_TRUSTED_PROXY", "").strip()
 # _get_client_ip's TRUSTED_PROXY-gated use for that); only presence is used
 # here, to decide whether a loopback bind can still be assumed private.
 _FORWARDING_HEADER_NAMES: tuple[str, ...] = (
-    "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "forwarded", "cf-connecting-ip",
+    "x-forwarded-for",
+    "x-forwarded-proto",
+    "x-forwarded-host",
+    "forwarded",
+    "cf-connecting-ip",
 )
 
 _FORWARDED_PARAM_RE = re.compile(r'(proto|host)="?([^;,"\s]+)"?', re.IGNORECASE)
@@ -215,7 +223,9 @@ def _forwarding_headers_look_inconsistent(request: "Request") -> bool:
     never remove it.
     """
     for header_name in ("x-forwarded-proto", "x-forwarded-host"):
-        values = {v.strip().lower() for v in request.headers.get(header_name, "").split(",") if v.strip()}
+        values = {
+            v.strip().lower() for v in request.headers.get(header_name, "").split(",") if v.strip()
+        }
         if len(values) > 1:
             return True
     forwarded = request.headers.get("forwarded", "")
@@ -266,9 +276,7 @@ def _request_restriction(request: "Request") -> tuple[bool, str]:
     return False, ""
 
 
-_RAW_ORIGINS: str = os.getenv(
-    "DEMO_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000"
-)
+_RAW_ORIGINS: str = os.getenv("DEMO_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000")
 _ALLOWED_ORIGINS: list[str] = [o.strip() for o in _RAW_ORIGINS.split(",") if o.strip()]
 
 # ---------------------------------------------------------------------------
@@ -309,7 +317,9 @@ _KEYLESS_TOOLS: frozenset[str] = frozenset(
 # an in-process cache with no TTL is correct, just size-bounded.
 # ponytail: single-process LRU dict; move to a real cache if this ever runs
 # behind multiple worker processes.
-_EOX_TILE_URL = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+_EOX_TILE_URL = (
+    "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+)
 _TILE_CACHE_MAX = 2000
 _TILE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 # 4^z tiles per zoom level — hard cost ceiling, matches maxzoom on the
@@ -390,7 +400,9 @@ _SETUP_ATTEMPTS: dict[str, "_deque[float]"] = {}
 
 def _check_setup_attempt_limit(ip: str) -> bool:
     """Throttle non-loopback /api/setup callers so the token cannot be brute-forced."""
-    return _sliding_window_allow(_SETUP_ATTEMPTS, ip, _SETUP_RL_MAX, _SETUP_RL_WINDOW_SECS, _MAX_IP_BUCKETS)
+    return _sliding_window_allow(
+        _SETUP_ATTEMPTS, ip, _SETUP_RL_MAX, _SETUP_RL_WINDOW_SECS, _MAX_IP_BUCKETS
+    )
 
 
 def _get_client_ip(request: "Request") -> str:
@@ -406,7 +418,11 @@ def _get_client_ip(request: "Request") -> str:
 
 
 def _sliding_window_allow(
-    store: dict[str, "_deque[float]"], ip: str, max_reqs: int, window_secs: float, max_ip_buckets: int
+    store: dict[str, "_deque[float]"],
+    ip: str,
+    max_reqs: int,
+    window_secs: float,
+    max_ip_buckets: int,
 ) -> bool:
     """Sliding-window rate limiter over an arbitrary per-caller bucket store.
     Returns True when the request is allowed."""
@@ -452,7 +468,9 @@ def _check_tile_rate_limit(ip: str) -> bool:
     able to 429 an unrelated keyless tool call (e.g. search_ip) sharing the
     same client IP, or vice versa.
     """
-    return _sliding_window_allow(_TILE_RATE_STORE, ip, _TILE_RL_MAX_REQS, _RL_WINDOW_SECS, _MAX_IP_BUCKETS)
+    return _sliding_window_allow(
+        _TILE_RATE_STORE, ip, _TILE_RL_MAX_REQS, _RL_WINDOW_SECS, _MAX_IP_BUCKETS
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +501,9 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sherlock"],
         "requires_env": [],
-        "binary_hints": {"sherlock": "uv tool install sherlock-project (or: pip install sherlock-project)"},
+        "binary_hints": {
+            "sherlock": "uv tool install sherlock-project (or: pip install sherlock-project)"
+        },
     },
     {
         "name": "search_breach",
@@ -750,7 +770,9 @@ _RUNNERS: dict[str, object] = {
     ),
     "search_dns": lambda v, t, keys=None: run_dns_osint(v, timeout_seconds=t),
     "search_rdap": lambda v, t, keys=None: run_rdap_osint(v, timeout_seconds=t),
-    "search_gdelt_geo": lambda v, t, keys=None: run_gdelt_geo_osint(v, timeout_seconds=t),
+    "search_gdelt_geo": lambda v, t, keys=None, bbox=None: run_gdelt_geo_osint(
+        v, timeout_seconds=t, bbox=tuple(bbox) if bbox else None
+    ),
     "search_abuseipdb": lambda v, t, keys=None: run_abuseipdb_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("ABUSEIPDB_API_KEY")
     ),
@@ -766,15 +788,11 @@ _RUNNERS: dict[str, object] = {
     "search_virustotal": lambda v, t, keys=None: run_virustotal_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("VIRUSTOTAL_API_KEY")
     ),
-    "search_censys": lambda v, t, keys=None: run_censys_osint(
-        v, timeout_seconds=t, api_keys=keys
-    ),
+    "search_censys": lambda v, t, keys=None: run_censys_osint(v, timeout_seconds=t, api_keys=keys),
     "search_dorks_live": lambda v, t, keys=None: run_dorks_live_osint(
         v, timeout_seconds=t, api_keys=keys
     ),
-    "scrape_url": lambda v, t, keys=None: run_scrape_url_osint(
-        v, timeout_seconds=t, api_keys=keys
-    ),
+    "scrape_url": lambda v, t, keys=None: run_scrape_url_osint(v, timeout_seconds=t, api_keys=keys),
     "search_footprint": lambda v, t, keys=None: run_footprint_osint(
         v, timeout_seconds=t, api_keys=keys
     ),
@@ -1046,6 +1064,8 @@ class RunRequest(BaseModel):
     input: str
     timeout: int = 120
     api_keys: dict[str, str] | None = None  # per-request BYOK; never logged
+    # search_gdelt_geo only: (min_lon, min_lat, max_lon, max_lat). Other tools ignore it.
+    bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
 
 
 class ChatRequest(BaseModel):
@@ -1848,7 +1868,8 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
             else:
                 required_keys: list[str] = meta.get("requires_env", [])
                 missing = [
-                    k for k in required_keys
+                    k
+                    for k in required_keys
                     if not supplied.get(k) and not os.environ.get(k, "").strip()
                 ]
             if missing:
@@ -1878,7 +1899,8 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         # api_keys values are intentionally not logged anywhere in this handler
         start = time.monotonic()
         try:
-            result = await _RUNNERS[tool_name](req.input, req.timeout, req.api_keys or {})
+            extra = {"bbox": req.bbox} if tool_name == "search_gdelt_geo" and req.bbox else {}
+            result = await _RUNNERS[tool_name](req.input, req.timeout, req.api_keys or {}, **extra)
             elapsed = round(time.monotonic() - start, 2)
             return {"status": "ok", "output": result, "tool": tool_name, "elapsed": elapsed}
         except Exception as exc:
@@ -1910,7 +1932,11 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         if tool_name in _KEYLESS_TOOLS and not _check_rate_limit(_get_client_ip(request)):
 
             async def _limited() -> AsyncIterator[dict]:
-                yield {"data": json.dumps({"line": "Rate limit exceeded. Please wait before retrying.", "done": False})}
+                yield {
+                    "data": json.dumps(
+                        {"line": "Rate limit exceeded. Please wait before retrying.", "done": False}
+                    )
+                }
                 yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
 
             return EventSourceResponse(_limited(), ping=15)
@@ -2044,10 +2070,12 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     async def chat(req: ChatRequest, request: Request):
         restricted, restriction_reason = _request_restriction(request)
         if restricted:
+
             async def _demo_block():
                 message = f"Server-side LLM is disabled ({restriction_reason}) — add your own API key in Settings."
-                yield f'data: {json.dumps({"type": "error", "message": message})}\n\n'
-                yield f'data: {json.dumps({"type": "done"})}\n\n'
+                yield f"data: {json.dumps({'type': 'error', 'message': message})}\n\n"
+                yield f"data: {json.dumps({'type': 'done'})}\n\n"
+
             return StreamingResponse(
                 _demo_block(),
                 media_type="text/event-stream",
@@ -2084,7 +2112,9 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
             else:
                 openai_base_url = os.environ.get("OPENAI_BASE_URL", "http://localhost:4000/v1")
                 openai_api_key = os.environ.get("OPENAI_API_KEY", "")
-            openai_model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
+            openai_model = (
+                req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+            ).strip()
         elif backend == "ollama":
             default_ollama = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
             if req.ollama_host and req.ollama_host.rstrip("/") != default_ollama.rstrip("/"):
@@ -2135,7 +2165,10 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                 status_code=403,
             )
 
-        if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
+        if (
+            request.headers.get("content-type", "").split(";")[0].strip().lower()
+            != "application/json"
+        ):
             return JSONResponse(
                 {"status": "error", "message": "Content-Type must be application/json."},
                 status_code=415,
