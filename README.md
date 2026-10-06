@@ -168,7 +168,7 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | `search_github` | GitHub REST API | Profile, repos, commit-discovered emails, username/keyword search |
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
 | `search_rdap` | RDAP (IANA bootstrap, keyless) | Registrar, registration/expiry dates, name servers, status; registrant contacts redacted by policy |
-| `search_gdelt_geo` | GDELT GEO 2.0 API | Worldwide geolocated news coverage, GeoJSON output |
+| `search_gdelt_geo` | GDELT 15-minute GKG feed (keyless) | Recent worldwide news placed on a map: headline, link, place; GeoJSON output |
 | `search_dorks_live` | Bright Data SERP API | Live Google search results for dork queries (title, URL, snippet) |
 | `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown |
 | `search_footprint` | Bright Data SERP API | Entity-type-aware public search-engine footprint: detects email/username/domain/phone/name and returns structured results + Entity Correlation Graph nodes/edges |
@@ -378,6 +378,28 @@ Looks up a domain's registrar, registration and expiry dates, name servers and s
 [+] Registered: 1995-08-14T04:00:00Z
 [+] Name servers: elliott.ns.cloudflare.com, hera.ns.cloudflare.com
 ```
+
+### search_gdelt_geo
+
+Recent, geolocated worldwide news. The old GDELT GEO 2.0 API was retired (it answers HTTP 404), so this tool reads [GDELT](https://www.gdeltproject.org/)'s 15-minute GKG article feed (`data.gdeltproject.org`, keyless, no account) and keeps the last 6 hours of articles in memory. Each article carries its headline, link and the places it mentions; the query is matched against headlines and URLs (quoted phrases and `OR` work; `*` means everything), and results are grouped by place for the globe. Country-level mentions are dropped so dots mark cities and regions, not the middle of a country.
+
+Nothing is downloaded until the tool is first used, so a local install that never opens the globe never fetches a GDELT file. The first search loads only the newest 15-minute file and answers from it; older files load in the background, and the result (and the globe) says how far back it covers, for example `News: last 15 min — older articles still loading`. After that, upstream traffic is one small file per 15 minutes however many searches you run.
+
+```text
+GDELT geolocated news for 'ukraine': 53 location(s), 471 article mention(s). Coverage: the last 6 h.
+
+[+] Kyiv, Kyyiv, Ukraine (50.4333, 30.5167) — 38 article(s)
+```
+
+Select an area on the globe (Shift+drag) to search only inside it. Failures (feed down, oversized or corrupt file) return one `[service_unavailable] search_gdelt_geo` result, and the globe shows a notice instead of an empty layer.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OPENOSINT_GDELT_WINDOW_HOURS` | `6` | How far back articles are kept (1–24). A full 6-hour window holds roughly 23,000 articles and adds about 65 MB of memory. |
+| `OPENOSINT_GDELT_MAX_ARTICLES` | `30000` | Hard cap on stored articles; the oldest are dropped first. |
+| `OPENOSINT_GDELT_USE_PROXY` | off | Route GDELT downloads through `OPENOSINT_PROXY_URL` (bypassed by default: the feed is public). |
+
+**Attribution and terms.** News data: [The GDELT Project](https://www.gdeltproject.org/). GDELT's [terms of use](https://gdeltproject.org/about.html) say: "all datasets released by the GDELT Project are available for unlimited and unrestricted use for any academic, commercial, or governmental use of any kind without fee." and "any use or redistribution of the data must include a citation to the GDELT Project and a link to this website (https://www.gdeltproject.org/)." (quoted 2026-10-06). The globe keeps the GDELT credit in its map attribution. Headlines and links come from third-party news sites and are shown as plain text.
 
 ### search_dorks_live
 
@@ -718,6 +740,8 @@ itself — the app starts and every key-less tool works with zero configuration.
 | `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`) |
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
+| `OPENOSINT_GDELT_WINDOW_HOURS` | `search_gdelt_geo` | Optional | Hours of news kept in memory (default `6`, max `24`). See [search_gdelt_geo](#search_gdelt_geo). |
+| `OPENOSINT_GDELT_MAX_ARTICLES` | `search_gdelt_geo` | Optional | Hard cap on stored articles (default `30000`; oldest dropped first) |
 | `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
 | `OPENOSINT_SETUP_TOKEN` | Web UI | Optional | Lets the browser save keys when it is not on loopback (Docker). Send as `X-Setup-Token`; the UI has a field for it. Unset = saving from a non-loopback browser is off. Failed attempts are throttled. |
 | `HIBP_API_KEY` | `search_breach` | Required for this tool | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |

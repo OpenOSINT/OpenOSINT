@@ -30,7 +30,7 @@ OpenOSINT is a modular OSINT framework that exposes 21 intelligence-gathering to
 - `search_github` — GitHub profile, repos, commit-discovered emails, username/keyword search
 - `search_dns` — A/AAAA/MX/NS/TXT/CNAME/SOA records plus SPF, DMARC, DKIM analysis
 - `search_rdap` — domain registrar, registration/expiry dates, name servers and status via RDAP (keyless)
-- `search_gdelt_geo` — worldwide geolocated news coverage via GDELT GEO 2.0 API, GeoJSON output
+- `search_gdelt_geo` — recent worldwide geolocated news (headline, link, place) from the GDELT 15-minute GKG feed, GeoJSON output
 - `search_dorks_live` — live Google search results for dork queries via Bright Data SERP API
 - `scrape_url` — fetch any URL bypassing Cloudflare/CAPTCHA via Bright Data Web Unlocker, returns clean Markdown
 - `search_footprint` — entity-type-aware public search-engine footprint (email/username/domain/phone/name), returns structured results + Entity Correlation Graph nodes/edges

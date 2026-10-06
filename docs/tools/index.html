@@ -65,7 +65,7 @@
 <tr><td><a href="#search_github"><code>search_github</code></a></td><td>GitHub REST API</td><td>Profile, repos, commit-discovered emails</td><td>&mdash;</td></tr>
 <tr><td><a href="#search_dns"><code>search_dns</code></a></td><td>dnspython (built-in)</td><td>A/AAAA/MX/NS/TXT/CNAME/SOA, SPF/DMARC/DKIM</td><td>&mdash;</td></tr>
 <tr><td><a href="#search_rdap"><code>search_rdap</code></a></td><td>RDAP (IANA bootstrap)</td><td>Registrar, dates, name servers, status</td><td>&mdash;</td></tr>
-<tr><td><a href="#search_gdelt_geo"><code>search_gdelt_geo</code></a></td><td>GDELT GEO 2.0 API</td><td>Worldwide geolocated news coverage (GeoJSON)</td><td>&mdash;</td></tr>
+<tr><td><a href="#search_gdelt_geo"><code>search_gdelt_geo</code></a></td><td>GDELT 15-minute GKG feed</td><td>Recent worldwide news on a map (GeoJSON)</td><td>&mdash;</td></tr>
 <tr><td><a href="#search_dorks_live"><code>search_dorks_live</code></a></td><td>Bright Data SERP API</td><td>Live Google dork results (title, URL, snippet)</td><td>BRIGHTDATA_API_KEY</td></tr>
 <tr><td><a href="#scrape_url"><code>scrape_url</code></a></td><td>Bright Data Web Unlocker</td><td>Fetch any URL bypassing Cloudflare/CAPTCHA</td><td>BRIGHTDATA_API_KEY</td></tr>
 <tr><td><a href="#search_footprint"><code>search_footprint</code></a></td><td>Bright Data SERP API</td><td>Entity-type-aware SERP footprint + correlation graph</td><td>BRIGHTDATA_API_KEY</td></tr>
@@ -281,11 +281,10 @@
 
 <h2 id="search_gdelt_geo">SEARCH_GDELT_GEO</h2>
 <div class="indent">
-<p>Searches worldwide, geolocated news coverage via the <a href="https://blog.gdeltproject.org/announcing-the-geo-2-0-api/" target="_blank" rel="noopener">GDELT GEO 2.0 API</a> — real-time point-level coverage refreshed every 15 minutes, covering GDELT's machine-translated languages worldwide. No API key. Optionally scoped to a bounding box.</p>
-<p><b>MCP parameters:</b> <code>query</code> (string, required), <code>timespan</code> (minutes, 15&ndash;1440), <code>maxpoints</code> (1&ndash;500), <code>bbox</code> (array) &nbsp;|&nbsp; <b>No API key required</b></p>
-<pre>GDELT geo results for 'ukraine war' (last 60min): 12 location(s)
-[+] Kyiv, Ukraine (50.45, 30.52) — 4 mention(s)
-[+] Kharkiv, Ukraine (49.99, 36.23) — 2 mention(s)</pre>
+<p>Recent, geolocated worldwide news from <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">The GDELT Project</a>'s 15-minute article feed (the GEO 2.0 API it replaces was retired). Queries are matched against headlines and URLs (quoted phrases, <code>OR</code>, or <code>*</code> for everything); results are grouped by place. The last 6 hours are kept in memory (<code>OPENOSINT_GDELT_WINDOW_HOURS</code>), loaded only when the tool is first used; the first search may cover just the last 15 minutes while older articles load, and the result says so. No API key. Optionally scoped to a bounding box. News data: GDELT Project, <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">gdeltproject.org</a>.</p>
+<p><b>MCP parameters:</b> <code>query</code> (string, required), <code>timespan</code> (minutes, 15&ndash;1440, capped at the loaded window), <code>maxpoints</code> (1&ndash;500), <code>bbox</code> (array) &nbsp;|&nbsp; <b>No API key required</b></p>
+<pre>GDELT geolocated news for 'ukraine': 53 location(s), 471 article mention(s). Coverage: the last 6 h.
+[+] Kyiv, Kyyiv, Ukraine (50.4333, 30.5167) — 38 article(s)</pre>
 </div>
 
 <hr>

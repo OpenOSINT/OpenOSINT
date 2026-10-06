@@ -9,6 +9,18 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- `search_gdelt_geo` works again: the GDELT GEO 2.0 API it called was retired (HTTP 404), so it now reads GDELT's 15-minute GKG article feed (`data.gdeltproject.org`, keyless) and keeps a rolling window in memory (default 6 hours; `OPENOSINT_GDELT_WINDOW_HOURS`, hard cap `OPENOSINT_GDELT_MAX_ARTICLES`, oldest dropped first). Same tool name, same GeoJSON point shape and `[service_unavailable]` result. Query matching is against headlines and URLs (`"phrases"`, `OR`, `*`), country-level mentions are dropped, and points now carry `title`, `url`, `domain` and `tone`.
+- Lazy and polite: nothing is downloaded until the tool is first used. The first search loads only the newest file; older files load on one background thread, one download at a time. Upstream load is one file per 15 minutes regardless of how many searches run. The result and the globe say how far back they cover ("News: last 15 min — older articles still loading").
+- Downloads are fail-closed: https `data.gdeltproject.org` only, no redirects, compressed and decompressed size caps, per-field length caps, URL validation; any violation returns the structured service-unavailable result.
+- The globe shows the headline and domain of a news point as plain text; box-select now asks for query `"*"` in the selected area, and a search with no matches clears the previous search's dots.
+
+### Fixed
+- `POST /api/run/search_gdelt_geo` dropped the selected bounding box; `RunRequest` now accepts an optional 4-number `bbox` (HTTP 422 if malformed) and passes it to the tool.
+
+### Added
+- Opt-in live check: `OPENOSINT_LIVE=1 pytest tests/test_gdelt_geo_live.py`.
+
 ## [2.31.0] — 2026-10-06
 
 Keys saved on this computer from the web UI, a first-run panel, clear messages for tools that need a key, the graph store and MCP graph tools without native builds, a new `search_rdap` tool, and a graceful fallback when the GDELT GEO service is down.
