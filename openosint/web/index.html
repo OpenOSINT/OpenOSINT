@@ -706,11 +706,15 @@
        class="absolute top-2 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
     Basemap imagery unavailable — points remain usable below.
   </div>
-  <!-- GDELT GEO is down: say so instead of showing an empty news layer with no explanation. -->
+  <!-- GDELT news feed is down: say so instead of showing an empty news layer with no explanation. -->
   <div x-show="newsUnavailable" x-cloak data-testid="news-unavailable"
        class="absolute top-10 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
     News layer unavailable — the GDELT service is not responding. Try again later.
   </div>
+  <!-- How far back the dots reach: a short first window must not read as "no news". Plain text only. -->
+  <div x-show="newsCoverage && !newsUnavailable" x-cloak data-testid="news-coverage"
+       class="absolute bottom-4 left-4 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-secondary z-20 c-fadein"
+       x-text="window._geoFns?.coverageLabel(newsCoverage)"></div>
   <!-- Pivot popover (shown on point tap) -->
   <div x-show="globePivotFeature" x-cloak
        class="absolute bottom-4 right-4 bg-surface border border-app rounded-lg shadow-xl p-3 z-20 w-56 text-xs c-fadein">
@@ -720,6 +724,9 @@
       <button @click="globePivotFeature = null" class="text-muted hover:text-primary transition-colors leading-none">✕</button>
     </div>
     <p class="text-primary font-medium mb-1 break-words leading-snug" x-text="globePivotLabel()"></p>
+    <!-- Headline/domain come from a worldwide news feed: text bindings only, never HTML. -->
+    <p x-show="globePivotTitle()" class="text-secondary mb-1 break-words leading-snug" x-text="globePivotTitle()"></p>
+    <p x-show="globePivotDomain()" class="text-muted mb-1 font-mono break-all" x-text="globePivotDomain()"></p>
     <a x-show="globePivotUrl()" :href="globePivotUrl()" target="_blank" rel="noopener noreferrer"
        class="text-accent-blue hover:underline text-xs break-all block mb-3" x-text="globePivotUrl()"></a>
     <button @click="pivotOnGlobeFeature()"
@@ -904,6 +911,7 @@ document.addEventListener('alpine:init', () => {
     globePivotFeature: null,
     basemapUnavailable: false,
     newsUnavailable: false,
+    newsCoverage: null,
     currentTarget: '',
 
     // Gate / notice bar state (initialized from localStorage in init())
@@ -991,7 +999,7 @@ document.addEventListener('alpine:init', () => {
             const [minLon, minLat, maxLon, maxLat] = bbox.map(n => Math.round(n * 10000) / 10000);
             this.globePivotFeature = null;
             this.activeView = 'chat';
-            this.input = `Investigate recent activity in the bounding box [${minLon}, ${minLat}, ${maxLon}, ${maxLat}] (min_lon, min_lat, max_lon, max_lat) — use search_gdelt_geo scoped to this bbox.`;
+            this.input = `Investigate recent activity in the bounding box [${minLon}, ${minLat}, ${maxLon}, ${maxLat}] (min_lon, min_lat, max_lon, max_lat) — use search_gdelt_geo with query "*" and this bbox.`;
             this.$nextTick(() => document.getElementById('chat-input')?.focus());
           });
           window._globeFns.onBasemapUnavailable((unavailable) => {
@@ -1440,12 +1448,14 @@ document.addEventListener('alpine:init', () => {
       if (down !== null && down !== undefined) this.newsUnavailable = down;
       if (!window._geoFns || !window._globeFns || !target) return;
       const features = window._geoFns.extractGeoFeatures(tool, target, output || '');
-      if (!features.length) return;
       if (tool === 'search_gdelt_geo') {
+        // A search that matched nothing must not leave the previous search's dots up.
+        if (down === true) return;
+        this.newsCoverage = window._geoFns.newsCoverage(tool, output);
         window._globeFns.setNewsFeatureCollection({ type: 'FeatureCollection', features });
-      } else {
-        features.forEach(f => window._globeFns.addFinding(f));
+        return;
       }
+      features.forEach(f => window._globeFns.addFinding(f));
     },
 
     // UI helpers
@@ -1454,6 +1464,7 @@ document.addEventListener('alpine:init', () => {
       this.hasGraphData = false; this.graphNodeCapHit = false;
       this.graphPivotNode = null; this.globePivotFeature = null; this.currentTarget = '';
       this.newsUnavailable = false;
+      this.newsCoverage = null;
       if (window._graphFns) window._graphFns.clearGraph();
       if (window._globeFns) {
         window._globeFns.clearFindings();
@@ -1666,12 +1677,21 @@ document.addEventListener('alpine:init', () => {
     },
 
     // Globe pivot panel — label/url readers + the "Investigate" action.
-    // GDELT's raw properties.html (if present) is a third-party-controlled
-    // HTML blurb — never x-html it; only pull a URL out of it via regex and
-    // render that as a plain, properly-bound <a href>.
+    // Titles, domains and URLs on news points are third-party text from GDELT's
+    // feed — never x-html them. Titles/domains render via x-text; the URL goes
+    // through safeHttpUrl and is rendered as a plain, properly-bound <a href>.
+    // (An older GDELT-style properties.html blurb is still read for its href only.)
     globePivotLabel() {
       const props = this.globePivotFeature?.feature?.properties || {};
       return props.name || props.target || 'Unknown location';
+    },
+    globePivotTitle() {
+      const t = this.globePivotFeature?.feature?.properties?.title;
+      return typeof t === 'string' ? t : '';
+    },
+    globePivotDomain() {
+      const d = this.globePivotFeature?.feature?.properties?.domain;
+      return typeof d === 'string' ? d : '';
     },
     globePivotUrl() {
       const props = this.globePivotFeature?.feature?.properties || {};
@@ -1750,7 +1770,7 @@ document.addEventListener('alpine:init', () => {
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';
   import { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox } from '/static/graph-renderer.js';
   import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo } from '/static/globe-renderer.js';
-  import { extractGeoFeatures, gdeltServiceStatus } from '/static/geo-extractor.js';
+  import { extractGeoFeatures, gdeltServiceStatus, newsCoverage, coverageLabel } from '/static/geo-extractor.js';
   import { safeHttpUrl } from '/static/url-safety.js';
   import * as setupClient from '/static/setup-client.js';
   window._runAgentLoop    = runAgentLoop;
@@ -1758,7 +1778,7 @@ document.addEventListener('alpine:init', () => {
   window._extractEntities = extractEntities;
   window._graphFns        = { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox };
   window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo };
-  window._geoFns          = { extractGeoFeatures, gdeltServiceStatus };
+  window._geoFns          = { extractGeoFeatures, gdeltServiceStatus, newsCoverage, coverageLabel };
   window._urlSafety       = { safeHttpUrl };
   window._setupClient     = setupClient;
   window._agentLoopReady  = true;

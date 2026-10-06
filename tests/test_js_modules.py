@@ -65,6 +65,27 @@ def test_globe_shows_a_notice_when_the_news_service_is_down():
     assert "newsUnavailable: false" in INDEX
 
 
+def test_globe_news_badge_and_headline_render_as_text_only():
+    assert 'data-testid="news-coverage"' in INDEX
+    assert 'x-text="window._geoFns?.coverageLabel(newsCoverage)"' in INDEX
+    assert 'x-text="globePivotTitle()"' in INDEX
+    assert 'x-text="globePivotDomain()"' in INDEX
+    assert "newsCoverage: null" in INDEX
+    # Third-party headlines/domains/URLs must never be injected as HTML.
+    panel = INDEX[INDEX.index("<!-- Pivot popover") : INDEX.index("</div><!-- end globe pane -->")]
+    assert "x-html" not in panel
+    assert ":href=\"globePivotUrl()\"" in panel  # URL only via the safe-URL check
+
+
+def test_box_select_asks_for_everything_in_the_area():
+    assert 'use search_gdelt_geo with query "*" and this bbox.' in INDEX
+
+
+def test_globe_keeps_the_gdelt_credit():
+    renderer = (ROOT / "openosint/web/static/globe-renderer.js").read_text()
+    assert "https://www.gdeltproject.org" in renderer
+
+
 # --- Settings flow per mode -------------------------------------------------
 
 
