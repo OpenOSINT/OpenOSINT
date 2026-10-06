@@ -254,6 +254,11 @@ def _slot_time(slot: str) -> datetime | None:
         return None
 
 
+def _slot_dt(slot: str) -> datetime:
+    """Like _slot_time for slots we generated ourselves (always valid)."""
+    return datetime.strptime(slot, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+
+
 def _slot_str(moment: datetime) -> str:
     return moment.strftime("%Y%m%d%H%M%S")
 
@@ -431,7 +436,7 @@ class GkgWindow:
     @staticmethod
     def _trim(files: dict[str, tuple[Article, ...]]) -> dict[str, tuple[Article, ...]]:
         """Drop slots outside the window, then oldest articles beyond the hard cap."""
-        newest = _slot_time(max(files))
+        newest = _slot_dt(max(files))
         oldest_kept = _slot_str(newest - timedelta(hours=window_hours(), minutes=-1))
         budget = max_articles()
         trimmed: dict[str, tuple[Article, ...]] = {}
@@ -454,7 +459,7 @@ class GkgWindow:
                 or time.monotonic() < self._backfill_retry_after
             ):
                 return
-            newest = _slot_time(max(self._files))
+            newest = _slot_dt(max(self._files))
             wanted = (
                 _slot_str(newest - timedelta(minutes=SLOT_MINUTES * i))
                 for i in range(1, window_hours() * 60 // SLOT_MINUTES)
