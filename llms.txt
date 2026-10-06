@@ -2,7 +2,7 @@
 > MCP-native Open Source Intelligence framework for AI agents. Autonomous OSINT investigations from your terminal.
 
 ## Overview
-OpenOSINT is a modular OSINT framework that exposes 20 intelligence-gathering tools to large language models via the Model Context Protocol (MCP). It also operates as a standalone CLI, interactive REPL, and browser Web UI for direct human use. No LLM is embedded — OpenOSINT provides the tool surface that an MCP-compatible client (e.g. Claude Code, Claude Desktop) drives autonomously.
+OpenOSINT is a modular OSINT framework that exposes 21 intelligence-gathering tools to large language models via the Model Context Protocol (MCP). It also operates as a standalone CLI, interactive REPL, and browser Web UI for direct human use. No LLM is embedded — OpenOSINT provides the tool surface that an MCP-compatible client (e.g. Claude Code, Claude Desktop) drives autonomously.
 
 ## Installation
 - PyPI: `pip install openosint`
@@ -29,6 +29,7 @@ OpenOSINT is a modular OSINT framework that exposes 20 intelligence-gathering to
 - `search_abuseipdb` — IP abuse confidence score, reports, country, ISP (requires ABUSEIPDB_API_KEY)
 - `search_github` — GitHub profile, repos, commit-discovered emails, username/keyword search
 - `search_dns` — A/AAAA/MX/NS/TXT/CNAME/SOA records plus SPF, DMARC, DKIM analysis
+- `search_rdap` — domain registrar, registration/expiry dates, name servers and status via RDAP (keyless)
 - `search_gdelt_geo` — worldwide geolocated news coverage via GDELT GEO 2.0 API, GeoJSON output
 - `search_dorks_live` — live Google search results for dork queries via Bright Data SERP API
 - `scrape_url` — fetch any URL bypassing Cloudflare/CAPTCHA via Bright Data Web Unlocker, returns clean Markdown

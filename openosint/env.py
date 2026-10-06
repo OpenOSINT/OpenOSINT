@@ -9,8 +9,17 @@ under site-packages — anchoring purely on `__file__` resolves into
 python-dotenv's default search starts from the caller's `__file__`, not
 the cwd.
 
-Resolution order (first match wins), `override=False` throughout — a real
-environment variable always beats anything in the file:
+Precedence, highest first — `override=False` throughout, so the first source to
+set a variable wins:
+  A. real environment variables
+  B. the data-directory config, `$OPENOSINT_HOME/config.env` (where the web UI
+     saves keys; see openosint/config_store.py)
+  C. legacy `.env` files, resolved as below
+A legacy `.env` at the package root, when it is the one that would be loaded, is
+copied into B once on first run (see `config_store.migrate_legacy_env`); the old
+file stays and keeps working.
+
+Legacy `.env` resolution (first match wins):
   1. `$OPENOSINT_ENV_FILE`, if set — fail loudly on a bad path rather than
      silently loading nothing.
   2. For the CLI and web server (`prefer_package_root=False`, the default):
@@ -41,8 +50,38 @@ from pathlib import Path
 
 from dotenv import find_dotenv, load_dotenv
 
+from openosint.config_store import config_path, migrate_legacy_env
+from openosint.settings_catalog import SAVEABLE_NAMES
+
 _loaded_path: str | None = None
 _load_attempted = False
+# variable name -> "config" | "legacy", for variables a file (not the real
+# environment) supplied. Lets the web UI tell a saved value from one that a real
+# environment variable will override after the next restart.
+_origins: dict[str, str] = {}
+
+
+def value_source(name: str) -> str | None:
+    """Where *name*'s current value came from: "environment", "config", "legacy" or None."""
+    if not os.environ.get(name, "").strip():
+        return None
+    return _origins.get(name, "environment")
+
+
+def mark_saved(name: str) -> None:
+    """Record that *name* now holds a value this process saved to the config file.
+
+    Without this, a key saved from the UI would later look like a real
+    environment variable and block the user from changing it again.
+    """
+    _origins[name] = "config"
+
+
+def _load_file(path: str | Path, origin: str) -> None:
+    before = set(os.environ)
+    load_dotenv(dotenv_path=path, override=False)
+    for name in set(os.environ) - before:
+        _origins[name] = origin
 
 
 def _resolve_path(*, prefer_package_root: bool = False) -> str:
@@ -84,8 +123,23 @@ def load_env(*, prefer_package_root: bool = False) -> Path | None:
         return Path(_loaded_path) if _loaded_path else None
 
     path = _resolve_path(prefer_package_root=prefer_package_root)
+
+    # Migrate only a package-root .env that this process would actually have loaded
+    # (not one shadowed by a cwd or OPENOSINT_ENV_FILE choice), so migrating never
+    # changes which legacy file wins.
+    package_env = Path(__file__).resolve().parent.parent / ".env"
+    if path and Path(path).resolve() == package_env.resolve():
+        migrate_legacy_env(package_env, SAVEABLE_NAMES)
+
+    # Config first: with override=False the first loader to set a variable wins,
+    # so this is what puts it above every legacy .env.
+    config_file = config_path()
+    if config_file.is_file():
+        _load_file(config_file, "config")
+        print(f"[*] Loaded config: {config_file}", file=sys.stderr)
+
     if path:
-        load_dotenv(dotenv_path=path, override=False)
+        _load_file(path, "legacy")
         print(f"[*] Loaded .env: {path}", file=sys.stderr)
 
     _loaded_path = path or None

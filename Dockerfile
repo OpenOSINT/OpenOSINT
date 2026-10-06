@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY . .
 
-# Editable on purpose: /api/setup saves keys to <package root>/.env, which
-# must resolve to /app/.env (see the CMD below).
+# Editable on purpose: the docs mount and static files resolve relative to the
+# package root. Keys saved from the UI go to $OPENOSINT_HOME/config.env, in the volume.
 RUN pip install --no-cache-dir -e ".[graph]" \
     && apt-get purge -y --auto-remove build-essential pkg-config
 
@@ -29,8 +29,9 @@ EXPOSE 8080
 # --allow-remote is required for a non-loopback bind (GHSA-cqr4-hcfp-m6m4) —
 # safe here because the container network boundary is what's actually
 # exposed; publish the port only to trusted networks.
-# /app/.env is a symlink into the data volume so keys saved from the UI
-# survive container re-creation without a bind-mounted file. It dangles until
-# a key is saved (which then creates /data/.env); no empty file is touched, so
-# the "Loaded .env" line only appears once there really is one.
+# /app/.env stays a symlink into the data volume so a /data/.env from an older
+# release keeps loading (and is copied to /data/config.env once). It dangles until
+# such a file exists, so the "Loaded .env" line only appears once there really is one.
+# Saving keys from the browser needs OPENOSINT_SETUP_TOKEN here: the browser reaches
+# the container over the Docker bridge, not loopback.
 CMD ["sh", "-c", "ln -sf /data/.env /app/.env && exec openosint web --host 0.0.0.0 --port 8080 --no-browser --allow-remote"]

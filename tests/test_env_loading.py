@@ -28,6 +28,15 @@ import pytest
 _PYTHON = sys.executable
 
 
+def _subprocess_env() -> dict[str, str]:
+    """Minimal child env. OPENOSINT_HOME is kept so a child never touches the real ~/.openosint."""
+    return {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": os.environ.get("HOME", ""),
+        "OPENOSINT_HOME": os.environ.get("OPENOSINT_HOME", ""),
+    }
+
+
 def _reset_env_module_state(monkeypatch):
     import openosint.env as env_module
 
@@ -49,7 +58,7 @@ class TestCliPicksUpDotenvFromCwd:
         result = subprocess.run(
             [_PYTHON, "-c", probe],
             cwd=str(tmp_path),
-            env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", "")},
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             timeout=30,
@@ -211,7 +220,7 @@ class TestJsonStdoutStaysClean:
         result = subprocess.run(
             [_PYTHON, "-m", "openosint.cli", "--json", "search-dorks-live", "example.com"],
             cwd=str(tmp_path),
-            env={"PATH": os.environ.get("PATH", ""), "HOME": os.environ.get("HOME", "")},
+            env=_subprocess_env(),
             capture_output=True,
             text=True,
             timeout=30,
@@ -253,8 +262,7 @@ class TestMissingEnvFileExitsCleanly:
             self._ENTRY_POINTS[entry_point],
             cwd=str(tmp_path),
             env={
-                "PATH": os.environ.get("PATH", ""),
-                "HOME": os.environ.get("HOME", ""),
+                **_subprocess_env(),
                 "OPENOSINT_ENV_FILE": str(missing),
             },
             input="",

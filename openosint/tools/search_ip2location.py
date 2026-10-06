@@ -19,7 +19,7 @@ import re
 
 import requests
 
-from openosint.env import missing_var_message
+from openosint.settings_catalog import missing_keys_message
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -159,7 +159,7 @@ async def run_ip2location_osint(
     """
     resolved_key = api_key or os.environ.get("IP2LOCATION_API_KEY", "")
     if not resolved_key:
-        return f"{missing_var_message('IP2LOCATION_API_KEY')} Get a key at https://www.ip2location.io/pricing"
+        return missing_keys_message("search_ip2location", ["IP2LOCATION_API_KEY"])
 
     ip = ip.strip()
     if not _is_valid_ip(ip):

@@ -24,7 +24,6 @@ import logging
 import os
 import re
 import secrets
-import shutil
 import socket
 import sys
 import time
@@ -68,14 +67,19 @@ from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
 from openosint.tools.search_phone import run_phone_osint
+from openosint.tools.search_rdap import run_rdap_osint
 from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 from openosint import __version__ as _VERSION
+from openosint.config_store import config_path, read_config, validate_pair, write_config
+from openosint.env import mark_saved, value_source
 from openosint.paths import home_dir
 from openosint.regexes import EMAIL_FIND_RE
 from openosint.request_guard import RequestGuardMiddleware
+from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
+from openosint.utils import find_binary
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
@@ -276,9 +280,23 @@ _MAX_IP_BUCKETS: int = int(os.getenv("RATE_LIMIT_MAX_IPS", "10000"))
 _RL_WINDOW_SECS: float = float(os.getenv("RATE_LIMIT_WINDOW", "60"))
 _RL_MAX_REQS: int = int(os.getenv("RATE_LIMIT_MAX", "30"))
 
-# Tools that need no API key and are therefore cheaply spammable
+# Tools that need no API key and are therefore cheaply spammable. The binary-backed
+# ones (holehe/sherlock/sublist3r) are the most expensive: each call fans out to
+# dozens of third-party sites or a subprocess.
 _KEYLESS_TOOLS: frozenset[str] = frozenset(
-    {"search_whois", "search_dns", "generate_dorks", "search_ip", "search_paste", "search_gdelt_geo"}
+    {
+        "search_whois",
+        "search_dns",
+        "generate_dorks",
+        "search_ip",
+        "search_paste",
+        "search_rdap",
+        "search_gdelt_geo",
+        "search_github",
+        "search_email",
+        "search_username",
+        "search_domain",
+    }
 )
 
 # ---------------------------------------------------------------------------
@@ -359,6 +377,22 @@ def _setup_request_is_authorized(request: "Request") -> bool:
     return secrets.compare_digest(supplied, expected)
 
 
+_SETUP_FORBIDDEN_MESSAGE = (
+    "Saving keys from the browser is only allowed from localhost, or with the setup token "
+    "(set OPENOSINT_SETUP_TOKEN on the server and enter it here). In Docker the browser "
+    "does not reach the server over loopback: set the keys in your compose environment or "
+    ".env file, or set OPENOSINT_SETUP_TOKEN."
+)
+_SETUP_RL_MAX = 10
+_SETUP_RL_WINDOW_SECS = 60.0
+_SETUP_ATTEMPTS: dict[str, "_deque[float]"] = {}
+
+
+def _check_setup_attempt_limit(ip: str) -> bool:
+    """Throttle non-loopback /api/setup callers so the token cannot be brute-forced."""
+    return _sliding_window_allow(_SETUP_ATTEMPTS, ip, _SETUP_RL_MAX, _SETUP_RL_WINDOW_SECS, _MAX_IP_BUCKETS)
+
+
 def _get_client_ip(request: "Request") -> str:
     """Return the real client IP, honouring proxy headers only when TRUSTED_PROXY is set."""
     if TRUSTED_PROXY:
@@ -437,7 +471,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["holehe"],
         "requires_env": [],
-        "binary_hints": {"holehe": "pip install holehe"},
+        "binary_hints": {"holehe": "uv tool install holehe (or: pip install holehe)"},
     },
     {
         "name": "search_username",
@@ -449,7 +483,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sherlock"],
         "requires_env": [],
-        "binary_hints": {"sherlock": "pip install sherlock-project"},
+        "binary_hints": {"sherlock": "uv tool install sherlock-project (or: pip install sherlock-project)"},
     },
     {
         "name": "search_breach",
@@ -496,7 +530,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sublist3r"],
         "requires_env": [],
-        "binary_hints": {"sublist3r": "pip install sublist3r"},
+        "binary_hints": {"sublist3r": "uv tool install sublist3r (or: pip install sublist3r)"},
     },
     {
         "name": "search_ip2location",
@@ -532,6 +566,17 @@ _TOOL_CATALOG: list[dict] = [
         "requires_binary": [],
         "requires_env": ["ABUSEIPDB_API_KEY"],
         "env_hints": {"ABUSEIPDB_API_KEY": "abuseipdb.com/account/api"},
+    },
+    {
+        "name": "search_rdap",
+        "description": "Structured domain registration data (registrar, dates, name servers) via RDAP.",
+        "input_label": "Domain",
+        "input_placeholder": "example.com",
+        "category": "Network",
+        "icon": "🗂️",
+        "tool_type": "A",
+        "requires_binary": [],
+        "requires_env": [],
     },
     {
         "name": "search_gdelt_geo",
@@ -704,6 +749,7 @@ _RUNNERS: dict[str, object] = {
         v, timeout_seconds=t, api_key=(keys or {}).get("IP2LOCATION_API_KEY")
     ),
     "search_dns": lambda v, t, keys=None: run_dns_osint(v, timeout_seconds=t),
+    "search_rdap": lambda v, t, keys=None: run_rdap_osint(v, timeout_seconds=t),
     "search_gdelt_geo": lambda v, t, keys=None: run_gdelt_geo_osint(v, timeout_seconds=t),
     "search_abuseipdb": lambda v, t, keys=None: run_abuseipdb_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("ABUSEIPDB_API_KEY")
@@ -768,9 +814,9 @@ _CLAUDE_TOOLS: list[dict] = [
 def _check_available(meta: dict) -> tuple[bool, str | None]:
     """Return (is_available, reason_if_not) for a tool."""
     for binary in meta.get("requires_binary", []):
-        if not shutil.which(binary):
+        if not find_binary(binary):
             hint = meta.get("binary_hints", {}).get(binary, f"install {binary}")
-            return False, f"{binary} not in PATH — {hint}"
+            return False, f"{binary} is not installed — {hint}"
     for key in meta.get("requires_env", []):
         if not os.environ.get(key, "").strip():
             hint = meta.get("env_hints", {}).get(key, "")
@@ -779,31 +825,13 @@ def _check_available(meta: dict) -> tuple[bool, str | None]:
     return True, None
 
 
-_KNOWN_ENV_KEYS = [
-    "ANTHROPIC_API_KEY",
-    "HIBP_API_KEY",
-    "IPINFO_TOKEN",
-    "IP2LOCATION_API_KEY",
-    "CENSYS_API_ID",
-    "CENSYS_SECRET",
-    "SHODAN_API_KEY",
-    "VIRUSTOTAL_API_KEY",
-    "ABUSEIPDB_API_KEY",
-    "GITHUB_TOKEN",
-    "BRIGHTDATA_API_KEY",
-    "BRIGHTDATA_SERP_ZONE",
-    "BRIGHTDATA_UNLOCKER_ZONE",
-]
+_KNOWN_ENV_KEYS = sorted(SETTING_NAMES)
 
-# Keys /api/setup is allowed to write. Anything else in the request body is
-# dropped — GHSA-cqr4-hcfp-m6m4 let a caller set arbitrary env vars (e.g.
-# OPENAI_BASE_URL) this way, redirecting outbound chat traffic and its auth
-# header to attacker infra.
-_SETUP_ALLOWED_KEYS: frozenset[str] = frozenset(_KNOWN_ENV_KEYS) | {
-    "OPENAI_BASE_URL",
-    "OPENAI_MODEL",
-    "OPENAI_API_KEY",
-}
+# Keys /api/setup is allowed to write (the catalog's settings plus the OpenAI-
+# compatible trio). Anything else in the request body is dropped —
+# GHSA-cqr4-hcfp-m6m4 let a caller set arbitrary env vars (e.g. OPENAI_BASE_URL)
+# this way, redirecting outbound chat traffic and its auth header to attacker infra.
+_SETUP_ALLOWED_KEYS: frozenset[str] = SAVEABLE_NAMES
 
 # Keys whose value must be a well-formed http(s) URL — prevents javascript:/
 # file:/gopher: schemes or bare hostnames sneaking into a *_BASE_URL var that
@@ -817,7 +845,7 @@ def _is_valid_base_url(value: str) -> bool:
 
 
 def _is_setup_complete() -> bool:
-    if (_ROOT / ".env").exists():
+    if config_path().exists() or (_ROOT / ".env").exists():
         return True
     return any(os.environ.get(k, "").strip() for k in _KNOWN_ENV_KEYS)
 
@@ -1879,6 +1907,14 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         # so every credentialed tool (and breach unconditionally) is blocked
         # here outright rather than gated. Use POST /api/tools/{tool}/run with
         # a caller-supplied key instead.
+        if tool_name in _KEYLESS_TOOLS and not _check_rate_limit(_get_client_ip(request)):
+
+            async def _limited() -> AsyncIterator[dict]:
+                yield {"data": json.dumps({"line": "Rate limit exceeded. Please wait before retrying.", "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_limited(), ping=15)
+
         restricted, restriction_reason = _request_restriction(request)
         _meta = next((m for m in _TOOL_CATALOG if m["name"] == tool_name), None)
         _needs_operator_key = bool(
@@ -2085,14 +2121,17 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     @app.post("/api/setup")
     async def setup(request: Request):
         # GHSA-cqr4-hcfp-m6m4: this endpoint writes to live process env vars
-        # and .env, so it must never be reachable from the network. Loopback
-        # callers are always allowed; anyone else needs OPENOSINT_SETUP_TOKEN.
+        # and the config file, so it must never be reachable from the network.
+        # Loopback callers are always allowed; anyone else needs OPENOSINT_SETUP_TOKEN.
+        client_ip = request.client.host if request.client else "unknown"
+        if not _is_loopback_request(request) and not _check_setup_attempt_limit(client_ip):
+            return JSONResponse(
+                {"status": "error", "message": "Too many setup attempts. Wait a minute and retry."},
+                status_code=429,
+            )
         if not _setup_request_is_authorized(request):
             return JSONResponse(
-                {
-                    "status": "error",
-                    "message": "Setup is only allowed from localhost, or with a valid X-Setup-Token.",
-                },
+                {"status": "error", "message": _SETUP_FORBIDDEN_MESSAGE},
                 status_code=403,
             )
 
@@ -2102,17 +2141,14 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                 status_code=415,
             )
 
-        body: dict = await request.json()
-        env_path = _ROOT / ".env"
-        existing: dict[str, str] = {}
-        if env_path.exists():
-            for raw in env_path.read_text().splitlines():
-                line = raw.strip()
-                if "=" in line and not line.startswith("#"):
-                    k, _, v = line.partition("=")
-                    existing[k.strip()] = v.strip()
+        body = await request.json()
+        if not isinstance(body, dict):
+            return JSONResponse(
+                {"status": "error", "message": "Body must be a JSON object of KEY: value pairs."},
+                status_code=400,
+            )
 
-        applied: list[str] = []
+        accepted: dict[str, str] = {}
         rejected: list[str] = []
         for k, v in body.items():
             key = str(k).strip()
@@ -2125,12 +2161,67 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
             if key in _SETUP_URL_KEYS and not _is_valid_base_url(v_str):
                 rejected.append(key)
                 continue
-            existing[key] = v_str
-            os.environ[key] = v_str
-            applied.append(key)
+            try:
+                validate_pair(key, v_str)
+            except ValueError:
+                rejected.append(key)
+                continue
+            accepted[key] = v_str
 
-        env_path.write_text("\n".join(f"{k}={v}" for k, v in existing.items()) + "\n")
-        return {"status": "ok", "applied": applied, "rejected": rejected}
+        # A real environment variable outranks the config file on every future start,
+        # so saving over one would only look like it worked until the next restart.
+        shadowed = sorted(k for k in accepted if value_source(k) == "environment")
+        try:
+            if accepted:
+                write_config(accepted)
+        except OSError as exc:
+            logging.getLogger(__name__).error("Could not write %s: %s", config_path(), exc)
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "message": f"Could not save to {config_path()}: {exc.strerror or 'write failed'}.",
+                },
+                status_code=500,
+            )
+        for key, value in accepted.items():
+            if key not in shadowed:
+                os.environ[key] = value
+                mark_saved(key)
+        applied = [k for k in accepted if k not in shadowed]
+        return {
+            "status": "ok",
+            "applied": applied,
+            "rejected": rejected,
+            "shadowed_by_environment": shadowed,
+            "saved_to": str(config_path()),
+        }
+
+    # ------------------------------------------------------------------
+    # GET /api/setup/status  — the key form's field list + what is configured
+    # ------------------------------------------------------------------
+
+    @app.get("/api/setup/status")
+    async def setup_status(request: Request):
+        restricted, _ = _request_restriction(request)
+        can_save = _is_loopback_request(request)
+        fields = public_catalog()
+        if not restricted:
+            saved = set(read_config())  # names only; values never leave config_store
+            for field in fields:
+                source = value_source(field["key"])
+                field["configured"] = source is not None
+                field["source"] = source
+                field["saved_in_config"] = field["key"] in saved
+                # Saved to config.env, but a real environment variable wins on every start.
+                field["shadowed"] = field["saved_in_config"] and source == "environment"
+        return {
+            "status": "ok",
+            "can_save": can_save,
+            "restricted": restricted,
+            "forbidden_message": None if can_save else _SETUP_FORBIDDEN_MESSAGE,
+            "config_path": str(config_path()) if can_save else None,
+            "keys": fields,
+        }
 
     # ------------------------------------------------------------------
     # POST /api/demo/chat  — pre-scripted demo stream, no API key needed
@@ -2320,7 +2411,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     async def graph_page():
         page = _WEB_DIR / "graph.html"
         if page.exists():
-            return HTMLResponse(page.read_text())
+            return HTMLResponse(page.read_text(encoding="utf-8"))
         return HTMLResponse("<h1>graph.html not found</h1>", status_code=404)
 
     # ------------------------------------------------------------------
@@ -2339,7 +2430,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     async def serve_frontend(full_path: str):
         index = _WEB_DIR / "index.html"
         if index.exists():
-            return HTMLResponse(index.read_text())
+            return HTMLResponse(index.read_text(encoding="utf-8"))
         return HTMLResponse(
             "<h1>OpenOSINT</h1>"
             "<p><strong>web/index.html not found.</strong></p>"

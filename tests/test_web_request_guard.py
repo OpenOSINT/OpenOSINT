@@ -223,4 +223,3 @@ class TestSetupContentType:
         async with make_client() as c:
             r = await send(c, "POST", "/api/setup", {"Content-Type": content_type}, content=b"{}")
         assert r.status_code == 200
-        assert (tmp_path / ".env").exists()

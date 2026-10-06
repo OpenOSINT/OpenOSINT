@@ -104,3 +104,13 @@ export function extractGeoFeatures(toolName, target, output) {
     return [];
   }
 }
+
+/**
+ * Whether a search_gdelt_geo result is the "service unavailable" answer (see
+ * openosint/tools/search_gdelt_geo.py). Returns true / false for that tool and
+ * null for any other tool, so callers leave the notice alone for unrelated results.
+ */
+export function gdeltServiceStatus(toolName, output) {
+  if (toolName !== 'search_gdelt_geo') return null;
+  return String(output || '').includes('[service_unavailable] search_gdelt_geo');
+}

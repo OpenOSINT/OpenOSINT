@@ -10,15 +10,20 @@ terms impose on their plain-text output.
 
 Kept separate from search_whois.py: RDAP and WHOIS are different protocols
 with different response shapes, so there's no meaningful logic to share.
+
+Keyless: queries the public IANA bootstrap registry and the TLD's own RDAP server.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import re
 import time
 
 import requests
 
+from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -52,7 +57,7 @@ def fetch_rdap_bootstrap(timeout_seconds: int = _DEFAULT_TIMEOUT) -> dict[str, l
         return cached[1]
 
     try:
-        response = requests.get(_IANA_BOOTSTRAP_URL, timeout=timeout_seconds)
+        response = requests.get(_IANA_BOOTSTRAP_URL, timeout=timeout_seconds, proxies=get_requests_proxies())
     except requests.RequestException as exc:
         raise OSINTError(f"Failed to fetch IANA RDAP bootstrap registry: {exc}") from exc
 
@@ -103,7 +108,12 @@ def fetch_rdap_data(domain: str, bootstrap: dict[str, list[str]], timeout_second
     for base_url in base_urls:
         url = f"{base_url.rstrip('/')}/domain/{domain}"
         try:
-            response = requests.get(url, timeout=timeout_seconds, headers={"Accept": "application/rdap+json"})
+            response = requests.get(
+                url,
+                timeout=timeout_seconds,
+                headers={"Accept": "application/rdap+json"},
+                proxies=get_requests_proxies(),
+            )
         except requests.RequestException as exc:
             last_exc = OSINTError(f"Network error querying RDAP for '{domain}': {exc}")
             continue
@@ -159,3 +169,52 @@ def parse_rdap_domain(rdap_data: dict) -> dict:
         ),
         "status": rdap_data.get("status", []),
     }
+
+
+_DOMAIN_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+_DEFAULT_RUN_TIMEOUT = 15
+
+
+def _normalize_domain(raw: str) -> str:
+    domain = raw.strip().lower()
+    domain = re.sub(r"^[a-z][a-z0-9+.-]*://", "", domain)
+    return domain.split("/", 1)[0].split("?", 1)[0].rstrip(".")
+
+
+def _format_rdap_result(domain: str, info: dict) -> str:
+    nameservers = ", ".join(info["nameServers"]) or "none listed"
+    statuses = ", ".join(info["status"]) or "none listed"
+    return "\n".join(
+        [
+            f"RDAP registration data for '{domain}':",
+            "",
+            f"[+] Registrar: {info['registrar'] or 'not listed'}",
+            f"[+] Registered: {info['createdDate'] or 'not listed'}",
+            f"[+] Expires: {info['expiresDate'] or 'not listed'}",
+            f"[+] Name servers: {nameservers}",
+            f"[+] Status: {statuses}",
+            "",
+            "[*] RDAP omits registrant contact details by design (ICANN redaction policy).",
+        ]
+    )
+
+
+def _lookup(domain: str, timeout_seconds: int) -> dict:
+    bootstrap = fetch_rdap_bootstrap(timeout_seconds)
+    return parse_rdap_domain(fetch_rdap_data(domain, bootstrap, timeout_seconds))
+
+
+async def run_rdap_osint(domain: str, timeout_seconds: int = _DEFAULT_RUN_TIMEOUT) -> str:
+    """Look up a domain's registrar, dates, name servers and status via RDAP. Never raises."""
+    target = _normalize_domain(domain)
+    if not _DOMAIN_RE.match(target):
+        return f"Invalid domain: '{domain.strip()}'. Enter a domain such as example.com."
+    try:
+        info = await asyncio.to_thread(_lookup, target, timeout_seconds)
+    except OSINTError as exc:
+        logger.warning("RDAP lookup failed for %s: %s", target, exc)
+        return f"Scan error: {exc}"
+    except Exception as exc:  # defensive: tools must return text, never raise
+        logger.exception("Unexpected error during RDAP lookup.")
+        return f"Internal error: {exc}"
+    return _format_rdap_result(target, info)

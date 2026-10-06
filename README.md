@@ -3,7 +3,7 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 20 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
+  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 21 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
   <p><em>The AI issues hard-stop tool calls; your code executes the real binary — hallucinated findings are structurally impossible.</em></p>
 </div>
@@ -133,9 +133,9 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 20 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
+| 21 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | All 20 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
+| Native MCP server | All 21 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -167,6 +167,7 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | `search_abuseipdb` | AbuseIPDB v2 API | IP abuse reputation: confidence score, reports, country, ISP |
 | `search_github` | GitHub REST API | Profile, repos, commit-discovered emails, username/keyword search |
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
+| `search_rdap` | RDAP (IANA bootstrap, keyless) | Registrar, registration/expiry dates, name servers, status; registrant contacts redacted by policy |
 | `search_gdelt_geo` | GDELT GEO 2.0 API | Worldwide geolocated news coverage, GeoJSON output |
 | `search_dorks_live` | Bright Data SERP API | Live Google search results for dork queries (title, URL, snippet) |
 | `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown |
@@ -368,6 +369,16 @@ openosint dns example.com
 [DNS] SPF: v=spf1 include:_spf.google.com ~all
 ```
 
+### search_rdap
+
+Looks up a domain's registrar, registration and expiry dates, name servers and status codes over [RDAP](https://about.rdap.org), the machine-readable successor to WHOIS. Keyless: it asks the IANA bootstrap registry which server owns the TLD, then queries that server. Registrant contact details are redacted by registry policy and are never returned.
+
+```text
+[+] Registrar: RESERVED-Internet Assigned Numbers Authority
+[+] Registered: 1995-08-14T04:00:00Z
+[+] Name servers: elliott.ns.cloudflare.com, hera.ns.cloudflare.com
+```
+
 ### search_dorks_live
 
 Executes live Google dork queries through the [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call. Requires `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE`.
@@ -411,11 +422,18 @@ openosint footprint johndoe99
 An additive [FollowTheMoney](https://followthemoney.tech/) entity graph —
 statement-level provenance, an append-only store, non-destructive same_as
 deduplication, and a human review queue — sits alongside the tools above
-without changing anything about them. Opt in with `pip install
-"openosint[graph]"` (Python 3.10+) or `"openosint[graph-dedup]"` (adds
-same_as scoring, needs Python 3.11+), then use it via three MCP tools:
-`graph_export`, `graph_neighbors`, `graph_review_candidates`. See
-[docs/graph.md](docs/graph.md) for the full guide and a worked example.
+without changing anything about them. The store, the `/graph` page, the
+`/api/graph/*` routes and the `graph_neighbors` / `graph_review_candidates`
+MCP tools work in a plain `uvx openosint web` install, with no compiler and no
+extra. The `graph` extra (`pip install "openosint[graph]"`, builds PyICU) adds
+the real FollowTheMoney library: `graph_export` and `.ftm` export. The
+`graph-dedup` extra (Python 3.11+) adds same_as scoring. Without the extra,
+ids are produced by a vendored copy that a CI test proves byte-identical to
+FollowTheMoney's, so a `graph.db` is readable either way. Nothing in the web
+UI or the agent writes to this store: it is filled through the Python API
+(see [docs/graph.md](docs/graph.md) for the full guide and a worked example);
+the GRAPH tab in the main UI is a separate, client-side view of the current
+chat.
 
 The same workflow is shown end to end — including the `.ftm` export that
 passes `ftm validate` — in the terminal demo in
@@ -541,7 +559,7 @@ Full per-tool reference, CLI flags, and configuration options at [openosint.tech
 
 ### MCP Server
 
-Expose all 20 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 20 tools during conversations.
+Expose all 21 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 21 tools during conversations.
 
 **Claude Code:**
 
@@ -620,7 +638,7 @@ Your browser opens automatically; if it doesn't, open <http://127.0.0.1:8080/>. 
 | Keep the browser closed | `uvx openosint web --no-browser` |
 | Find your data | Graph database and session history live in `~/.openosint/` (`%USERPROFILE%\.openosint` on Windows). Move it with `OPENOSINT_HOME=/path`; `OPENOSINT_GRAPH_DB` still overrides just `graph.db`. |
 | Find reports | CLI and REPL reports are written to `./reports/` in the directory you ran `openosint` from. The web UI writes none. |
-| Use the entity graph view | Needs the `graph` extra, which builds [PyICU](https://pypi.org/project/PyICU/) and so needs libicu and a C++ compiler first (Python 3.11+). Ubuntu: `sudo apt install libicu-dev pkg-config g++`. macOS: `brew install icu4c pkg-config` and `export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig"`. Then `uvx --from "openosint[graph]" openosint web`. On Windows, or to skip the build, use [Docker](#docker), which includes it. |
+| Use the entity graph store | Works with plain `uvx openosint web`, no compiler needed: the `/graph` page, `/api/graph/*`, and the `graph_neighbors` / `graph_review_candidates` MCP tools. `graph_export` (.ftm) needs the `graph` extra, which builds [PyICU](https://pypi.org/project/PyICU/) and so needs libicu and a C++ compiler first (Ubuntu: `sudo apt install libicu-dev pkg-config g++`; macOS: `brew install icu4c pkg-config` and `export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig"`), then `uvx --from "openosint[graph]" openosint web`; or use [Docker](#docker), which includes it. The store starts empty: it is filled through the Python API, not by the UI. |
 
 ### Alternatives
 
@@ -661,7 +679,27 @@ If a binary is absent, the corresponding tool returns a descriptive error. All o
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill in your keys. `.env` is read from the
+**Easiest:** open the web UI. On a local install, Settings saves your keys on this
+computer by default ("Save on this computer"), as does the first-run panel; "Use only
+for this browser session" is a secondary option that keeps a key in the tab only. On the
+public demo, keys stay in the browser. Keys are written to `config.env` in the data directory
+(`~/.openosint/config.env`, or `$OPENOSINT_HOME/config.env`), never inside the
+installed package, with user-only permissions (`0600`) where the OS supports it.
+Values are never logged or sent back to the browser; the UI only shows which keys
+are configured and where each value came from.
+
+Precedence, highest first:
+
+1. real environment variables (a saved value cannot override one; the UI says so)
+2. `config.env` in the data directory
+3. a legacy `.env` (the locations below)
+
+An existing `.env` keeps working. If the file at the package root (a source
+checkout or Docker image) is the one that would be loaded, its known settings
+are copied into `config.env` once, with a notice on stderr that names keys but
+never values; the old file is left in place and now has lower priority.
+
+For a file you manage yourself, copy `.env.example` to `.env` and fill in your keys. `.env` is read from the
 **directory you run `openosint` from** (searched upward, like `git` finds
 `.git`) — it does not need to be at any particular "project root", and a
 regular `pip install` works the same way as running from a source checkout.
@@ -681,6 +719,7 @@ itself — the app starts and every key-less tool works with zero configuration.
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
 | `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
+| `OPENOSINT_SETUP_TOKEN` | Web UI | Optional | Lets the browser save keys when it is not on loopback (Docker). Send as `X-Setup-Token`; the UI has a field for it. Unset = saving from a non-loopback browser is off. Failed attempts are throttled. |
 | `HIBP_API_KEY` | `search_breach` | Required for this tool | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
 | `IPINFO_TOKEN` | `search_ip` | Optional | Works without it; raises ipinfo.io rate limits |
 | `SHODAN_API_KEY` | `search_shodan` | Required for this tool | Shodan API — [get one](https://account.shodan.io) |
@@ -748,6 +787,8 @@ docker compose run --rm openosint email target@example.com --json
 
 `.env` is optional: with no keys the web UI still starts at <http://localhost:8080>. To provide keys today, list them under `environment:` in `docker-compose.yml` (or in a `.env` next to it), or put a `.env` in the data volume (`/data/.env`). Reports are persisted to `./reports/`; the graph database and session history live in the `openosint-data` volume (`/data` in the container, via `OPENOSINT_HOME`). The image includes the graph view.
 
+**Saving keys from the browser in Docker.** The browser reaches the container over the Docker network, not loopback, so the UI cannot save keys by default and says so (it shows the reason instead of failing silently). Either set the keys in your compose environment or `.env`, or set a token and enter it in the UI's *Save keys to server* panel: `OPENOSINT_SETUP_TOKEN=choose-a-long-random-string docker compose up`. Saved keys go to `/data/config.env` in the `openosint-data` volume and survive restarts. Wrong tokens are throttled.
+
 The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSINT_ALLOWED_HOSTS` defaults to `localhost,127.0.0.1` in the compose file; extend it if you reach the UI by another name). To reach it from other machines on purpose, run `OPENOSINT_BIND=0.0.0.0 docker compose up`: the instance then runs in restricted mode (it never spends keys held on the server). **Security note:** the UI's setup endpoint accepts and stores API keys, so only do this on a network and behind a firewall or reverse proxy you trust.
 
 > **Warning: `OPENOSINT_PUBLISHED_BIND`.** `docker-compose.yml` sets this to the same value as `OPENOSINT_BIND` to tell the server which address the port is published on; an exact loopback value (`127.0.0.1`, `localhost`, `::1`) lifts the restriction that a container's `0.0.0.0` bind otherwise gets. Never set it to a loopback value yourself, or edit the compose port mapping away from it, when the port is published on any other interface.
@@ -785,7 +826,7 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
   currently returns. A negative result (no breach found, no accounts found)
   means the source didn't report a match — not that no exposure exists.
 - **Most tools depend on third-party services you don't control.** Nine of
-  the 20 tools hard-require an API key and are subject to that provider's
+  the 21 tools hard-require an API key and are subject to that provider's
   uptime, rate limits, and pricing (Shodan, VirusTotal, Censys, AbuseIPDB,
   IP2Location, HaveIBeenPwned, and the three Bright Data–backed tools). Free
   tiers are small; heavy use requires a paid plan with the provider, not with
@@ -796,7 +837,7 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
 - **The entity graph module (`openosint[graph]`) is additive, not
   authoritative.** `same_as` links are scored candidates for human review,
   not verified identity matches — see [docs/graph.md](docs/graph.md).
-- **The AI agent can only call the 20 tools above.** It cannot browse the
+- **The AI agent can only call the 21 tools above.** It cannot browse the
   open web freely, run arbitrary code, or invent data — every finding comes
   from a real tool call, but the agent's tool selection can still be wrong
   or incomplete for a given target.
@@ -868,7 +909,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.30.0 — October 2026*
+*OpenOSINT v2.31.0 — October 2026*
 
 ## Star History
 

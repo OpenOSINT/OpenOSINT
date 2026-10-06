@@ -185,6 +185,70 @@
       </button>
     </div>
 
+    <!-- LOCAL MODE (primary): keys are saved on this computer, through /api/setup, into the
+         data directory. The browser-only fields below become a secondary option. -->
+    <div x-show="saveToComputer" x-cloak data-testid="save-to-computer" class="mb-4">
+      <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">API keys</p>
+      <p class="text-muted text-xs leading-relaxed mb-3" data-testid="save-location-copy">
+        Saved on this computer in
+        <span class="font-mono text-secondary break-all" x-text="setupStatus?.config_path || 'the OpenOSINT data directory'"></span>,
+        readable only by you. Survives restarts. A real environment variable of the same name takes precedence.
+      </p>
+      <!-- This browser cannot save (typically Docker): say why, offer the token path. -->
+      <div x-show="setupStatus && !setupStatus.can_save" x-cloak
+           class="border border-app rounded-md p-3 space-y-2 mb-3" data-testid="setup-forbidden">
+        <p class="text-xs text-warning leading-relaxed" x-text="setupStatus?.forbidden_message"></p>
+        <label class="text-secondary text-xs block">Setup token (<span class="font-mono">OPENOSINT_SETUP_TOKEN</span>)</label>
+        <input type="password" x-model="setupToken" autocomplete="off" placeholder="Only if the server has one set"
+               class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
+      </div>
+      <div class="space-y-4" data-testid="server-keys">
+        <template x-for="g in setupGroups" :key="g.id">
+          <div class="space-y-3">
+            <p class="text-xs font-medium text-muted uppercase tracking-wider" x-text="g.title"></p>
+            <template x-for="k in g.fields" :key="k.key">
+              <div>
+                <div class="flex items-center justify-between mb-1 gap-2">
+                  <label class="text-secondary text-xs" x-text="k.label"></label>
+                  <a x-show="k.url" :href="k.url" target="_blank"
+                     :rel="(k.key === 'IP2LOCATION_API_KEY' || k.key.startsWith('BRIGHTDATA')) ? 'noopener sponsored' : 'noopener'"
+                     class="text-accent-blue hover:underline text-xs flex-none">Get a key ↗</a>
+                </div>
+                <input :type="k.secret ? 'password' : 'text'"
+                       x-model="setupData[k.key]"
+                       autocomplete="off"
+                       :placeholder="k.configured ? (k.secret ? '••••••••  configured — type to replace' : 'configured — type to replace') : k.key"
+                       class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
+                <p x-show="k.configured && !k.shadowed" class="text-accent text-xs mt-1" data-testid="configured-badge"
+                   x-text="'● configured (' + (k.source === 'config' ? 'saved on this computer' : k.source === 'environment' ? 'environment variable' : 'legacy .env file') + ')'"></p>
+                <p x-show="k.shadowed" class="text-warning text-xs mt-1" data-testid="shadowed-badge">
+                  ⚠ A saved value exists, but an environment variable of the same name overrides it. Unset the variable and restart to use the saved one.</p>
+                <p x-show="k.note" class="text-muted text-xs mt-1" x-text="k.note"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div class="flex items-center gap-3">
+          <button @click="saveApiKeys()" :disabled="setupBusy" data-testid="save-to-computer-button"
+                  class="bg-accent hover:bg-accent-80 text-bg rounded-md px-4 py-2 text-xs font-medium transition-colors disabled:opacity-50">
+            Save on this computer
+          </button>
+          <span x-show="setupMsg" x-text="setupMsg"
+                :class="setupOk ? 'text-accent' : 'text-error'"
+                class="text-xs font-mono break-words min-w-0"></span>
+        </div>
+      </div>
+      <button @click="showSessionOnly = !showSessionOnly" data-testid="session-only-toggle"
+              class="flex items-center gap-1.5 text-muted hover:text-secondary text-xs mt-5 transition-colors">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+             :class="showSessionOnly ? 'rotate-180' : ''" class="transition-transform"><polyline points="6 9 12 15 18 9"/></svg>
+        Use only for this browser session (not saved)
+      </button>
+    </div>
+
+    <!-- Browser-only keys (sessionStorage). The default on the public demo; secondary on a local install. -->
+    <div x-show="!saveToComputer || showSessionOnly" x-cloak data-testid="browser-only-keys"
+         :class="saveToComputer ? 'mt-3 pt-3 border-t border-app' : ''">
     <!-- LLM Provider (BYOK — stored in sessionStorage) -->
     <p class="text-xs font-medium text-muted uppercase tracking-wider mb-3">LLM Provider</p>
     <div class="flex gap-2 mb-4">
@@ -321,37 +385,6 @@
         </div>
       </template>
     </div>
-
-    <!-- Server-side key save (self-hosters) -->
-    <button @click="showAdvancedKeys = !showAdvancedKeys"
-            class="flex items-center gap-1.5 text-muted hover:text-secondary text-xs mt-4 transition-colors">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-           :class="showAdvancedKeys ? 'rotate-180' : ''"
-           class="transition-transform">
-        <polyline points="6 9 12 15 18 9"/>
-      </svg>
-      Save keys to server (self-hosted only)
-    </button>
-    <div x-show="showAdvancedKeys" class="mt-3 space-y-3">
-      <p class="text-muted text-xs">Writes keys to the server's .env file. Only use on your own instance.</p>
-      <template x-for="k in serverApiKeys" :key="k.key">
-        <div>
-          <label class="text-secondary text-xs block mb-1" x-text="k.label"></label>
-          <input :type="showKeys[k.key] ? 'text' : 'password'"
-                 x-model="setupData[k.key]"
-                 :placeholder="k.placeholder"
-                 class="w-full bg-app border border-app rounded-md px-3 py-2 text-sm text-primary focus:outline-none transition-colors">
-        </div>
-      </template>
-      <div class="flex items-center gap-3">
-        <button @click="saveApiKeys()"
-                class="bg-accent hover:bg-accent-80 text-bg rounded-md px-4 py-2 text-xs font-medium transition-colors">
-          Save to server
-        </button>
-        <span x-show="setupMsg" x-text="setupMsg"
-              :class="setupOk ? 'text-accent' : 'text-error'"
-              class="text-xs font-mono"></span>
-      </div>
     </div>
 
     <!-- sponsors footer -->
@@ -465,7 +498,7 @@
 <!-- LEFT RAIL — CHAT / GLOBE / GRAPH. All three panes below stay mounted;
      switching here only toggles x-show, so the WebGL globe context and the
      Cytoscape instance are created once and never torn down. -->
-<nav class="flex-none w-16 flex flex-col border-r border-app bg-surface">
+<nav class="flex-none w-16 flex flex-col border-r border-app bg-surface" style="user-select:none;-webkit-user-select:none">
   <button @click="activeView = 'chat'"
           :class="activeView === 'chat' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
           class="flex flex-col items-center justify-center gap-1 py-3 transition-colors">
@@ -519,6 +552,45 @@
                 class="px-4 py-2 rounded-md bg-accent hover:bg-accent-80 text-bg text-xs font-medium transition-colors">
           Open Settings →
         </button>
+      </div>
+      <!-- first run: non-blocking, dismissible; says what works now and how to add an AI provider -->
+      <div x-show="showFirstRun" x-cloak data-testid="first-run"
+           class="mb-8 border border-app rounded-lg p-4 bg-surface">
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-sm text-primary font-medium">Here is what works right now</p>
+          <button @click="dismissFirstRun()" aria-label="Dismiss"
+                  class="text-muted hover:text-primary text-xs transition-colors">✕</button>
+        </div>
+        <ul class="text-xs text-muted leading-relaxed mt-2 space-y-1.5 list-disc pl-4">
+          <li><span class="text-secondary">No key needed:</span>
+            <span class="font-mono" x-text="toolSummary.working.join(', ') || 'loading…'"></span>.
+            From a terminal they also run without any AI, e.g. <span class="font-mono text-accent">openosint dns example.com</span>.</li>
+          <li x-show="toolSummary.needKey.length">
+            <span x-text="toolSummary.needKey.length"></span> more tools need their own key (Shodan, VirusTotal, …). Add them any time under
+            Settings → Save keys to server; until then each one just tells you which key to add.</li>
+          <li x-show="toolSummary.needInstall.length">
+            Not installed here: <span class="font-mono" x-text="toolSummary.needInstall.join(', ')"></span>
+            — Settings shows the install command for each.</li>
+        </ul>
+        <p class="text-secondary text-xs mt-3 mb-1.5">To chat with the agent, connect an AI provider — one step (saved on this computer, <button @click="showSettings = true" class="text-accent-blue hover:underline">all keys in Settings</button>):</p>
+        <div x-show="!setupStatus || setupStatus.can_save" class="flex gap-2">
+          <input type="password" x-model="firstRunKey" autocomplete="off" placeholder="Anthropic API key (sk-ant-…)"
+                 @keydown.enter="saveFirstRunKey()"
+                 class="flex-1 min-w-0 bg-app border border-app rounded-md px-3 py-2 text-xs text-primary focus:outline-none transition-colors">
+          <button @click="saveFirstRunKey()" :disabled="setupBusy"
+                  class="px-4 py-2 rounded-md bg-accent hover:bg-accent-80 text-bg text-xs font-medium transition-colors disabled:opacity-50">Save</button>
+        </div>
+        <p x-show="setupStatus && !setupStatus.can_save" class="text-xs text-warning leading-relaxed"
+           x-text="setupStatus?.forbidden_message"></p>
+        <p x-show="setupMsg" x-text="setupMsg" :class="setupOk ? 'text-accent' : 'text-error'"
+           class="text-xs font-mono mt-2 break-words"></p>
+        <p class="text-muted text-xs mt-3 leading-relaxed">
+          No key? <a href="https://ollama.com" target="_blank" rel="noopener" class="text-accent-blue hover:underline">Ollama</a>
+          runs models on your own machine for free —
+          <button @click="showSettings = true; showSessionOnly = true; byok.provider = 'ollama'; saveByok()"
+                  class="text-accent-blue hover:underline">choose Ollama in Settings</button>.
+          Or <button @click="showSettings = true; showSessionOnly = true" class="text-accent-blue hover:underline">use a key for this browser session only</button>.
+        </p>
       </div>
       <div class="flex flex-wrap gap-2">
         <template x-for="s in suggestions" :key="s.title">
@@ -633,6 +705,11 @@
   <div x-show="basemapUnavailable" x-cloak
        class="absolute top-2 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
     Basemap imagery unavailable — points remain usable below.
+  </div>
+  <!-- GDELT GEO is down: say so instead of showing an empty news layer with no explanation. -->
+  <div x-show="newsUnavailable" x-cloak data-testid="news-unavailable"
+       class="absolute top-10 left-1/2 -translate-x-1/2 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-warning z-20 c-fadein">
+    News layer unavailable — the GDELT service is not responding. Try again later.
   </div>
   <!-- Pivot popover (shown on point tap) -->
   <div x-show="globePivotFeature" x-cloak
@@ -804,7 +881,8 @@ document.addEventListener('alpine:init', () => {
     isStreaming: false,
     aiBackend: 'none',
     showSettings: false,
-    showAdvancedKeys: false,
+    showSessionOnly: false,
+    clientReady: false, // setup-client.js module loaded
     setupMsg: '',
     setupOk: false,
     ollamaTestResult: '',
@@ -825,6 +903,7 @@ document.addEventListener('alpine:init', () => {
     graphPivotNode: null,
     globePivotFeature: null,
     basemapUnavailable: false,
+    newsUnavailable: false,
     currentTarget: '',
 
     // Gate / notice bar state (initialized from localStorage in init())
@@ -845,13 +924,13 @@ document.addEventListener('alpine:init', () => {
       openaiApiKey: '',
     },
 
-    // Legacy server-side key inputs (self-hosters)
-    serverApiKeys: [
-      { key: 'ANTHROPIC_API_KEY',   label: 'Anthropic API Key',      placeholder: 'sk-ant-api03-...' },
-      { key: 'HIBP_API_KEY',        label: 'HaveIBeenPwned API Key', placeholder: 'your-hibp-key'    },
-      { key: 'SHODAN_API_KEY',      label: 'Shodan API Key',         placeholder: 'your-shodan-key'  },
-      { key: 'VIRUSTOTAL_API_KEY',  label: 'VirusTotal API Key',     placeholder: 'your-vt-key'      },
-    ],
+    // Server-side key form: fields and "can this browser save?" come from /api/setup/status
+    setupStatus: null,
+    setupToken: '',
+    setupBusy: false,
+    healthLoaded: false,
+    firstRunDismissed: false,
+    firstRunKey: '',
 
     suggestions: [
       {
@@ -883,12 +962,15 @@ document.addEventListener('alpine:init', () => {
       document.addEventListener('gate-accepted', () => { this.gatePassed = true; }, { once: true });
       this.loadSettings();
       this.loadByok();
+      try { this.firstRunDismissed = !!localStorage.getItem('openosint-firstrun-dismissed'); } catch {}
       const theme = localStorage.getItem('openosint-theme') || 'dark';
       this.isLight = theme === 'light';
       if (this.isLight) document.documentElement.classList.add('light');
       // Guard for ES module race (amendment 5): modules may not be ready yet.
       const _onModulesReady = () => {
         this.agentLoopReady = true;
+        this.clientReady = !!window._setupClient;
+        this.fetchSetupStatus();
         const container = document.getElementById('graph-container');
         if (container && window._graphFns) {
           window._graphFns.initGraph(container);
@@ -994,6 +1076,7 @@ document.addEventListener('alpine:init', () => {
         const r = await fetch('/api/health');
         if (!r.ok) return;
         const d = await r.json();
+        this.healthLoaded     = true;
         this.version          = d.version    || this.version;
         this.aiBackend        = d.ai_backend || 'none';
         this.serverSideFallback = !d.demo_mode;
@@ -1353,6 +1436,8 @@ document.addEventListener('alpine:init', () => {
     // already the full FeatureCollection for that query); every other tool
     // with geo output accumulates onto agent-findings one point at a time.
     _pushGeoFeatures(tool, target, output) {
+      const down = window._geoFns?.gdeltServiceStatus(tool, output);
+      if (down !== null && down !== undefined) this.newsUnavailable = down;
       if (!window._geoFns || !window._globeFns || !target) return;
       const features = window._geoFns.extractGeoFeatures(tool, target, output || '');
       if (!features.length) return;
@@ -1368,6 +1453,7 @@ document.addEventListener('alpine:init', () => {
       this.messages = []; this.chatHistory = [];
       this.hasGraphData = false; this.graphNodeCapHit = false;
       this.graphPivotNode = null; this.globePivotFeature = null; this.currentTarget = '';
+      this.newsUnavailable = false;
       if (window._graphFns) window._graphFns.clearGraph();
       if (window._globeFns) {
         window._globeFns.clearFindings();
@@ -1426,30 +1512,84 @@ document.addEventListener('alpine:init', () => {
       return h;
     },
 
-    // API key save
+    // Server-side key save
+    // Local install (not the public demo, not a restricted request): keys are saved on this
+    // computer by default. The public demo keeps browser-only BYOK.
+    get saveToComputer() {
+      return this.serverSideFallback && !(this.setupStatus && this.setupStatus.restricted);
+    },
+
+    // Getters read reactive state BEFORE checking the module: Alpine only tracks what a
+    // getter touches, so returning early on a not-yet-loaded module would leave it
+    // subscribed to nothing and it would never re-render once the data arrives.
+    get setupGroups() {
+      const keys = this.setupStatus?.keys;
+      return this.clientReady ? window._setupClient.groupFields(keys) : [];
+    },
+
+    get toolSummary() {
+      const tools = this.tools;
+      return this.clientReady
+        ? window._setupClient.summarizeTools(tools)
+        : { working: [], needKey: [], needInstall: [] };
+    },
+
+    get showFirstRun() {
+      return this.serverSideFallback && this.healthLoaded && !this.firstRunDismissed
+        && this.aiBackend === 'none' && !this._isByokReady();
+    },
+
+    dismissFirstRun() {
+      this.firstRunDismissed = true;
+      try { localStorage.setItem('openosint-firstrun-dismissed', '1'); } catch {}
+    },
+
+    async fetchSetupStatus() {
+      try {
+        const r = await fetch('/api/setup/status');
+        if (r.ok) this.setupStatus = await r.json();
+      } catch {}
+    },
+
     async saveApiKeys() {
+      const body = window._setupClient
+        ? window._setupClient.buildSetupBody(this.setupStatus?.keys, this.setupData)
+        : {};
+      await this._postSetup(body, 'Enter at least one key.');
+    },
+
+    async saveFirstRunKey() {
+      const key = (this.firstRunKey || '').trim();
+      await this._postSetup(key ? { ANTHROPIC_API_KEY: key } : {}, 'Paste your Anthropic key first.');
+      if (this.setupOk) this.firstRunKey = '';
+    },
+
+    async _postSetup(body, emptyMessage) {
       this.setupMsg = '';
-      const body = {};
-      for (const k of this.apiKeys) {
-        const v = (this.setupData[k.key] || '').trim();
-        if (v) body[k.key] = v;
-      }
-      if (!Object.keys(body).length) {
-        this.setupOk = false; this.setupMsg = 'Enter at least one key.'; return;
-      }
+      if (!window._setupClient) { this.setupOk = false; this.setupMsg = 'Still loading — try again in a moment.'; return; }
+      if (!Object.keys(body).length) { this.setupOk = false; this.setupMsg = emptyMessage; return; }
+      this.setupBusy = true;
       try {
         const r = await fetch('/api/setup', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: window._setupClient.setupHeaders(this.setupToken),
           body: JSON.stringify(body),
         });
-        if (!r.ok) throw new Error('Save failed');
-        this.setupData = {};
-        this.setupOk = true; this.setupMsg = 'Saved';
-        await this.fetchHealth();
-        setTimeout(() => { this.setupMsg = ''; }, 3000);
-      } catch (e) {
-        this.setupOk = false; this.setupMsg = e.message || 'Failed to save.';
+        let data = null;
+        try { data = await r.json(); } catch {}
+        const result = window._setupClient.describeSetupResult(r.status, data);
+        this.setupOk = result.ok;
+        this.setupMsg = result.message;
+        if (r.ok) {
+          this.setupData = {};
+          await this.fetchHealth();
+          await this.fetchSetupStatus();
+        }
+      } catch {
+        this.setupOk = false;
+        this.setupMsg = 'Could not reach the server.';
+      } finally {
+        this.setupBusy = false;
       }
     },
 
@@ -1610,15 +1750,17 @@ document.addEventListener('alpine:init', () => {
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';
   import { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox } from '/static/graph-renderer.js';
   import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo } from '/static/globe-renderer.js';
-  import { extractGeoFeatures } from '/static/geo-extractor.js';
+  import { extractGeoFeatures, gdeltServiceStatus } from '/static/geo-extractor.js';
   import { safeHttpUrl } from '/static/url-safety.js';
+  import * as setupClient from '/static/setup-client.js';
   window._runAgentLoop    = runAgentLoop;
   window._makeTargetNode  = makeTargetNode;
   window._extractEntities = extractEntities;
   window._graphFns        = { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox };
   window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo };
-  window._geoFns          = { extractGeoFeatures };
+  window._geoFns          = { extractGeoFeatures, gdeltServiceStatus };
   window._urlSafety       = { safeHttpUrl };
+  window._setupClient     = setupClient;
   window._agentLoopReady  = true;
   document.dispatchEvent(new Event('agent-loop-ready'));
 </script>

@@ -30,6 +30,17 @@ class SubprocessResult(NamedTuple):
     return_code: int
 
 
+def find_binary(binary: str) -> str | None:
+    """Resolve *binary* the way tools run it: this interpreter's bin dir, then PATH.
+
+    The interpreter's own bin dir comes first so console scripts installed next
+    to OpenOSINT (a venv, or the environment `uvx` builds) are found without
+    being on the user's PATH.
+    """
+    venv_bin = str(Path(sys.executable).parent)
+    return shutil.which(binary, path=os.pathsep.join([venv_bin, os.environ.get("PATH", "")]))
+
+
 async def run_subprocess(
     binary: str,
     args: list[str],
@@ -61,11 +72,7 @@ async def run_subprocess(
     ToolTimeoutError
         When the process exceeds timeout_seconds.
     """
-    # Prepend the venv/uv-tool bin dir so co-installed tools are found even
-    # when the venv is not activated and its bin is absent from the user's PATH.
-    venv_bin = str(Path(sys.executable).parent)
-    search_path = os.pathsep.join([venv_bin, os.environ.get("PATH", "")])
-    resolved = shutil.which(binary, path=search_path)
+    resolved = find_binary(binary)
     if not resolved:
         detail = f" {install_hint}" if install_hint else ""
         raise ToolNotFoundError(f"'{binary}' is not installed or not in PATH.{detail}")

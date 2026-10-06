@@ -24,7 +24,7 @@ import re
 
 import requests
 
-from openosint.env import missing_var_message
+from openosint.settings_catalog import missing_keys_message
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -280,10 +280,7 @@ async def run_virustotal_osint(target: str, timeout_seconds: int = _DEFAULT_TIME
     """
     resolved_key = api_key or os.environ.get("VIRUSTOTAL_API_KEY", "")
     if not resolved_key:
-        return (
-            f"{missing_var_message('VIRUSTOTAL_API_KEY')} "
-            "Get a free key at https://www.virustotal.com/gui/my-apikey"
-        )
+        return missing_keys_message("search_virustotal", ["VIRUSTOTAL_API_KEY"])
 
     target = target.strip()
     input_type = _detect_input_type(target)

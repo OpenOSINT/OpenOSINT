@@ -30,6 +30,7 @@ from openosint.tools.search_abuseipdb import run_abuseipdb_osint
 from openosint.tools.search_breach import run_breach_osint
 from openosint.tools.search_censys import run_censys_osint
 from openosint.tools.search_dns import run_dns_osint
+from openosint.tools.search_rdap import run_rdap_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
@@ -326,6 +327,25 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "search_rdap",
+        "description": (
+            "Structured domain registration lookup via RDAP, the machine-readable successor to WHOIS: "
+            "registrar, registration and expiry dates, name servers and status codes. Registrant "
+            "contact details are redacted by policy and never returned. No API key required. "
+            "Use alongside search_whois to confirm registration dates and registrar."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "description": "Target domain (e.g. example.com).",
+                }
+            },
+            "required": ["domain"],
+        },
+    },
+    {
         "name": "search_dns",
         "description": (
             "Comprehensive DNS record enumeration for a domain including A, AAAA, MX, NS, "
@@ -477,6 +497,7 @@ _TOOL_MAP: dict[str, Any] = {
     "search_abuseipdb": lambda a: run_abuseipdb_osint(a["ip"], timeout_seconds=30),
     "search_github": lambda a: run_github_osint(a["query"], timeout_seconds=30),
     "search_dns": lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
+    "search_rdap": lambda a: run_rdap_osint(a["domain"], timeout_seconds=15),
     "search_gdelt_geo": lambda a: run_gdelt_geo_osint(
         a["query"],
         timeout_seconds=15,
@@ -508,7 +529,7 @@ INVESTIGATION STRATEGY:
 - For a full name target: always start with generate_dorks to discover real identifiers.
 - For an email: run search_email and search_breach.
 - For a username: run search_username and search_paste.
-- For a domain: run search_whois, search_domain, and search_dns to reveal subdomains, registration data, DNS records, and email security posture.
+- For a domain: run search_whois, search_rdap, search_domain, and search_dns to reveal subdomains, registration data, DNS records, and email security posture.
 - For an IP: run search_ip and optionally search_shodan or search_censys for open ports/services.
 - For a GitHub username or handle: use search_github to retrieve profile data, repos, and commit-discovered emails.
 - For IP reputation/abuse: use search_abuseipdb to get the abuseConfidenceScore — a score above 50% indicates a high-risk IP; combine with search_ip or search_shodan for full context.

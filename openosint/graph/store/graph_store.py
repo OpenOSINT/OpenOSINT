@@ -22,11 +22,9 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
 
-from followthemoney.statement import Statement
-from followthemoney.statement.util import get_prop_type
-
 from openosint.correlation import EntityType
 from openosint.graph.bridge import BridgeLink
+from openosint.graph.ftm_compat import Statement, get_prop_type
 from openosint.graph.mapping import EmissionResult
 from openosint.graph.provenance import ProvenanceRecord
 from openosint.graph.store.neighbors import NeighborCandidate, NeighborResult

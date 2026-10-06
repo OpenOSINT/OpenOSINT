@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 _BINARY = "holehe"
 _DEFAULT_TIMEOUT = 120
-_INSTALL_HINT = "Install it with: pip install holehe"
+_INSTALL_HINT = "Install it with: uv tool install holehe (or: pip install holehe)"
 
 
 async def _run_holehe(email: str, timeout_seconds: int) -> str:

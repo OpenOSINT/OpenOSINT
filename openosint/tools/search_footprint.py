@@ -32,8 +32,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
-from openosint.env import missing_var_message
+from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.regexes import detect_entity_kind
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -44,21 +43,6 @@ _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_QUERIES = 3
 _GOOGLE_SEARCH_BASE = "https://www.google.com/search?q="
 
-
-def _missing_key_msg() -> str:
-    return (
-        f"{missing_var_message('BRIGHTDATA_API_KEY')} "
-        "A free tier (5,000 requests/month) is available — "
-        f"sign up at {BRIGHTDATA_LINK_CLI}"
-    )
-
-
-def _missing_zone_msg() -> str:
-    return (
-        f"{missing_var_message('BRIGHTDATA_SERP_ZONE')} "
-        "Set it to your Bright Data SERP API zone name (e.g. 'serp_api1'). "
-        f"Create a zone at {BRIGHTDATA_LINK_CLI}"
-)
 
 # ---------------------------------------------------------------------------
 # Entity-type-aware query templates
@@ -200,13 +184,11 @@ async def run_footprint_osint(
         descriptive error message.
     """
     _k = api_keys or {}
-    api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ.get("BRIGHTDATA_API_KEY", "")
-    if not api_key:
-        return _missing_key_msg()
-
-    zone = _k.get("BRIGHTDATA_SERP_ZONE") or os.environ.get("BRIGHTDATA_SERP_ZONE", "")
-    if not zone:
-        return _missing_zone_msg()
+    missing = missing_from(["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"], _k, os.environ)
+    if missing:
+        return missing_keys_message("search_footprint", missing)
+    api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ["BRIGHTDATA_API_KEY"]
+    zone = _k.get("BRIGHTDATA_SERP_ZONE") or os.environ["BRIGHTDATA_SERP_ZONE"]
 
     target = target.strip()
     if not target:

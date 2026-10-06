@@ -35,7 +35,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 
-from followthemoney.statement import Statement
+from openosint.graph.ftm_compat import Statement
 
 from openosint.correlation import Entity
 from openosint.extractors import EXTRACTOR_REGISTRY

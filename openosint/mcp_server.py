@@ -2,12 +2,12 @@
 """
 OpenOSINT MCP Server — v2.23.0
 
-Exposes all 20 OSINT tool capabilities plus multi-target investigation
+Exposes all 21 OSINT tool capabilities plus multi-target investigation
 to MCP-compliant AI clients over standard I/O. Tools include:
 search_email, search_username, search_breach, search_whois, search_ip,
 search_domain, generate_dorks, search_paste, search_phone, search_shodan,
 search_virustotal, search_censys, search_ip2location, search_abuseipdb,
-search_github, search_dns, search_gdelt_geo, search_dorks_live, scrape_url,
+search_github, search_dns, search_rdap, search_gdelt_geo, search_dorks_live, scrape_url,
 search_footprint.
 """
 
@@ -46,6 +46,7 @@ from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
 from openosint.tools.search_censys import run_censys_osint  # noqa: E402
 from openosint.tools.search_dns import run_dns_osint  # noqa: E402
+from openosint.tools.search_rdap import run_rdap_osint  # noqa: E402
 from openosint.tools.search_domain import run_domain_osint  # noqa: E402
 from openosint.tools.search_dorks_live import run_dorks_live_osint  # noqa: E402
 from openosint.tools.search_email import run_email_osint  # noqa: E402
@@ -258,6 +259,21 @@ async def list_tools() -> list[Tool]:
                     "type": "object",
                     "properties": {"query": {"type": "string"}},
                     "required": ["query"],
+                }
+            ),
+        ),
+        Tool(
+            name="search_rdap",
+            description=(
+                "Structured domain registration lookup via RDAP (the machine-readable successor "
+                "to WHOIS): registrar, registration and expiry dates, name servers and status "
+                "codes. Registrant contact details are redacted by policy. No API key required."
+            ),
+            inputSchema=_with_json(
+                {
+                    "type": "object",
+                    "properties": {"domain": {"type": "string"}},
+                    "required": ["domain"],
                 }
             ),
         ),
@@ -544,6 +560,10 @@ _HANDLERS: dict[str, tuple] = {
     ),
     "search_dns": (
         lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
+        lambda a: a["domain"],
+    ),
+    "search_rdap": (
+        lambda a: run_rdap_osint(a["domain"], timeout_seconds=15),
         lambda a: a["domain"],
     ),
     "search_gdelt_geo": (
