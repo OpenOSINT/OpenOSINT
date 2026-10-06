@@ -580,7 +580,7 @@ _TOOL_CATALOG: list[dict] = [
     },
     {
         "name": "search_gdelt_geo",
-        "description": "Search worldwide geolocated news coverage via the GDELT GEO 2.0 API.",
+        "description": "Search recent geolocated worldwide news from GDELT's 15-minute article feed.",
         "input_label": "Keywords",
         "input_placeholder": "ukraine war",
         "category": "Network",
