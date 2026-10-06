@@ -9,6 +9,10 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.31.0] — 2026-10-06
+
+Keys saved on this computer from the web UI, a first-run panel, clear messages for tools that need a key, the graph store and MCP graph tools without native builds, a new `search_rdap` tool, and a graceful fallback when the GDELT GEO service is down.
+
 > **Behavior changes**
 > - Keys saved from the web UI now go to `$OPENOSINT_HOME/config.env` (default `~/.openosint/config.env`, user-only permissions) instead of `<package root>/.env`. Precedence is real environment > `config.env` > legacy `.env`. A legacy package-root `.env` that would have been loaded is copied once, with a stderr notice (keys named, never values); the old file stays and keeps working.
 > - A key saved in the UI while a real environment variable of the same name is set is stored but reported as not active (the environment wins on every start).

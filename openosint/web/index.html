@@ -498,7 +498,7 @@
 <!-- LEFT RAIL — CHAT / GLOBE / GRAPH. All three panes below stay mounted;
      switching here only toggles x-show, so the WebGL globe context and the
      Cytoscape instance are created once and never torn down. -->
-<nav class="flex-none w-16 flex flex-col border-r border-app bg-surface">
+<nav class="flex-none w-16 flex flex-col border-r border-app bg-surface" style="user-select:none;-webkit-user-select:none">
   <button @click="activeView = 'chat'"
           :class="activeView === 'chat' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
           class="flex flex-col items-center justify-center gap-1 py-3 transition-colors">
