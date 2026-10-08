@@ -326,6 +326,28 @@ _BLANK_TILE = bytes.fromhex(
 )
 
 
+_TILE_FETCH_ATTEMPTS = 2  # one retry: EOX drops the odd connection under a burst of ~20 tiles
+_TILE_RETRY_DELAY_SECONDS = 0.3
+
+
+def _fetch_tile(url: str):
+    """GET an upstream tile, retrying once on a connection error or HTTP 5xx.
+
+    Returns the response, or raises the last exception if every attempt raised.
+    """
+    for attempt in range(_TILE_FETCH_ATTEMPTS):
+        last = attempt == _TILE_FETCH_ATTEMPTS - 1
+        try:
+            resp = _requests.get(url, timeout=10)
+        except Exception:
+            if last:
+                raise
+        else:
+            if resp.status_code < 500 or last:
+                return resp
+        time.sleep(_TILE_RETRY_DELAY_SECONDS)
+
+
 def _tile_cache_get(key: tuple[int, int, int]) -> bytes | None:
     value = _tile_cache.get(key)
     if value is not None:
@@ -1759,9 +1781,11 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
 
             url = _EOX_TILE_URL.format(z=z, y=y, x=x)
             try:
-                resp = await asyncio.to_thread(_requests.get, url, timeout=10)
-            except Exception:
-                logging.getLogger(__name__).warning("Tile fetch failed for z=%d x=%d y=%d", z, x, y)
+                resp = await asyncio.to_thread(_fetch_tile, url)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Tile fetch failed for z=%d x=%d y=%d: %s", z, x, y, type(exc).__name__
+                )
                 return Response(content=_BLANK_TILE, media_type="image/gif")
 
             if resp.status_code != 200:
