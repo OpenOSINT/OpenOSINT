@@ -155,3 +155,9 @@ def test_new_geo_results_badge_the_globe_and_reset_with_the_conversation():
     assert "mergeNewsFeatures(window._globeFns.getNewsFeatures(), features)" in INDEX
     assert "window._globeFns.fitToFeatures(features)" in INDEX
     assert "this.globeUnseen = 0;" in _method_body("clearConversation")
+
+
+def test_user_messages_without_parts_do_not_break_the_message_template():
+    # User messages have no `parts`; x-show on them still evaluates the expression.
+    assert 'x-show="msg.parts?.length === 0"' in INDEX
+    assert 'x-show="msg.parts.length === 0"' not in INDEX

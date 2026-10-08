@@ -619,7 +619,7 @@
 
           <!-- assistant block -->
           <div x-show="msg.role === 'assistant'" class="mb-6">
-            <div x-show="msg.parts.length === 0"
+            <div x-show="msg.parts?.length === 0"
                  class="flex items-center gap-1.5 text-muted text-xs font-mono">
               <span class="inline-block c-blink">_</span>thinking
             </div>
