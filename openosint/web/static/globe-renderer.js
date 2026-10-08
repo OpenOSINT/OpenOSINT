@@ -18,6 +18,8 @@
  *   addFinding(feature)           — push one GeoJSON Point onto agent-findings
  *   clearFindings()
  *   setNewsFeatureCollection(fc)  — replace the gdelt-news source wholesale
+ *   fitToFeatures(features)       — rotate/zoom to them (now if the globe is
+ *                                   visible, otherwise on the next GLOBE open)
  *   onBoxSelect(cb)                — cb(bbox) fires after a shift-drag box-select
  *   onPointClick(cb)               — cb(feature, sourceId) fires on point tap
  */
@@ -32,6 +34,8 @@ let _loadPromise = null;
 let _boxSelectCallback = null;
 let _pointClickCallback = null;
 let _basemapUnavailableCallback = null;
+let _mapReady = false;
+let _pendingFit = null;
 let _tileFailStreak = 0;
 const TILE_FAIL_THRESHOLD = 5;
 
@@ -183,11 +187,16 @@ export async function initGlobe(containerEl) {
   // with cached tiles resolves almost immediately) — check loaded() first
   // rather than trusting the event to always be in the future.
   const onMapReady = () => {
+    _mapReady = true;
+    // The style was built from a snapshot of the buffers; anything that arrived
+    // while the map was still loading its style is only in the buffers.
+    _syncSources();
     _map.resize();
     _wireBoxSelect();
     _wirePointClicks();
     _wireTileFailureTracking();
     _map.on('render', () => { _hasRendered = true; });
+    _tryFit();
   };
   if (_map.loaded()) onMapReady();
   else _map.on('load', onMapReady);
@@ -207,6 +216,57 @@ export async function onEnterGlobe(containerEl) {
   if (!containerEl) return;
   await initGlobe(containerEl);
   resizeGlobe();
+  _tryFit();
+}
+
+function _syncSources() {
+  _map?.getSource('agent-findings')?.setData(_findingsFC);
+  _map?.getSource('gdelt-news')?.setData(_newsFC);
+}
+
+/** Pure: how to bring these points into view. Tight sets fit their bounds; a
+ * set that spans most of the globe centres on its mean direction instead
+ * (a bounds fit on a sphere is meaningless there). Null when nothing to show. */
+export function planFit(features) {
+  const pts = (features || []).map((f) => f?.geometry?.coordinates)
+    .filter((c) => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1]));
+  if (!pts.length) return null;
+  const lons = pts.map((c) => c[0]);
+  const lats = pts.map((c) => c[1]);
+  const [minLon, maxLon] = [Math.min(...lons), Math.max(...lons)];
+  const [minLat, maxLat] = [Math.min(...lats), Math.max(...lats)];
+  if (maxLon - minLon <= 100 && maxLat - minLat <= 60) {
+    return { type: 'bounds', bounds: [[minLon, minLat], [maxLon, maxLat]] };
+  }
+  const rad = Math.PI / 180;
+  let x = 0, y = 0, z = 0;
+  for (const [lon, lat] of pts) {
+    x += Math.cos(lat * rad) * Math.cos(lon * rad);
+    y += Math.cos(lat * rad) * Math.sin(lon * rad);
+    z += Math.sin(lat * rad);
+  }
+  const center = Math.hypot(x, y, z) < 1e-6
+    ? [0, 20]
+    : [Math.atan2(y, x) / rad, Math.atan2(z, Math.hypot(x, y)) / rad];
+  return { type: 'center', center, zoom: 1.2 };
+}
+
+/** Bring new results into view: immediately when the globe is on screen,
+ * otherwise remembered and applied the next time GLOBE opens. */
+export function fitToFeatures(features) {
+  const plan = planFit(features);
+  if (!plan) return;
+  _pendingFit = plan;
+  _tryFit();
+}
+
+function _tryFit() {
+  if (!_pendingFit || !_map || !_mapReady) return;
+  if (_map.getContainer().offsetParent === null) return; // GLOBE pane hidden
+  const plan = _pendingFit;
+  _pendingFit = null;
+  if (plan.type === 'bounds') _map.fitBounds(plan.bounds, { padding: 80, maxZoom: 5, duration: 1500 });
+  else _map.easeTo({ center: plan.center, zoom: plan.zoom, duration: 1500 });
 }
 
 /** Merge one GeoJSON Point Feature into the agent-findings source. */

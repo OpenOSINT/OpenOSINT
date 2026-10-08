@@ -14,7 +14,7 @@ INDEX = (ROOT / "openosint" / "web" / "index.html").read_text(encoding="utf-8")
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-@pytest.mark.parametrize("script", ["test_setup_client.mjs", "test_geo_status.mjs"])
+@pytest.mark.parametrize("script", ["test_setup_client.mjs", "test_geo_status.mjs", "test_globe_buffering.mjs"])
 def test_node_unit_tests_pass(script):
     result = subprocess.run(
         ["node", str(ROOT / "tests" / script)], capture_output=True, text=True, timeout=60

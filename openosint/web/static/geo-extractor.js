@@ -153,3 +153,27 @@ export function coverageLabel(coverage) {
   if (coverage.staleMinutes) label += ` — feed ${coverage.staleMinutes} min behind`;
   return label;
 }
+
+/** Most news places kept on the globe for one conversation; oldest dropped first. */
+export const NEWS_FEATURE_CAP = 500;
+
+function _placeKey(feature) {
+  const [lon, lat] = feature.geometry.coordinates;
+  return `${feature.properties?.name ?? ''}|${lon.toFixed(2)}|${lat.toFixed(2)}`;
+}
+
+/**
+ * Merge a new search_gdelt_geo result into the places already on the globe.
+ * One entry per place: a repeat replaces the older one and moves to the end,
+ * so the cap drops the stalest places. Returns a new array; inputs are untouched.
+ */
+export function mergeNewsFeatures(existing, incoming, cap = NEWS_FEATURE_CAP) {
+  const byPlace = new Map();
+  for (const f of [...existing, ...incoming]) {
+    if (!f?.geometry?.coordinates) continue;
+    const key = _placeKey(f);
+    byPlace.delete(key);
+    byPlace.set(key, f);
+  }
+  return [...byPlace.values()].slice(-cap);
+}
