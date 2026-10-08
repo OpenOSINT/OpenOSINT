@@ -67,7 +67,10 @@ def test_globe_shows_a_notice_when_the_news_service_is_down():
 
 def test_globe_news_badge_and_headline_render_as_text_only():
     assert 'data-testid="news-coverage"' in INDEX
-    assert 'x-text="window._geoFns?.coverageLabel(newsCoverage)"' in INDEX
+    assert 'x-text="coverageText()"' in INDEX
+    # The method must read newsCoverage itself: an x-text that only reaches it through
+    # `window._geoFns?.` never subscribes to it when _geoFns is not loaded yet, and stays blank.
+    assert "return this.newsCoverage ? window._geoFns?.coverageLabel(this.newsCoverage)" in INDEX
     assert 'x-text="globePivotTitle()"' in INDEX
     assert 'x-text="globePivotDomain()"' in INDEX
     assert "newsCoverage: null" in INDEX
@@ -144,3 +147,11 @@ def test_setup_getters_track_reactive_state_before_the_module_check():
         body = re.search(rf"get {name}\(\) \{{\n(.*?)\n    \}},", INDEX, re.S).group(1)
         assert body.index(state) < body.index("this.clientReady"), name
     assert "this.clientReady = !!window._setupClient" in INDEX
+
+
+def test_new_geo_results_badge_the_globe_and_reset_with_the_conversation():
+    assert 'data-testid="globe-badge"' in INDEX
+    assert "globeUnseen: 0" in INDEX
+    assert "mergeNewsFeatures(window._globeFns.getNewsFeatures(), features)" in INDEX
+    assert "window._globeFns.fitToFeatures(features)" in INDEX
+    assert "this.globeUnseen = 0;" in _method_body("clearConversation")

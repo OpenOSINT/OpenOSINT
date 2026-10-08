@@ -507,7 +507,7 @@
     </svg>
     <span class="text-xs">Chat</span>
   </button>
-  <button @click="activeView = 'globe'; $nextTick(() => window._globeFns?.onEnterGlobe?.(document.getElementById('globe-container')))"
+  <button @click="activeView = 'globe'; globeUnseen = 0; $nextTick(() => window._globeFns?.onEnterGlobe?.(document.getElementById('globe-container')))"
           :class="activeView === 'globe' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
           class="flex flex-col items-center justify-center gap-1 py-3 transition-colors">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -515,6 +515,9 @@
       <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
     </svg>
     <span class="text-xs">Globe</span>
+    <span x-show="globeUnseen > 0 && activeView !== 'globe'" x-cloak data-testid="globe-badge"
+          class="rounded-full bg-accent text-bg px-1.5 leading-4 font-medium c-fadein" style="font-size:10px"
+          x-text="globeUnseen + (globeUnseen === 1 ? ' place' : ' places')"></span>
   </button>
   <button @click="activeView = 'graph'; $nextTick(() => window._graphFns?.resizeGraph())"
           :class="activeView === 'graph' ? 'text-primary bg-border' : 'text-muted hover:text-primary hover:bg-surface'"
@@ -714,7 +717,7 @@
   <!-- How far back the dots reach: a short first window must not read as "no news". Plain text only. -->
   <div x-show="newsCoverage && !newsUnavailable" x-cloak data-testid="news-coverage"
        class="absolute bottom-4 left-4 bg-surface border border-app rounded-md px-3 py-1.5 text-xs text-secondary z-20 c-fadein"
-       x-text="window._geoFns?.coverageLabel(newsCoverage)"></div>
+       x-text="coverageText()"></div>
   <!-- Pivot popover (shown on point tap) -->
   <div x-show="globePivotFeature" x-cloak
        class="absolute bottom-4 right-4 bg-surface border border-app rounded-lg shadow-xl p-3 z-20 w-56 text-xs c-fadein">
@@ -912,6 +915,7 @@ document.addEventListener('alpine:init', () => {
     basemapUnavailable: false,
     newsUnavailable: false,
     newsCoverage: null,
+    globeUnseen: 0,
     currentTarget: '',
 
     // Gate / notice bar state (initialized from localStorage in init())
@@ -1440,22 +1444,34 @@ document.addEventListener('alpine:init', () => {
     },
 
     // Globe: route a tool result's geo features onto the right layer.
-    // search_gdelt_geo owns the gdelt-news source (replaced wholesale, it's
-    // already the full FeatureCollection for that query); every other tool
-    // with geo output accumulates onto agent-findings one point at a time.
+    // search_gdelt_geo results accumulate in the gdelt-news source for the whole
+    // conversation (one entry per place, capped; clearConversation resets it);
+    // every other tool with geo output accumulates onto agent-findings one
+    // point at a time. New results bring the camera to them, and while the
+    // GLOBE pane is hidden they show as a badge on its nav button.
     _pushGeoFeatures(tool, target, output) {
       const down = window._geoFns?.gdeltServiceStatus(tool, output);
       if (down !== null && down !== undefined) this.newsUnavailable = down;
       if (!window._geoFns || !window._globeFns || !target) return;
       const features = window._geoFns.extractGeoFeatures(tool, target, output || '');
       if (tool === 'search_gdelt_geo') {
-        // A search that matched nothing must not leave the previous search's dots up.
-        if (down === true) return;
+        // An unavailable feed or an empty search leaves what is already on the globe alone.
+        if (down === true || !features.length) return;
         this.newsCoverage = window._geoFns.newsCoverage(tool, output);
-        window._globeFns.setNewsFeatureCollection({ type: 'FeatureCollection', features });
-        return;
+        const merged = window._geoFns.mergeNewsFeatures(window._globeFns.getNewsFeatures(), features);
+        window._globeFns.setNewsFeatureCollection({ type: 'FeatureCollection', features: merged });
+      } else {
+        features.forEach(f => window._globeFns.addFinding(f));
       }
-      features.forEach(f => window._globeFns.addFinding(f));
+      if (!features.length) return;
+      window._globeFns.fitToFeatures(features);
+      const { news, findings } = window._globeFns.getFeatureCounts();
+      if (this.activeView !== 'globe') this.globeUnseen = news + findings;
+    },
+
+    // Plain text only; reads newsCoverage first so Alpine re-renders when it changes.
+    coverageText() {
+      return this.newsCoverage ? window._geoFns?.coverageLabel(this.newsCoverage) ?? '' : '';
     },
 
     // UI helpers
@@ -1465,6 +1481,7 @@ document.addEventListener('alpine:init', () => {
       this.graphPivotNode = null; this.globePivotFeature = null; this.currentTarget = '';
       this.newsUnavailable = false;
       this.newsCoverage = null;
+      this.globeUnseen = 0;
       if (window._graphFns) window._graphFns.clearGraph();
       if (window._globeFns) {
         window._globeFns.clearFindings();
@@ -1769,16 +1786,16 @@ document.addEventListener('alpine:init', () => {
   import { runAgentLoop } from '/static/agent-loop.js';
   import { makeTargetNode, extractEntities } from '/static/entity-graph.js';
   import { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox } from '/static/graph-renderer.js';
-  import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo } from '/static/globe-renderer.js';
-  import { extractGeoFeatures, gdeltServiceStatus, newsCoverage, coverageLabel } from '/static/geo-extractor.js';
+  import { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, fitToFeatures, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo } from '/static/globe-renderer.js';
+  import { extractGeoFeatures, mergeNewsFeatures, gdeltServiceStatus, newsCoverage, coverageLabel } from '/static/geo-extractor.js';
   import { safeHttpUrl } from '/static/url-safety.js';
   import * as setupClient from '/static/setup-client.js';
   window._runAgentLoop    = runAgentLoop;
   window._makeTargetNode  = makeTargetNode;
   window._extractEntities = extractEntities;
   window._graphFns        = { initGraph, addToGraph, clearGraph, resizeGraph, exportPng, exportJson, getNodeRenderedBBox };
-  window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo };
-  window._geoFns          = { extractGeoFeatures, gdeltServiceStatus, newsCoverage, coverageLabel };
+  window._globeFns        = { onEnterGlobe, resizeGlobe, addFinding, clearFindings, setNewsFeatureCollection, fitToFeatures, onBoxSelect, onPointClick, onBasemapUnavailable, isGlobeReady, getFeatureCounts, getNewsFeatures, getFindingsFeatures, pickRenderedPoint, flyTo };
+  window._geoFns          = { extractGeoFeatures, mergeNewsFeatures, gdeltServiceStatus, newsCoverage, coverageLabel };
   window._urlSafety       = { safeHttpUrl };
   window._setupClient     = setupClient;
   window._agentLoopReady  = true;
