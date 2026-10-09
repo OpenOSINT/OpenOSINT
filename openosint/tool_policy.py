@@ -265,9 +265,12 @@ class ToolBudget:
 
     limit: int = field(default_factory=max_tool_calls)
     used: int = 0
+    # True once a call was refused for lack of budget: the loop must stop, not retry.
+    denied: bool = False
 
     def try_consume(self) -> bool:
         if self.used >= self.limit:
+            self.denied = True
             return False
         self.used += 1
         return True
