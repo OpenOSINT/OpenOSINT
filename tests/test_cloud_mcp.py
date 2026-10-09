@@ -23,6 +23,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from cloud import db, keys
+from cloud.main import create_app
 from cloud.routes.mcp_gateway import (
     _AuthMiddleware,
     _customer_ctx,
@@ -317,3 +318,31 @@ async def test_shodan_attribution_reaches_mcp_text_result():
                     result = await _run_mcp_tool("search_shodan", "1.2.3.4")
 
     assert result == "[Shodan] Host: 1.2.3.4\nData provided by Shodan (shodan.io)."
+
+
+# ── (j) mounted /mcp transport serves the MCP handshake ──────────────────────
+
+
+def test_mounted_mcp_initialize_returns_session_id():
+    """Issue #41: Starlette never runs a mounted sub-app lifespan, so the
+    StreamableHTTPSessionManager stays unstarted and every /mcp call 500s."""
+    from fastapi.testclient import TestClient
+
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {
+            "protocolVersion": "2025-06-18",
+            "capabilities": {},
+            "clientInfo": {"name": "pytest", "version": "0"},
+        },
+    }
+    headers = {"Accept": "application/json, text/event-stream"}
+    # base_url host must pass the MCP SDK DNS-rebinding check, which rejects
+    # the TestClient default host ("testserver").
+    with TestClient(create_app(), base_url="http://localhost:8000") as client:
+        response = client.post("/mcp/", json=payload, headers=headers)
+
+    assert response.status_code == 200
+    assert response.headers.get("mcp-session-id")
