@@ -6,7 +6,7 @@
  * their formatted string simply have no entry here.
  *
  * search_gdelt_geo is the one entry that doesn't parse `[+]`-style lines —
- * its output carries the raw upstream FeatureCollection in a fenced
+ * its output carries the whole FeatureCollection in a fenced
  * ```geojson block (see openosint/tools/search_gdelt_geo.py), so its
  * extractor just pulls that block back out.
  */
@@ -113,4 +113,67 @@ export function extractGeoFeatures(toolName, target, output) {
 export function gdeltServiceStatus(toolName, output) {
   if (toolName !== 'search_gdelt_geo') return null;
   return String(output || '').includes('[service_unavailable] search_gdelt_geo');
+}
+
+/**
+ * How far back a search_gdelt_geo result reaches, from the `coverage` member of
+ * its fenced FeatureCollection: {minutes, requested, loading, stale_minutes}.
+ * Returns null for other tools and for results without a usable coverage (an
+ * empty or failed search has no fence), and never throws. Values are coerced to
+ * plain numbers/booleans so nothing third-party-controlled reaches the page.
+ */
+export function newsCoverage(toolName, output) {
+  if (toolName !== 'search_gdelt_geo') return null;
+  const m = _GEOJSON_FENCE_RE.exec(output || '');
+  if (!m) return null;
+  try {
+    const c = JSON.parse(m[1]).coverage;
+    const minutes = Number(c?.minutes);
+    if (!c || !Number.isFinite(minutes) || minutes < 0) return null;
+    return {
+      minutes: Math.round(minutes),
+      requested: Math.round(Number(c.requested)) || Math.round(minutes),
+      loading: c.loading === true,
+      staleMinutes: Math.max(0, Math.round(Number(c.stale_minutes)) || 0),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** "last 45 min" / "last 6 h" / "last 1 h 15 min" — plain text for the globe badge. */
+export function coverageLabel(coverage) {
+  if (!coverage) return '';
+  const h = Math.floor(coverage.minutes / 60);
+  const m = coverage.minutes % 60;
+  const span = h ? (m ? `${h} h ${m} min` : `${h} h`) : `${m} min`;
+  const partial = coverage.minutes < coverage.requested;
+  let label = `News: last ${span}`;
+  if (partial && coverage.loading) label += ' — older articles still loading';
+  if (coverage.staleMinutes) label += ` — feed ${coverage.staleMinutes} min behind`;
+  return label;
+}
+
+/** Most news places kept on the globe for one conversation; oldest dropped first. */
+export const NEWS_FEATURE_CAP = 500;
+
+function _placeKey(feature) {
+  const [lon, lat] = feature.geometry.coordinates;
+  return `${feature.properties?.name ?? ''}|${lon.toFixed(2)}|${lat.toFixed(2)}`;
+}
+
+/**
+ * Merge a new search_gdelt_geo result into the places already on the globe.
+ * One entry per place: a repeat replaces the older one and moves to the end,
+ * so the cap drops the stalest places. Returns a new array; inputs are untouched.
+ */
+export function mergeNewsFeatures(existing, incoming, cap = NEWS_FEATURE_CAP) {
+  const byPlace = new Map();
+  for (const f of [...existing, ...incoming]) {
+    if (!f?.geometry?.coordinates) continue;
+    const key = _placeKey(f);
+    byPlace.delete(key);
+    byPlace.set(key, f);
+  }
+  return [...byPlace.values()].slice(-cap);
 }

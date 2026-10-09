@@ -45,7 +45,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from openosint.agent import default_anthropic_model
@@ -326,6 +326,28 @@ _BLANK_TILE = bytes.fromhex(
 )
 
 
+_TILE_FETCH_ATTEMPTS = 2  # one retry: EOX drops the odd connection under a burst of ~20 tiles
+_TILE_RETRY_DELAY_SECONDS = 0.3
+
+
+def _fetch_tile(url: str):
+    """GET an upstream tile, retrying once on a connection error or HTTP 5xx.
+
+    Returns the response, or raises the last exception if every attempt raised.
+    """
+    for attempt in range(_TILE_FETCH_ATTEMPTS):
+        last = attempt == _TILE_FETCH_ATTEMPTS - 1
+        try:
+            resp = _requests.get(url, timeout=10)
+        except Exception:
+            if last:
+                raise
+        else:
+            if resp.status_code < 500 or last:
+                return resp
+        time.sleep(_TILE_RETRY_DELAY_SECONDS)
+
+
 def _tile_cache_get(key: tuple[int, int, int]) -> bytes | None:
     value = _tile_cache.get(key)
     if value is not None:
@@ -580,7 +602,7 @@ _TOOL_CATALOG: list[dict] = [
     },
     {
         "name": "search_gdelt_geo",
-        "description": "Search worldwide geolocated news coverage via the GDELT GEO 2.0 API.",
+        "description": "Search recent geolocated worldwide news from GDELT's 15-minute article feed.",
         "input_label": "Keywords",
         "input_placeholder": "ukraine war",
         "category": "Network",
@@ -750,7 +772,9 @@ _RUNNERS: dict[str, object] = {
     ),
     "search_dns": lambda v, t, keys=None: run_dns_osint(v, timeout_seconds=t),
     "search_rdap": lambda v, t, keys=None: run_rdap_osint(v, timeout_seconds=t),
-    "search_gdelt_geo": lambda v, t, keys=None: run_gdelt_geo_osint(v, timeout_seconds=t),
+    "search_gdelt_geo": lambda v, t, keys=None, bbox=None: run_gdelt_geo_osint(
+        v, timeout_seconds=t, bbox=tuple(bbox) if bbox else None
+    ),
     "search_abuseipdb": lambda v, t, keys=None: run_abuseipdb_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("ABUSEIPDB_API_KEY")
     ),
@@ -1046,6 +1070,8 @@ class RunRequest(BaseModel):
     input: str
     timeout: int = 120
     api_keys: dict[str, str] | None = None  # per-request BYOK; never logged
+    # search_gdelt_geo only: (min_lon, min_lat, max_lon, max_lat). Other tools ignore it.
+    bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
 
 
 class ChatRequest(BaseModel):
@@ -1755,9 +1781,11 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
 
             url = _EOX_TILE_URL.format(z=z, y=y, x=x)
             try:
-                resp = await asyncio.to_thread(_requests.get, url, timeout=10)
-            except Exception:
-                logging.getLogger(__name__).warning("Tile fetch failed for z=%d x=%d y=%d", z, x, y)
+                resp = await asyncio.to_thread(_fetch_tile, url)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Tile fetch failed for z=%d x=%d y=%d: %s", z, x, y, type(exc).__name__
+                )
                 return Response(content=_BLANK_TILE, media_type="image/gif")
 
             if resp.status_code != 200:
@@ -1878,7 +1906,8 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         # api_keys values are intentionally not logged anywhere in this handler
         start = time.monotonic()
         try:
-            result = await _RUNNERS[tool_name](req.input, req.timeout, req.api_keys or {})
+            extra = {"bbox": req.bbox} if tool_name == "search_gdelt_geo" and req.bbox else {}
+            result = await _RUNNERS[tool_name](req.input, req.timeout, req.api_keys or {}, **extra)
             elapsed = round(time.monotonic() - start, 2)
             return {"status": "ok", "output": result, "tool": tool_name, "elapsed": elapsed}
         except Exception as exc:

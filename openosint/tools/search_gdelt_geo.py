@@ -1,14 +1,21 @@
 # openosint/tools/search_gdelt_geo.py
 """
-GDELT GEO 2.0 geospatial news search module.
+Geolocated worldwide news search over GDELT's 15-minute GKG feed.
 
-Queries the GDELT GEO 2.0 API for real-time, geolocated worldwide news
-coverage. Keyless, no auth. Returns a formatted string; never raises.
+The GDELT GEO 2.0 API this tool used to call was retired (HTTP 404), so
+articles now come from the GKG files GDELT publishes every 15 minutes (keyless,
+no account), held in a rolling in-memory window by openosint.tools.gdelt_gkg.
+Nothing is downloaded until this tool is first called.
 
-The raw GeoJSON FeatureCollection is embedded as a fenced ```geojson block
-at the end of the string (same string-only contract every other tool
-follows) so the web UI's globe view can pull it back out and hand it to
-MapLibre without a second round trip.
+Returns a formatted string; never raises. The GeoJSON FeatureCollection the
+globe draws is embedded as a fenced ```geojson block at the end of the string
+(same string-only contract every other tool follows) so the web UI can pull it
+back out without a second round trip. Article titles/URLs are third-party text:
+they appear only inside that fence (browser-bound, rendered as text) and never
+in the model-bound summary.
+
+Data: GDELT Project, https://www.gdeltproject.org/ (free for any use with
+citation; see the README).
 """
 
 from __future__ import annotations
@@ -16,173 +23,151 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import os
 import re
-import time
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
-import requests
-
-from openosint.proxy import get_requests_proxies
-from openosint.tools.exceptions import OSINTError, ToolExecutionError
+from openosint.tools.gdelt_gkg import (
+    SLOT_MINUTES,
+    Article,
+    GkgError,
+    Window,
+    get_window,
+)
 
 logger = logging.getLogger(__name__)
 
-_GDELT_URL = "https://api.gdeltproject.org/api/v2/geo/geo"
 _DEFAULT_TIMEOUT = 15
-_CONNECT_TIMEOUT_SECONDS = 5  # fail fast on a dead/hanging endpoint; read keeps the full budget
-
-# GDELT GEO 2.0 is public, keyless, and not per-IP rate-limited — routing it
-# through the shared upstream proxy (OPENOSINT_PROXY_URL) is a pure failure
-# point and cost with no benefit, unlike credentialed/target-facing tools
-# that use the proxy for good reason. Bypass it here by default; opt back in
-# per-deployment with OPENOSINT_GDELT_USE_PROXY=1 if you have a reason to.
-_GDELT_PROXY_OPT_IN_ENV_VAR = "OPENOSINT_GDELT_USE_PROXY"
-
-
-def _gdelt_proxies() -> dict[str, str] | None:
-    if os.environ.get(_GDELT_PROXY_OPT_IN_ENV_VAR, "").strip().lower() in ("1", "true", "yes"):
-        return get_requests_proxies()
-    return None
 _MIN_TIMESPAN = 15
 _MAX_TIMESPAN = 1440
 _DEFAULT_TIMESPAN = 60
 _MAX_MAXPOINTS = 500
 _DEFAULT_MAXPOINTS = 250
 _SAMPLE_LINES = 10
-_CACHE_TTL_SECONDS = 300  # GDELT itself only refreshes every 15min upstream
+_MAX_QUERY_CHARS = 200
+_MAX_QUERY_TERMS = 10
+_PLACES_PER_ARTICLE_ON_MAP = 3  # an article about 5 countries is not 5 dots
+_MATCH_ALL = {"", "*"}
 
 BBox = tuple[float, float, float, float]  # (min_lon, min_lat, max_lon, max_lat)
 
-# ponytail: process-local dict, single-worker assumption. Move to a shared
-# cache (redis, etc.) if this ever runs behind multiple worker processes.
-_cache: dict[tuple, tuple[float, dict]] = {}
+SERVICE_UNAVAILABLE_MARKER = "[service_unavailable] search_gdelt_geo"
 
 
 def _clamp(value: int, lo: int, hi: int) -> int:
     return max(lo, min(hi, value))
 
 
-def clamp_gdelt_params(timespan: int, maxpoints: int) -> tuple[int, int]:
-    """Clamp (timespan, maxpoints) to GDELT GEO 2.0's accepted ranges."""
-    return (
-        _clamp(int(timespan), _MIN_TIMESPAN, _MAX_TIMESPAN),
-        _clamp(int(maxpoints), 1, _MAX_MAXPOINTS),
-    )
+# --------------------------------------------------------------------------
+# Query matching
+# --------------------------------------------------------------------------
+
+_TERM_RE = re.compile(r'"([^"]+)"|(\S+)')
 
 
-_HREF_RE = re.compile(r'href=[\'"]([^\'"]+)[\'"]', re.IGNORECASE)
-
-
-def extract_urls_from_popup_html(html: str | None, limit: int = 3) -> list[str]:
-    """
-    Extract article URLs from a GDELT GEO feature's `html` popup field.
-
-    GDELT GEO 2.0 doesn't return article URLs as a separate structured
-    field — they're embedded as <a href="..."> links inside the popup HTML
-    string shown on the map. This pulls them out with a link count cap.
-    """
-    if not html:
+def parse_query(query: str) -> list[list[str]]:
+    """'a "b c" OR d' → [['a', 'b c'], ['d']]: OR of ANDs, lower-cased. [] matches everything."""
+    text = query.strip()[:_MAX_QUERY_CHARS]
+    if text in _MATCH_ALL:
         return []
-    seen: list[str] = []
-    for url in _HREF_RE.findall(html):
-        if url not in seen:
-            seen.append(url)
-        if len(seen) >= limit:
-            break
-    return seen
+    groups = []
+    for chunk in re.split(r"\s+OR\s+", text):
+        terms = [(m.group(1) or m.group(2)).lower().strip("()") for m in _TERM_RE.finditer(chunk)]
+        terms = [t for t in terms if t]
+        if terms:
+            groups.append(terms[:_MAX_QUERY_TERMS])
+    return groups
 
 
-def _cache_get(key: tuple) -> dict | None:
-    hit = _cache.get(key)
-    if hit is None:
-        return None
-    stored_at, data = hit
-    if time.monotonic() - stored_at > _CACHE_TTL_SECONDS:
-        del _cache[key]
-        return None
-    return data
-
-
-def _cache_set(key: tuple, data: dict) -> None:
-    _cache[key] = (time.monotonic(), data)
+def _matches(article: Article, groups: list[list[str]]) -> bool:
+    if not groups:
+        return True
+    haystack = f"{article.title} {article.url}".lower()
+    return any(all(term in haystack for term in group) for group in groups)
 
 
 def _in_bbox(lon: float, lat: float, bbox: BBox) -> bool:
     min_lon, min_lat, max_lon, max_lat = bbox
-    return min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
+    if not min_lat <= lat <= max_lat:
+        return False
+    if min_lon <= max_lon:
+        return min_lon <= lon <= max_lon
+    return lon >= min_lon or lon <= max_lon  # box crosses the antimeridian
 
 
-def _filter_by_bbox(feature_collection: dict, bbox: BBox | None) -> dict:
-    """Return a copy of feature_collection with only features inside bbox."""
-    if not bbox:
-        return feature_collection
-    kept = []
-    for feat in feature_collection.get("features", []):
-        coords = (feat.get("geometry") or {}).get("coordinates")
-        if not coords or len(coords) < 2:
+def parse_bbox(raw) -> BBox | None:
+    """Validate a user/agent supplied bbox: None for 'no bbox', ValueError when malformed."""
+    if raw is None or raw == "" or raw == [] or raw == ():
+        return None
+    try:
+        values = tuple(float(v) for v in raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("bbox must be four numbers") from exc
+    if len(values) != 4:
+        raise ValueError("bbox must be [min_lon, min_lat, max_lon, max_lat]")
+    min_lon, min_lat, max_lon, max_lat = values
+    if not (-90 <= min_lat <= max_lat <= 90 and -180 <= min_lon <= 180 and -180 <= max_lon <= 180):
+        raise ValueError("bbox is out of range (lat -90..90, lon -180..180, min_lat <= max_lat)")
+    return min_lon, min_lat, max_lon, max_lat
+
+
+# --------------------------------------------------------------------------
+# Aggregation
+# --------------------------------------------------------------------------
+
+
+@dataclass
+class _Spot:
+    name: str
+    lat: float
+    lon: float
+    lead: Article
+    count: int = 0
+    tone_sum: float = 0.0
+
+
+def build_feature_collection(
+    articles: tuple[Article, ...],
+    groups: list[list[str]],
+    cutoff_slot: str,
+    bbox: BBox | None,
+    maxpoints: int,
+) -> dict:
+    """Group matching articles by place into Point features (busiest first)."""
+    spots: dict[tuple[float, float], _Spot] = {}
+    for article in reversed(articles):  # newest first, so each spot's lead article is the newest
+        if article.slot < cutoff_slot or not _matches(article, groups):
             continue
-        lon, lat = coords[0], coords[1]
-        if _in_bbox(lon, lat, bbox):
-            kept.append(feat)
-    return {**feature_collection, "features": kept}
+        for place in article.places[:_PLACES_PER_ARTICLE_ON_MAP]:
+            if bbox and not _in_bbox(place.lon, place.lat, bbox):
+                continue
+            spot = spots.setdefault(
+                (place.lat, place.lon), _Spot(place.name, place.lat, place.lon, article)
+            )
+            spot.count += 1
+            spot.tone_sum += article.tone
+    busiest = sorted(spots.values(), key=lambda s: -s.count)[:maxpoints]
+    features = [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": spot.name,
+                "count": spot.count,
+                "title": spot.lead.title,
+                "url": spot.lead.url,
+                "domain": spot.lead.domain,
+                "tone": round(spot.tone_sum / spot.count, 1),
+            },
+            "geometry": {"type": "Point", "coordinates": [spot.lon, spot.lat]},
+        }
+        for spot in busiest
+    ]
+    return {"type": "FeatureCollection", "features": features}
 
 
-def fetch_gdelt_data(query: str, timespan: int, maxpoints: int, timeout_seconds: int) -> dict:
-    """
-    Query the GDELT GEO 2.0 API for point-level geolocated news coverage.
-
-    Raises
-    ------
-    OSINTError
-        On network failures or a timeout.
-    ToolExecutionError
-        On a non-200 status or a malformed/unexpected response body.
-    """
-    params = {
-        "query": query,
-        "mode": "PointData",
-        "format": "GeoJSON",
-        "timespan": timespan,
-        "maxpoints": maxpoints,
-    }
-    try:
-        # A single flat timeout applies to BOTH connect and read, so a host
-        # that completes the TCP handshake but hangs mid-TLS (observed with
-        # GDELT during an outage) blocks for the full read budget. Splitting
-        # them means a genuinely dead/hanging endpoint fails fast — the live
-        # demo gets a clean error instead of a 15s+ spinner — while a slow
-        # but reachable one still gets the full timeout_seconds to respond.
-        response = requests.get(
-            _GDELT_URL,
-            params=params,
-            timeout=(_CONNECT_TIMEOUT_SECONDS, timeout_seconds),
-            proxies=_gdelt_proxies(),
-        )
-    except requests.ConnectTimeout as exc:
-        raise OSINTError(
-            f"GDELT GEO API did not respond within {_CONNECT_TIMEOUT_SECONDS}s — endpoint appears down."
-        ) from exc
-    except requests.Timeout as exc:
-        raise OSINTError(f"GDELT GEO API timed out after {timeout_seconds}s.") from exc
-    except requests.RequestException as exc:
-        raise OSINTError(f"Network error querying GDELT GEO API: {exc}") from exc
-
-    if response.status_code != 200:
-        raise ToolExecutionError(
-            f"GDELT GEO API returned HTTP {response.status_code} — the endpoint is "
-            "intermittently unavailable and rate-sensitive; retry shortly."
-        )
-
-    try:
-        data = response.json()
-    except ValueError as exc:
-        raise ToolExecutionError("GDELT GEO API returned malformed JSON.") from exc
-
-    if not isinstance(data, dict) or data.get("type") != "FeatureCollection":
-        raise ToolExecutionError("GDELT GEO API returned an unexpected response shape.")
-
-    return data
-
+# --------------------------------------------------------------------------
+# Output
+# --------------------------------------------------------------------------
 
 _GEOJSON_FENCE_RE = re.compile(r"```geojson\n(.*?)```", re.DOTALL)
 
@@ -192,12 +177,12 @@ def split_geojson_fence(output: str) -> tuple[str, str | None]:
 
     The fenced ```geojson block exists so the browser can pull the raw
     FeatureCollection out over SSE and hand it to the globe. The LLM has no
-    use for raw coordinates, and every call site that feeds a tool result
-    back to a provider resends the *entire* conversation on every
-    subsequent round — an unstripped fence costs real tokens (tens of
-    thousands, on a BYOK user's own key) on every round after the one that
-    called this tool. Every model-bound call site must call this first;
-    every browser/SSE-bound call site must keep the original string.
+    use for raw coordinates (nor for third-party headlines), and every call
+    site that feeds a tool result back to a provider resends the *entire*
+    conversation on every subsequent round — an unstripped fence costs real
+    tokens on every round after the one that called this tool. Every
+    model-bound call site must call this first; every browser/SSE-bound call
+    site must keep the original string.
 
     Returns (output, None) unchanged when no fence is present — safe to
     call on any tool's output, not just search_gdelt_geo's.
@@ -216,45 +201,81 @@ def split_geojson_fence(output: str) -> tuple[str, str | None]:
     return text, geojson
 
 
-def _format_gdelt_results(feature_collection: dict, query: str, timespan: int) -> str:
-    """Return a structured string summarising results, plus the raw GeoJSON fence."""
-    features = feature_collection.get("features", [])
-    if not features:
-        return f"No geolocated coverage found for '{query}' in the last {timespan} minute(s)."
+def _duration(minutes: int) -> str:
+    hours, rest = divmod(minutes, 60)
+    if not hours:
+        return f"{rest} min"
+    return f"{hours} h" if not rest else f"{hours} h {rest} min"
 
+
+def _coverage(window: Window, timespan: int) -> dict:
+    requested = min(timespan, window.window_minutes)
+    return {
+        "minutes": min(requested, window.covered_minutes),
+        "requested": requested,
+        "loading": window.loading and window.covered_minutes < requested,
+        "stale_minutes": window.stale_minutes,
+    }
+
+
+def _coverage_note(coverage: dict) -> str:
+    note = f"Coverage: the last {_duration(coverage['minutes'])}"
+    if coverage["minutes"] < coverage["requested"]:
+        note += f" (of the {_duration(coverage['requested'])} requested"
+        note += (
+            "; older articles are still loading, search again shortly)"
+            if coverage["loading"]
+            else ")"
+        )
+    if coverage["stale_minutes"]:
+        note += f". Data is {_duration(coverage['stale_minutes'])} behind: GDELT did not refresh"
+    return note + "."
+
+
+def _format_results(fc: dict, query: str, coverage: dict) -> str:
+    features = fc["features"]
+    note = _coverage_note(coverage)
+    if not features:
+        return f"No geolocated coverage found for '{query}'. {note}"
+
+    mentions = sum(f["properties"]["count"] for f in features)
     lines = [
-        f"GDELT geo results for '{query}' (last {timespan}min): "
-        f"{len(features)} location(s)\n"
+        f"GDELT geolocated news for '{query}': {len(features)} location(s), "
+        f"{mentions} article mention(s). {note}\n"
     ]
     for feat in features[:_SAMPLE_LINES]:
-        props = feat.get("properties") or {}
-        coords = (feat.get("geometry") or {}).get("coordinates") or [None, None]
-        lon, lat = coords[0], coords[1]
-        name = props.get("name") or f"{lat}, {lon}"
-        count = props.get("count")
-        suffix = f" — {count} mention(s)" if count else ""
-        lines.append(f"[+] {name} ({lat}, {lon}){suffix}")
+        props = feat["properties"]
+        lon, lat = feat["geometry"]["coordinates"]
+        lines.append(f"[+] {props['name']} ({lat}, {lon}) — {props['count']} article(s)")
     if len(features) > _SAMPLE_LINES:
         lines.append(f"\n... and {len(features) - _SAMPLE_LINES} more.")
-
-    lines.append("")
-    lines.append("```geojson")
-    lines.append(json.dumps(feature_collection))
-    lines.append("```")
+    # A backtick inside a headline must not end the fence early: escape it in the JSON.
+    payload = json.dumps({**fc, "coverage": coverage}).replace("`", "\\u0060")
+    lines += ["", "```geojson", payload, "```"]
     return "\n".join(lines)
 
 
-SERVICE_UNAVAILABLE_MARKER = "[service_unavailable] search_gdelt_geo"
-
-
 def service_unavailable_message(reason: str) -> str:
-    """The one result returned when GDELT GEO fails; web/static/geo-extractor.js matches the marker."""
+    """The one result returned when the news feed fails; web/static/geo-extractor.js matches the marker."""
     return (
         "Scan error: GDELT GEO service unavailable, try again later.\n"
         f"{SERVICE_UNAVAILABLE_MARKER}\n"
         f"Reason: {reason}\n"
         "Other tools are unaffected; the news layer on the globe stays empty until GDELT recovers."
     )
+
+
+# --------------------------------------------------------------------------
+# Entry point
+# --------------------------------------------------------------------------
+
+
+def _cutoff_slot(articles: tuple[Article, ...], timespan: int) -> str:
+    """First slot inside the lookback, measured back from the newest loaded slot."""
+    if not articles:
+        return ""
+    newest = datetime.strptime(max(a.slot for a in articles), "%Y%m%d%H%M%S")
+    return (newest - timedelta(minutes=timespan - SLOT_MINUTES)).strftime("%Y%m%d%H%M%S")
 
 
 async def run_gdelt_geo_osint(
@@ -266,50 +287,56 @@ async def run_gdelt_geo_osint(
     bbox: BBox | None = None,
 ) -> str:
     """
-    Search worldwide geolocated news coverage for query via GDELT GEO 2.0.
+    Search worldwide geolocated news coverage for query via GDELT's GKG feed.
 
     Returns a descriptive error string on failure rather than raising.
 
     Parameters
     ----------
     query:
-        Keywords to search for. Supports quoted phrases and OR groups.
+        Keywords matched against article headlines and URLs. Quoted phrases and
+        OR groups are supported; "*" (or empty) matches everything, which is
+        the way to list all coverage inside a bbox.
     timeout_seconds:
-        HTTP request timeout in seconds.
+        Per-download read timeout.
     timespan:
-        Lookback window in minutes, clamped to [15, 1440].
+        Lookback in minutes, clamped to [15, 1440] and to the loaded window
+        (OPENOSINT_GDELT_WINDOW_HOURS, default 6 h).
     maxpoints:
-        Maximum number of point features to request, clamped to [1, 500].
+        Maximum number of point features, clamped to [1, 500].
     bbox:
-        Optional (min_lon, min_lat, max_lon, max_lat). When set, features
-        outside it are filtered out server-side before returning.
+        Optional (min_lon, min_lat, max_lon, max_lat); only places inside it.
 
     Returns
     -------
     str
-        Formatted summary + a trailing fenced ```geojson block containing
-        the raw FeatureCollection, or a descriptive error message.
+        Formatted summary + a trailing fenced ```geojson block containing the
+        FeatureCollection (with a "coverage" member saying how far back the
+        results reach), or a descriptive error message.
     """
-    timespan = _clamp(int(timespan), _MIN_TIMESPAN, _MAX_TIMESPAN)
-    maxpoints = _clamp(int(maxpoints), 1, _MAX_MAXPOINTS)
-    cache_key = (query, timespan, maxpoints)
+    try:
+        timespan = _clamp(int(timespan), _MIN_TIMESPAN, _MAX_TIMESPAN)
+        maxpoints = _clamp(int(maxpoints), 1, _MAX_MAXPOINTS)
+        box = parse_bbox(bbox)
+    except (TypeError, ValueError) as exc:
+        return f"Invalid input: {exc}"
 
     logger.info("Starting GDELT geo search for: %s", query)
     try:
-        data = _cache_get(cache_key)
-        if data is None:
-            data = await asyncio.to_thread(
-                fetch_gdelt_data, query, timespan, maxpoints, timeout_seconds
-            )
-            _cache_set(cache_key, data)
-        data = _filter_by_bbox(data, bbox)
-        result = _format_gdelt_results(data, query, timespan)
+        window = await asyncio.to_thread(get_window().snapshot, timeout_seconds)
+        coverage = _coverage(window, timespan)
+        fc = build_feature_collection(
+            window.articles,
+            parse_query(query),
+            _cutoff_slot(window.articles, coverage["requested"]),
+            box,
+            maxpoints,
+        )
         logger.info("GDELT geo search complete for: %s", query)
-        return result
-    except OSINTError as exc:
-        # Covers timeouts, network errors and non-200s (ToolExecutionError is an
-        # OSINTError): GDELT GEO is the least reliable upstream we use, so every failure
-        # becomes one structured, human-readable result the UI can recognise.
+        return _format_results(fc, query, coverage)
+    except GkgError as exc:
+        # Every failure — network, size caps, bad archive, stale data — becomes
+        # one structured, human-readable result the UI can recognise.
         logger.warning("GDELT geo search failed: %s", exc)
         return service_unavailable_message(str(exc))
     except Exception as exc:

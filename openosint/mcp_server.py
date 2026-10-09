@@ -296,18 +296,24 @@ async def list_tools() -> list[Tool]:
         Tool(
             name="search_gdelt_geo",
             description=(
-                "Search worldwide, geolocated news coverage via the GDELT GEO 2.0 API. "
-                "No API key required. Returns a text summary plus the raw GeoJSON "
-                "FeatureCollection. Optionally scope to a bounding box."
+                "Search recent, geolocated worldwide news from GDELT's 15-minute article "
+                "feed (headlines/URLs matched against the query). No API key required. "
+                "Returns a text summary plus a GeoJSON FeatureCollection, and says how "
+                "far back it covers (the first call may cover only the last 15 minutes "
+                "while older articles load). Optionally scope to a bounding box; query "
+                "\"*\" lists everything inside it."
             ),
             inputSchema=_with_json(
                 {
                     "type": "object",
                     "properties": {
-                        "query": {"type": "string"},
+                        "query": {
+                            "type": "string",
+                            "description": "Keywords (quoted phrases, OR groups) or \"*\" for all.",
+                        },
                         "timespan": {
                             "type": "integer",
-                            "description": "Lookback window in minutes (15-1440). Default 60.",
+                            "description": "Lookback in minutes (15-1440, capped at the loaded window). Default 60.",
                         },
                         "maxpoints": {
                             "type": "integer",

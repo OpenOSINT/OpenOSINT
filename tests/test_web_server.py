@@ -809,6 +809,23 @@ class TestTileProxy:
         assert r.headers["content-type"] == "image/gif"
         assert r.content == ws._BLANK_TILE
 
+    async def test_transient_upstream_error_is_retried_once(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        ok = _mock_requests_response(status_code=200)
+        ok.content = b"\xff\xd8jpeg"
+        with (
+            patch("openosint.web_server._requests") as mreq,
+            patch("openosint.web_server.time.sleep"),
+        ):
+            mreq.get.side_effect = [Exception("connection reset"), ok]
+            r = await http_client.get("/api/tiles/3/3/1")
+
+        assert r.headers["content-type"] == "image/jpeg"
+        assert r.content == b"\xff\xd8jpeg"
+        assert mreq.get.call_count == 2
+
     async def test_upstream_non_200_returns_blank_tile(self, http_client):
         import openosint.web_server as ws
 

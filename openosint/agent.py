@@ -369,11 +369,14 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "search_gdelt_geo",
         "description": (
-            "Search worldwide, geolocated news coverage via the GDELT GEO 2.0 API. "
-            "No API key required. Use for real-time situational awareness of events "
-            "in a region, or to find geolocated news mentioning a target. "
+            "Search recent, geolocated worldwide news from GDELT's 15-minute article "
+            "feed (headlines and URLs matched against the query; places come from the "
+            "articles' location mentions). No API key required. Use for situational "
+            "awareness of events in a region, or to find geolocated news mentioning a "
+            "target. The result says how far back it covers; the first call after "
+            "startup may cover only the last 15 minutes while older articles load. "
             "Optionally scope the search to a bounding box (e.g. from a user-selected "
-            "map area)."
+            "map area); use query \"*\" to list all coverage inside it."
         ),
         "input_schema": {
             "type": "object",
@@ -381,12 +384,16 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                 "query": {
                     "type": "string",
                     "description": (
-                        "Keywords to search for. Supports quoted phrases and OR groups."
+                        "Keywords matched against article headlines and URLs. Supports "
+                        "quoted phrases and OR groups. Use \"*\" for everything in the bbox."
                     ),
                 },
                 "timespan": {
                     "type": "integer",
-                    "description": "Lookback window in minutes (15–1440). Defaults to 60.",
+                    "description": (
+                        "Lookback in minutes (15–1440, capped at the loaded window, "
+                        "6 hours by default). Defaults to 60."
+                    ),
                 },
                 "maxpoints": {
                     "type": "integer",
@@ -538,7 +545,7 @@ INVESTIGATION STRATEGY:
 - For live Google search results on a target: use search_dorks_live (uses BRIGHTDATA_API_KEY).
 - For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (uses BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
 - To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (uses BRIGHTDATA_API_KEY).
-- For real-time geolocated news coverage of a region or event (no key required): use search_gdelt_geo. If the user has selected a map area, pass its bbox.
+- For real-time geolocated news coverage of a region or event (no key required): use search_gdelt_geo. If the user has selected a map area, pass its bbox with query "*". Tell the user how far back the result covers.
 - Chain tools intelligently: use findings from each step to decide the next.
 - Never run search_email or search_breach with a full name — only with actual email addresses.
 - Never run search_username with spaces in the name.
