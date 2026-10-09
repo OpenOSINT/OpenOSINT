@@ -30,7 +30,7 @@ import time
 from collections import OrderedDict
 from collections import deque as _deque
 from pathlib import Path
-from typing import AsyncIterator, Callable
+from typing import Any, AsyncIterator, Callable
 from urllib.parse import urlparse as _urlparse
 
 import requests as _requests
@@ -1169,12 +1169,13 @@ def _offered_tools() -> list[dict]:
 async def _run_tool(
     tool_name: str, tool_input: str, timeout: int = 120, budget: ToolBudget | None = None
 ) -> str:
+    # Refused and unknown requests count too, so a model can't loop on them forever.
+    if budget is not None and not budget.try_consume():
+        return budget.message()
     if tool_name not in _RUNNERS:
         return f"Unknown tool: {tool_name}"
     if not is_tool_enabled(tool_name):
         return disabled_result(tool_name)
-    if budget is not None and not budget.try_consume():
-        return budget.message()
     if not str(tool_input).strip():
         return (
             f"Tool call error: 'input' is required for {tool_name} but was not provided. "

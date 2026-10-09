@@ -620,13 +620,15 @@ async def _execute_tool(
     A tool the current mode doesn't offer returns a structured "disabled" result even
     if the model asks for it anyway; a call past the request's budget is refused.
     """
+    # Every request counts against the budget, including unknown and disabled tools: a model
+    # that keeps asking for a refused tool must still hit the cap instead of looping forever.
+    budget = current_budget()
+    if budget is not None and not budget.try_consume():
+        return budget.message()
     if tool_name not in _TOOL_MAP:
         return f"Error: unknown tool '{tool_name}'."
     if not is_tool_enabled(tool_name):
         return disabled_result(tool_name)
-    budget = current_budget()
-    if budget is not None and not budget.try_consume():
-        return budget.message()
     if on_tool_call is not None:
         await on_tool_call(tool_name, tool_input)
     return await _TOOL_MAP[tool_name](tool_input)
