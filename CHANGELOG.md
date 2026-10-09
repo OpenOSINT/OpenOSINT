@@ -9,13 +9,22 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.32.0] — 2026-10-09
+
+Live geolocated news is back on the globe, via GDELT's 15-minute GKG feed (the GDELT GEO API was retired). Headlines now show on globe points, results accumulate across searches, the globe flies to new results, and the Globe nav shows an "N places" badge. Also fixes the news-before-globe race, the blank coverage pill, the dropped bounding box, and the Alpine warning on user messages.
+
+> **New environment variables** (all optional): `OPENOSINT_GDELT_WINDOW_HOURS` (default `6`, max `24`), `OPENOSINT_GDELT_MAX_ARTICLES` (default `30000`), `OPENOSINT_GDELT_USE_PROXY` (default off).
+
 ### Changed
 - `search_gdelt_geo` works again: the GDELT GEO 2.0 API it called was retired (HTTP 404), so it now reads GDELT's 15-minute GKG article feed (`data.gdeltproject.org`, keyless) and keeps a rolling window in memory (default 6 hours; `OPENOSINT_GDELT_WINDOW_HOURS`, hard cap `OPENOSINT_GDELT_MAX_ARTICLES`, oldest dropped first). Same tool name, same GeoJSON point shape and `[service_unavailable]` result. Query matching is against headlines and URLs (`"phrases"`, `OR`, `*`), country-level mentions are dropped, and points now carry `title`, `url`, `domain` and `tone`.
 - Lazy and polite: nothing is downloaded until the tool is first used. The first search loads only the newest file; older files load on one background thread, one download at a time. Upstream load is one file per 15 minutes regardless of how many searches run. The result and the globe say how far back they cover ("News: last 15 min — older articles still loading").
 - Downloads are fail-closed: https `data.gdeltproject.org` only, no redirects, compressed and decompressed size caps, per-field length caps, URL validation; any violation returns the structured service-unavailable result.
 - The globe shows the headline and domain of a news point as plain text; box-select now asks for query `"*"` in the selected area, and a search with no matches clears the previous search's dots.
 
+- Globe: news accumulates per conversation across searches, the camera flies to new results, and the Globe nav shows an "N places" badge (cleared with the trash icon).
+
 ### Fixed
+- News that arrived before the globe was first opened was lost; the coverage pill could render blank; the Alpine warning on every user message (`msg.parts` on messages without parts) is gone.
 - `POST /api/run/search_gdelt_geo` dropped the selected bounding box; `RunRequest` now accepts an optional 4-number `bbox` (HTTP 422 if malformed) and passes it to the tool.
 
 ### Added
