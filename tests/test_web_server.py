@@ -399,8 +399,8 @@ class TestRunToolInputValidation:
         async def fake_runner(v, t):
             return f"ran:{v}"
 
-        with patch("openosint.web_server._RUNNERS", {"test_tool": lambda v, t: fake_runner(v, t)}):
-            result = await _run_tool("test_tool", "my_target")
+        with patch("openosint.web_server._RUNNERS", {"search_ip": lambda v, t: fake_runner(v, t)}):
+            result = await _run_tool("search_ip", "my_target")
 
         assert result == "ran:my_target"
 

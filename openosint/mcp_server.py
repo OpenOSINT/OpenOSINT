@@ -13,8 +13,10 @@ search_footprint.
 
 from __future__ import annotations
 
+import argparse
 import asyncio
 import logging
+import os
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ from mcp.server.stdio import stdio_server  # noqa: E402
 from mcp.types import CallToolResult, TextContent, Tool  # noqa: E402
 
 from openosint.json_output import to_json  # noqa: E402
+from openosint.tool_policy import ENV_ALLOW_ACTIVE, TOOL_POLICY, describe, disabled_result, is_tool_enabled  # noqa: E402
 from openosint.tools.generate_dorks import run_dork_osint  # noqa: E402
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
@@ -79,6 +82,16 @@ def _with_json(schema: dict) -> dict:
 
 @app.list_tools()
 async def list_tools() -> list[Tool]:
+    """Only tools the current mode enables are listed, each with its noise label, so a
+    client LLM in passive mode cannot even see the non-passive ones."""
+    return [
+        tool.model_copy(update={"description": describe(tool.name, tool.description or "")})
+        for tool in _all_tools()
+        if is_tool_enabled(tool.name)
+    ]
+
+
+def _all_tools() -> list[Tool]:
     return [
         Tool(
             name="search_email",
@@ -604,6 +617,8 @@ _HANDLERS: dict[str, tuple] = {
 @app.call_tool()
 async def call_tool(name: str, arguments: dict[str, Any]) -> CallToolResult:
     logger.info("Tool: %s | args: %s", name, arguments)
+    if name in TOOL_POLICY and not is_tool_enabled(name):
+        return CallToolResult(content=[TextContent(type="text", text=disabled_result(name))], isError=True)
     should_use_json = bool(arguments.get("json_output", False))
 
     # Special handler for multi-target investigation
@@ -740,7 +755,19 @@ async def _serve() -> None:
         await app.run(r, w, _initialization_options())
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(prog="openosint-mcp", description="OpenOSINT MCP server (stdio).")
+    parser.add_argument(
+        "--allow-active",
+        action="store_true",
+        help=(
+            "Also expose tools that touch the target or are noisy (scrape_url, search_username, "
+            "search_email, search_domain, search_phone, VirusTotal URL submission, DNS DKIM probes). "
+            "Off by default: the server lists passive tools only. Same as OPENOSINT_ALLOW_ACTIVE=1."
+        ),
+    )
+    if parser.parse_args(argv).allow_active:
+        os.environ[ENV_ALLOW_ACTIVE] = "1"
     asyncio.run(_serve())
 
 
