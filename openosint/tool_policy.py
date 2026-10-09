@@ -208,6 +208,20 @@ def disabled_result(name: str, detail: str = "") -> str:
     )
 
 
+def humanize(result: str) -> str:
+    """Plain-text form of a ``disabled_result`` JSON (anything else passes through)."""
+    if not result.startswith('{"status": "disabled_in_passive_mode"'):
+        return result
+    try:
+        data = json.loads(result)
+    except ValueError:
+        return result
+    return (
+        f"[passive mode] {data['tool']} is disabled ({data['noise']}): {data['reason']}\n"
+        f"{data['how_to_enable']}"
+    )
+
+
 def filter_definitions(definitions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Tool definitions the current mode may offer, with the noise label in each description."""
     out = []
