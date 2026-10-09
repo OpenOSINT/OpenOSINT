@@ -762,3 +762,4 @@ async def test_web_claude_loop_is_capped_and_filtered(monkeypatch):
     assert runner.await_count == 2
     assert events[-1]["type"] == "error" and "Tool call limit reached (2" in events[-1]["message"]
     assert not set(tools_seen[0]) & set(NON_PASSIVE)
+

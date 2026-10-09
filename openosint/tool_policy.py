@@ -315,3 +315,24 @@ def use_budget(budget: ToolBudget) -> Iterator[ToolBudget]:
         yield budget
     finally:
         _budget.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# README table (tests/test_passive_mode.py fails if the README copy drifts)
+# ---------------------------------------------------------------------------
+
+_TABLE_LABELS = {"search_virustotal_url": "search_virustotal (URL submission)"}
+
+
+def markdown_table() -> str:
+    """The README's noise table, one honest line per tool, generated from TOOL_POLICY."""
+    rows = ["| Tool | Level | Default | What it actually sends, and where |", "|---|---|---|---|"]
+    for name, policy in sorted(TOOL_POLICY.items()):
+        default = "on" if policy.is_passive else "**off**"
+        note = policy.note + (f" **Active part:** {policy.active_part}" if policy.active_part else "")
+        rows.append(f"| `{_TABLE_LABELS.get(name, name)}` | {policy.noise.value} | {default} | {note} |")
+    return "\n".join(rows)
+
+
+if __name__ == "__main__":
+    print(markdown_table())
