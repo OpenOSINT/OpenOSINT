@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 
 from openosint.proxy import get_subprocess_env
+from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError
 from openosint.utils import run_subprocess
 
@@ -47,6 +48,7 @@ def _format_domain_results(raw: str, domain: str) -> str:
     )
 
 
+@requires_active("search_domain")
 async def run_domain_osint(
     domain: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,

@@ -12,6 +12,7 @@ import asyncio
 import logging
 
 from openosint.proxy import get_sherlock_proxy_args
+from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 from openosint.utils import run_subprocess
 
@@ -49,6 +50,7 @@ def _format_username_results(raw: str, username: str) -> str:
     return f"OSINT results for username '{username}':\n\n{raw}"
 
 
+@requires_active("search_username")
 async def run_username_osint(
     username: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,

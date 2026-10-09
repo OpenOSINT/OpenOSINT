@@ -18,6 +18,17 @@ def _isolated_openosint_home(tmp_path, monkeypatch):
     """Each test gets its own empty data directory."""
     monkeypatch.setenv("OPENOSINT_HOME", str(tmp_path / "openosint-home"))
 
+@pytest.fixture(autouse=True)
+def _active_tools_for_legacy_tests(request, monkeypatch):
+    """Passive mode is the product default. Tests written before it exist exercise the
+    tools themselves, so they run with active tools on; test_passive_*.py runs on the
+    real default (env unset) and opts in explicitly where it needs to."""
+    if request.path.name.startswith("test_passive"):
+        monkeypatch.delenv("OPENOSINT_ALLOW_ACTIVE", raising=False)
+    else:
+        monkeypatch.setenv("OPENOSINT_ALLOW_ACTIVE", "1")
+
+
 # Test modules whose subjects are still `raise NotImplementedError` stubs in
 # openosint/graph (see each function's docstring). Marked xfail, not skipped,
 # so they start reporting XPASS once the phase is implemented.

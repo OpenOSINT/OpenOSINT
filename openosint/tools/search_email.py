@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 
 from openosint.proxy import get_subprocess_env
+from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 from openosint.utils import run_subprocess
 
@@ -42,6 +43,7 @@ def _format_email_results(raw: str, email: str) -> str:
     return f"OSINT results for '{email}':\n\n{raw}"
 
 
+@requires_active("search_email")
 async def run_email_osint(
     email: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,

@@ -31,6 +31,7 @@ import re
 import requests
 
 from openosint.settings_catalog import missing_from, missing_keys_message
+from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,7 @@ def _fetch_unlocker(url: str, api_key: str, zone: str, timeout: int) -> str:
     return response.text
 
 
+@requires_active("scrape_url")
 async def run_scrape_url_osint(
     url: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,
