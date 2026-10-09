@@ -21,6 +21,7 @@ from mcp.server.fastmcp import FastMCP
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cloud import db, rate_limit, tools
+from openosint.tool_policy import is_tool_enabled
 from cloud.config import TOOL_TIMEOUT_SECONDS
 from cloud.key_sources import get_credit_cost, is_platform_pool_tool, resolve_key
 from cloud.routes.enrich import _log_outcome
@@ -35,7 +36,15 @@ _ERROR_PREFIXES = ("Scan error", "Internal error", "Error:")
 # ── FastMCP instance ──────────────────────────────────────────────────────────
 # streamable_http_path="/" because FastAPI mounts this at /mcp and Starlette
 # strips the /mcp prefix before passing the request to the sub-app.
-_mcp = FastMCP(
+class _PassiveFirstMCP(FastMCP):
+    """Lists only the tools the current mode enables, so a client LLM never sees
+    the active ones (e.g. search_domain) unless the operator opted in."""
+
+    async def list_tools(self):  # type: ignore[override]
+        return [t for t in await super().list_tools() if is_tool_enabled(t.name)]
+
+
+_mcp = _PassiveFirstMCP(
     "OpenOSINT Cloud",
     streamable_http_path="/",
 )
