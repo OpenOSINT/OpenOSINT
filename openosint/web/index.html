@@ -347,6 +347,41 @@
 
     <div class="border-t border-app my-5"></div>
 
+    <!-- Tool noise level: passive by default, active tools are an explicit opt-in -->
+    <div class="mb-5">
+      <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">Tools &amp; noise level</p>
+      <label class="flex items-start gap-2 text-xs text-primary mb-2">
+        <input type="checkbox" class="mt-0.5"
+               :checked="policy.allow_active"
+               :disabled="!policy.can_change"
+               @change="setAllowActive($event.target.checked)">
+        <span>
+          Enable active tools (noisy or touches the target)
+          <span class="text-muted block">
+            Off by default. Turning this on lets the agent run tools that send many requests from your IP or contact
+            the target's infrastructure, which can trigger rate limits, WAF blocks and alerts. Max
+            <span x-text="policy.max_tool_calls"></span> tool calls per request.
+          </span>
+        </span>
+      </label>
+      <p x-show="policy.restricted" class="text-xs text-warning mb-2">Active tools are not available on this public/restricted instance.</p>
+      <p x-show="policyMsg" class="text-xs text-error mb-2" x-text="policyMsg"></p>
+      <ul class="space-y-1">
+        <template x-for="t in tools" :key="t.name">
+          <li class="text-xs">
+            <span class="font-mono text-secondary" x-text="t.name"></span>
+            <span class="font-mono px-1 py-0.5 rounded border border-app bg-surface"
+                  :class="t.noise === 'passive' || t.noise === 'inherits' ? 'text-muted' : 'text-warning'"
+                  x-text="t.noise"></span>
+            <span x-show="!t.enabled" class="text-muted">(off)</span>
+            <span class="text-muted block" x-text="t.noise_note + (t.active_part ? ' ' + t.active_part : '')"></span>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <div class="border-t border-app my-5"></div>
+
     <!-- Tool API Keys — driven by /api/tools required_keys -->
     <div class="flex items-center justify-between mb-3">
       <p class="text-xs font-medium text-muted uppercase tracking-wider">Tool API Keys</p>
@@ -900,6 +935,8 @@ document.addEventListener('alpine:init', () => {
     openaiTestResult: '',
     openaiTestOk: false,
     tools: [],
+    policy: { allow_active: false, can_change: false, restricted: false, max_tool_calls: 15, active_tools: [] },
+    policyMsg: '',
     featuredSponsors: [],
     showKeys: {},
     showByokKeys: {},
@@ -1104,7 +1141,23 @@ document.addEventListener('alpine:init', () => {
       try {
         const r = await fetch('/api/tools');
         if (r.ok) this.tools = await r.json();
+        const p = await fetch('/api/policy');
+        if (p.ok) this.policy = await p.json();
       } catch {}
+    },
+
+    async setAllowActive(value) {
+      this.policyMsg = '';
+      try {
+        const r = await fetch('/api/policy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ allow_active: value }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) { this.policyMsg = d.message || 'Could not change the mode.'; return; }
+        await this.fetchTools();
+      } catch { this.policyMsg = 'Could not reach the server.'; }
     },
 
     async fetchSponsors() {
@@ -1261,7 +1314,13 @@ document.addEventListener('alpine:init', () => {
           const parts = this.messages[msgIdx].parts;
           const last = parts.at(-1);
           if (last?.streaming) last.streaming = false;
-          parts.push({ type: 'text', content: 'Investigation reached the maximum of 8 tool-use rounds. Results above may be partial — refine your query or ask a follow-up.', streaming: false });
+          parts.push({ type: 'text', content: 'Investigation stopped: too many tool-use rounds. Results above may be partial — refine your query or ask a follow-up.', streaming: false });
+          this.scrollToBottom();
+        } else if (evt.type === 'max_tool_calls') {
+          const parts = this.messages[msgIdx].parts;
+          const last = parts.at(-1);
+          if (last?.streaming) last.streaming = false;
+          parts.push({ type: 'text', content: evt.message, streaming: false });
           this.scrollToBottom();
 
         } else if (evt.type === 'error') {
@@ -1411,7 +1470,12 @@ document.addEventListener('alpine:init', () => {
 
             } else if (evt.type === 'max_rounds') {
               flushText();
-              this.messages[msgIdx].parts.push({ type: 'text', content: 'Investigation reached the maximum of 8 tool-use rounds. Results above may be partial.', streaming: false });
+              this.messages[msgIdx].parts.push({ type: 'text', content: 'Investigation stopped: too many tool-use rounds. Results above may be partial.', streaming: false });
+              break outer;
+
+            } else if (evt.type === 'max_tool_calls') {
+              flushText();
+              this.messages[msgIdx].parts.push({ type: 'text', content: evt.message, streaming: false });
               break outer;
 
             } else if (evt.type === 'error') {
