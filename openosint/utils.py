@@ -23,12 +23,16 @@ from openosint.tools.exceptions import ToolNotFoundError, ToolTimeoutError
 logger = logging.getLogger(__name__)
 
 
-# Promotions of OTHER products that a wrapped CLI prints after its results. They are not
-# findings: left in, they reach the model and the user as if the tool had reported them.
-# Credit to the tool itself is kept, and every result carries attribution_line() below.
+# Upstream banners, social and donation lines, and promotions that a wrapped CLI prints
+# around its results. They are not findings: left in, they reach the model and the user as
+# if the tool had reported them. Credit to the tool is OpenOSINT's own attribution_line().
 _PROMO_LINE_RE = re.compile(
     r"go deeper than a username"  # sherlock -> OSINTSearch
-    r"|try osintsearch",  # sherlock -> OSINTSearch
+    r"|try osintsearch"  # sherlock -> OSINTSearch
+    r"|^twitter\s*:"  # holehe credit
+    r"|^github\s*:"  # holehe credit
+    r"|^for btc donations"  # holehe donation address
+    r"|coded by ahmed aboul-ela",  # sublist3r banner
     re.IGNORECASE,
 )
 
@@ -40,7 +44,7 @@ _UPSTREAM_URLS = {
 
 
 def strip_promotions(raw: str) -> str:
-    """Drop lines that advertise another product from a wrapped tool's stdout."""
+    """Drop upstream banner, social, donation and promotion lines from a wrapped tool's stdout."""
     kept = [line for line in raw.splitlines() if not _PROMO_LINE_RE.search(line.strip())]
     return "\n".join(kept).strip()
 
