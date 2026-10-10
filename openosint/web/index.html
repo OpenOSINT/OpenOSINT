@@ -364,7 +364,7 @@
           </span>
         </span>
       </label>
-      <p x-show="policy.restricted" class="text-xs text-warning mb-2">Active tools are not available on this public/restricted instance.</p>
+      <p x-show="policy.restricted" class="text-xs text-warning mb-2">Active tools are not available on this public/restricted instance<span x-show="policy.restriction_reason"> (<span x-text="policy.restriction_reason"></span>)</span>.</p>
       <p x-show="policyMsg" class="text-xs text-error mb-2" x-text="policyMsg"></p>
       <ul class="space-y-1">
         <template x-for="t in tools" :key="t.name">

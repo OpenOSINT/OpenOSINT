@@ -166,10 +166,20 @@ def _compute_demo_mode(host: str | None) -> bool:
     return exposed or _env_forces_demo_mode()
 
 
+def _compute_demo_reason(host: str | None) -> str:
+    """Why DEMO_MODE is on: the bind address if that is what restricts, else the env override."""
+    if not _is_loopback_host(host) and not _restriction_lifted_by_declaration(host):
+        return "this instance is not bound to loopback"
+    if _env_forces_demo_mode():
+        return "demo mode is forced by OPENOSINT_DEMO_MODE"
+    return ""
+
+
 # Set for real by create_app(host=...) before routes are built; None here
 # means "undetermined" until then, which _compute_demo_mode treats as
 # not-loopback (restricted) — see _is_loopback_host.
 DEMO_MODE: bool = _compute_demo_mode(None)
+DEMO_REASON: str = _compute_demo_reason(None)
 
 # Trust CF-Connecting-IP / X-Forwarded-For for rate limiting only when
 # explicitly enabled — prevents IP spoofing in local dev.
@@ -257,7 +267,7 @@ def _request_restriction(request: "Request") -> tuple[bool, str]:
     silent, unexplained restriction.
     """
     if DEMO_MODE:
-        return True, "this instance is not bound to loopback"
+        return True, DEMO_REASON or "demo mode"
     if _forwarding_headers_look_inconsistent(request):
         return True, "forwarding headers on this request are internally inconsistent"
     if _request_carries_forwarding_signals(request):
@@ -1722,8 +1732,9 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     (see the module note near DEMO_MODE's definition). Leave it unset only
     when the bind address genuinely isn't known yet; that fails closed to
     restricted, not open."""
-    global DEMO_MODE
+    global DEMO_MODE, DEMO_REASON
     DEMO_MODE = _compute_demo_mode(host)
+    DEMO_REASON = _compute_demo_reason(host)
 
     app = FastAPI(
         title="OpenOSINT",
