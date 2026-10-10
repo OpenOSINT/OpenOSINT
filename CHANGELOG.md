@@ -9,6 +9,10 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.33.0] — 2026-10-10
+
+OpenOSINT is now passive by default. Agents and MCP clients are only offered tools that query third-party data sources or compute locally; noisy and target-touching tools are an explicit opt-in. Every agent loop has a per-request tool-call cap, every tool carries a noise label (web UI, tool descriptions, README table), and the docs no longer claim that hallucination is impossible.
+
 > ### ⚠ Behavior changes
 >
 > **OpenOSINT is now passive by default, everywhere** (CLI, REPL, web UI, MCP server, Cloud gateway, playbooks, `investigate_graph`).
@@ -39,6 +43,8 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - The Ollama and OpenAI-compatible agent loops (CLI/REPL and web chat) could loop on tool calls with no bound.
+- Third-party promotion and credit lines (sherlock's OSINTSearch footer, holehe's donation/credit lines, sublist3r's banner) no longer appear in `search_username`, `search_email` and `search_domain` results.
+- In demo mode on a loopback bind (`OPENOSINT_DEMO_MODE`), `restriction_reason` no longer says "this instance is not bound to loopback"; it reports the real reason, in `/api/health`, `/api/policy` and the Settings UI.
 
 ## [2.32.0] — 2026-10-09
 
