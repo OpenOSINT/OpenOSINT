@@ -640,7 +640,7 @@ The command every client runs is the same:
 
 ```bash
 uvx --from openosint openosint-mcp              # 20 passive tools
-uvx --from openosint openosint-mcp --allow-active   # 25 tools: adds username, email, phone, domain, scrape_url
+uvx --from openosint openosint-mcp --allow-active   # 25 listed: adds username, email, phone, domain, scrape_url
 ```
 
 GUI clients (Claude Desktop, Cursor) often launch with a minimal `PATH` that does not include `uvx`. If the server fails to start, replace `"uvx"` with the absolute path from `which uvx` (macOS/Linux) or `where uvx` (Windows).
