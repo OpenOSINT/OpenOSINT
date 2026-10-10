@@ -17,7 +17,7 @@
       "transport": {
         "type": "stdio"
       },
-      "installInstructions": "pip install openosint",
+      "installInstructions": "uvx --from openosint openosint-mcp  (add --allow-active to expose active tools)",
       "environmentVariables": [
         {
           "name": "ANTHROPIC_API_KEY",
