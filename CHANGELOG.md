@@ -9,6 +9,37 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+> ### ⚠ Behavior changes
+>
+> **OpenOSINT is now passive by default, everywhere** (CLI, REPL, web UI, MCP server, Cloud gateway, playbooks, `investigate_graph`).
+> Agents and MCP clients are only offered tools that query third-party data sources or compute locally. These tools are **off until you opt in**:
+> `search_username`, `search_email`, `search_domain` (noisy), `scrape_url` (touches the target), `search_phone` (unverified), VirusTotal **URL submission** (VirusTotal fetches the URL and the community can see it), and the 9 DKIM selector probes inside `search_dns`.
+>
+> **To restore the old behavior:** pass `--allow-active` (CLI/REPL/web/MCP server), set `OPENOSINT_ALLOW_ACTIVE=1`, or use Settings → "Enable active tools" in the web UI. A public or demo instance can never enable them.
+>
+> Direct CLI subcommands (`openosint username …`, `email`, `scrape`) now exit with code 2 and a message unless `--allow-active` is given.
+>
+> **Every agent loop is now capped at 15 tool calls per user request** (`OPENOSINT_MAX_TOOL_CALLS`; each new message resets it), and `investigate_multi` shares one cap of 30 across all targets (`OPENOSINT_MAX_TOOL_CALLS_MULTI`). When the cap is reached the investigation stops with an explicit message. Before this, the Anthropic, Ollama and OpenAI-compatible agent loops had no limit.
+
+### Added
+
+- `openosint/tool_policy.py`: one classification per tool (`passive` / `touches target` / `noisy` / `unverified` / `inherits`) with an honest one-line note, used by every surface. A test fails if a registered tool has no label.
+- Noise labels in the web UI Settings tool list, in tool descriptions sent to agents and MCP clients, and in a generated README table.
+- `--allow-active` (CLI, `openosint-mcp`), `OPENOSINT_ALLOW_ACTIVE`, `POST /api/policy` and a Settings toggle.
+- Disabled tools return a structured `disabled_in_passive_mode` result explaining how to enable them.
+- `GET /api/policy` (mode, cap, list of active tools).
+
+### Changed
+
+- `search_dns` no longer runs DKIM selector probes in passive mode and says so in its output.
+- `investigate_graph` routes only to passive tools in passive mode and spends the same per-request cap.
+- README, docs and the hallucination article no longer claim that hallucination is "structurally impossible". The accurate claim: tool results come from real executions and every finding is shown with the tool call that produced it; the model can still misread or misattribute them, and AI output is a lead, not proof.
+- `search_domain` is no longer described as "passive": it scrapes search engines and aggregators from your IP.
+
+### Fixed
+
+- The Ollama and OpenAI-compatible agent loops (CLI/REPL and web chat) could loop on tool calls with no bound.
+
 ## [2.32.0] — 2026-10-09
 
 Live geolocated news is back on the globe, via GDELT's 15-minute GKG feed (the GDELT GEO API was retired). Headlines now show on globe points, results accumulate across searches, the globe flies to new results, and the Globe nav shows an "N places" badge. Also fixes the news-before-globe race, the blank coverage pill, the dropped bounding box, and the Alpine warning on user messages.

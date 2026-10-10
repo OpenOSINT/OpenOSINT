@@ -101,7 +101,7 @@ def test_virustotal_url_mode_is_split_out_and_labeled_for_community_visibility()
     url_mode = TOOL_POLICY["search_virustotal_url"]
     assert not url_mode.is_passive
     assert "VirusTotal community" in url_mode.note
-    assert "VirusTotal community" in TOOL_POLICY["search_virustotal"].active_part
+    assert "separate active mode" in TOOL_POLICY["search_virustotal"].note
 
 
 # ---------------------------------------------------------------------------

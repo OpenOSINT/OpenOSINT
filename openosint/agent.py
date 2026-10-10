@@ -10,8 +10,8 @@ Implements the agentic loop using either:
 
 All agents share the same ``run()`` interface and return an ``AgentResponse``.
 No manual JSON parsing.  The model issues hard stops when it needs a tool,
-the real tool executes, the output goes back.  Hallucination in tool results
-is structurally impossible.
+the real tool executes, the output goes back.  Tool results come from real
+executions; the model can still misread or misattribute them.
 """
 
 from __future__ import annotations

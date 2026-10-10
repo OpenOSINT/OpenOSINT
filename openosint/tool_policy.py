@@ -64,7 +64,7 @@ TOOL_POLICY: dict[str, ToolPolicy] = {
     "search_paste": ToolPolicy(Noise.PASSIVE, "One request to psbdmp.ws."),
     "search_censys": ToolPolicy(Noise.PASSIVE, "Censys API; returns data Censys already holds."),
     "search_shodan": ToolPolicy(Noise.PASSIVE, "Shodan API; reads Shodan's existing index, requests no new scan."),
-    "search_gdelt_geo": ToolPolicy(Noise.PASSIVE, "Reads GDELT's public news feed."),
+    "search_gdelt_geo": ToolPolicy(Noise.PASSIVE, "Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine."),
     "search_dorks_live": ToolPolicy(
         Noise.PASSIVE, "Google results via Bright Data; the target is sent to those two services."
     ),
@@ -78,11 +78,8 @@ TOOL_POLICY: dict[str, ToolPolicy] = {
     ),
     "search_virustotal": ToolPolicy(
         Noise.PASSIVE,
-        "IP, domain and hash lookups read VirusTotal's existing data.",
-        active_part=(
-            "URL submission makes VirusTotal fetch the target URL and makes the URL visible "
-            "to the VirusTotal community, which can reveal your investigation."
-        ),
+        "IP, domain and hash lookups read VirusTotal's existing data. "
+        "URL submission is a separate active mode (see the next row).",
     ),
     # Mode of search_virustotal, not a separate registered tool: gated inside it.
     "search_virustotal_url": ToolPolicy(

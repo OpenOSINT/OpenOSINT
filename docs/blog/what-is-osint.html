@@ -77,7 +77,7 @@
 
 <p><strong>Active collection</strong> means sending requests directly to the target's systems. An HTTP crawl of a target's website. A port scan of their IP range. Subdomain brute-forcing that generates DNS queries resolved by the target's authoritative nameserver. These are technically OSINT-adjacent (the ports and HTTP responses are "public"), but they touch target infrastructure. Without written authorization, active probing can constitute unauthorized access under the Computer Fraud and Abuse Act and equivalent statutes in other jurisdictions.</p>
 
-<p>The rule: if your traffic appears in the target's logs, you're doing active collection. Get explicit written authorization before proceeding. Sublist3r's subdomain enumeration, for example, uses passive sources by default (search engines, VirusTotal, DNSdumpster) but can switch to active DNS brute-forcing. Know which mode you're operating in.</p>
+<p>The rule: if your traffic appears in the target's logs, you're doing active collection. Get explicit written authorization before proceeding. Sublist3r's subdomain enumeration, for example, queries third-party sources by default (search engines, VirusTotal, DNSdumpster) rather than the target, but it scrapes them from your IP, which is noisy, and it can switch to active DNS brute-forcing. Know which mode you're operating in.</p>
 </div>
 
 <h2>THE OSINT SURFACE AREA</h2>

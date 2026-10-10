@@ -117,7 +117,7 @@ The same 5 infrastructure tools as `/v1/enrich`:
 | `search_ip2location` | Proxy/VPN/Tor/datacenter, threat score (IP2Location.io) | server — included |
 | `search_abuseipdb` | Abuse confidence score, reports, ISP (AbuseIPDB) | customer BYOK — `abuseipdb` |
 | `search_dns` | A, AAAA, MX, NS, TXT, CNAME, SOA records | none |
-| `search_domain` | Subdomain enumeration (passive DNS) | none |
+| `search_domain` | Subdomain enumeration by scraping search engines and aggregators (noisy; disabled unless the operator enables active tools) | none |
 
 Each tool takes one string parameter `target` (an IP address or domain name).  BYOK tools require the corresponding key to be stored first via `POST /v1/keys`; a missing key returns a structured error string, not a protocol error.
 
@@ -203,7 +203,7 @@ IP and domain infrastructure intelligence only.
 | `search_ip2location` | Proxy/VPN/Tor/datacenter detection, threat score | IP2Location.io (sponsored) | server | — | ~1–2 s |
 | `search_abuseipdb` | IP abuse reputation, report history | AbuseIPDB | **customer** (BYOK) | `abuseipdb` | ~1–2 s |
 | `search_dns` | A, AAAA, MX, NS, TXT, CNAME, SOA records | dnspython | none | — | ~2–5 s |
-| `search_domain` | Subdomain enumeration (passive DNS) | sublist3r | none | — | ~10–30 s |
+| `search_domain` | Subdomain enumeration by scraping search engines and aggregators (noisy; disabled unless the operator enables active tools) | sublist3r | none | — | ~10–30 s |
 
 **Key source legend:**
 - **customer** — customer must add their own key via `POST /v1/keys` before calling this tool; missing key returns 422.

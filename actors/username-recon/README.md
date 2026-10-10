@@ -2,6 +2,8 @@
 
 Give it a username, get back every platform where that exact handle is registered — **$0.04 per username**, up to 20 usernames per run, no API keys to configure. NSFW sites excluded by default.
 
+> **What this Actor sends, and from where.** It checks hundreds of sites per username, one request per site, from the Actor's IP address. Each platform's logs will show those requests, and platforms may rate-limit or block them. Only run it against handles you are entitled to research.
+
 ## ✨ What you get
 
 - Hundreds of sites checked per username (social media, developer platforms, gaming, forums) via [sherlock](https://github.com/sherlock-project/sherlock)
@@ -103,7 +105,7 @@ Because pricing is per-username rather than per-hit, an agent can query several 
 
 **Is this legal to run against a public username?** Yes — this checks whether a public profile page exists at each platform's normal, unauthenticated URL. No login, scraping behind auth, or bypass of access controls is involved.
 
-**Does this expose anyone's private information?** No. It confirms whether a handle is *registered* on a platform and returns the public profile URL — it does not access profile content, private data, or anything behind a login wall.
+**Does this expose anyone's private information?** It does not log in or read anything behind a login wall: it checks whether a handle is *registered* on each platform by requesting the platform's normal public profile URL, and returns that URL. But a registered handle can still point to a real person, and a match is not proof that it is the same person. Treat hits as leads to verify, and only run it against handles you are entitled to research. The scan is noisy: it sends one request per site, from this Actor's IP, so each platform's logs will show it.
 
 **How is this different from other sherlock-based Actors?** Most charge the same per-username price but skip the control scan — the same 12-hex-string check that catches wildcard DNS entries and parked-domain "hits" before they reach your results. This one runs it on every scan, and reports partial coverage explicitly instead of presenting a partial result as complete.
 

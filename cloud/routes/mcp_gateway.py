@@ -156,7 +156,8 @@ async def search_dns(target: str) -> str:
 
 
 @_mcp.tool(description=(
-    "Enumerate subdomains for a target domain via passive DNS intelligence sources."
+    "Enumerate subdomains by scraping search engines and aggregators. Noisy: "
+    "listed only when the operator has enabled active tools."
 ))
 async def search_domain(target: str) -> str:
     """target: Apex domain name (e.g. example.com)"""

@@ -5,7 +5,7 @@ mcp-name: io.github.OpenOSINT/openosint
   <h1>OpenOSINT</h1>
   <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 21 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
-  <p><em>The AI issues hard-stop tool calls; your code executes the real binary — hallucinated findings are structurally impossible.</em></p>
+  <p><em>Tool results come from real executions, and every finding is shown with the tool call that produced it. AI summaries are leads to verify, not proof.</em></p>
 </div>
 
 <div align="center">
@@ -114,14 +114,11 @@ Start the REPL and investigate any target — the agent decides which tools to r
 openosint > investigate target@example.com
 
   -> generate_dorks('target@example.com')
-  -> search_email('target@example.com')
-  Found: Spotify, WordPress, Gravatar, Office365
-
   -> search_breach('target@example.com')
   Found in 2 breaches: LinkedIn (2016), Adobe (2013)
 
-  -> search_username('johndoe99')   <- pivoted from email findings
-  Found: GitHub, Reddit, Twitter
+  -> search_github('johndoe99')   <- pivoted from breach findings
+  Found: profile, 14 repos, commit-discovered emails
 
   Report saved -> reports/2026-05-11_14-32-11_report.md
 ```
@@ -151,15 +148,15 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 
 | Tool | Powered by | What it investigates |
 |------|-----------|---------------------|
-| `search_email` | holehe | Social accounts linked to an email address |
-| `search_username` | sherlock | Username presence across 400+ platforms |
+| `search_email` | holehe | Social accounts linked to an email address *(noisy, off by default)* |
+| `search_username` | sherlock | Username presence across 400+ platforms *(noisy, off by default)* |
 | `search_breach` | HaveIBeenPwned v3 API | Data breach exposure |
 | `search_whois` | python-whois | Domain registrant and DNS info |
 | `search_ip` | ipinfo.io | Geolocation, ASN, hostname |
-| `search_domain` | sublist3r | Subdomain enumeration |
+| `search_domain` | sublist3r | Subdomain enumeration *(noisy, off by default)* |
 | `generate_dorks` | built-in | 12 targeted Google dork URLs (no network calls) |
 | `search_paste` | psbdmp.ws | Pastebin dump mentions |
-| `search_phone` | phoneinfoga | Carrier, country, line type |
+| `search_phone` | phoneinfoga | Carrier, country, line type *(unverified network behavior, off by default)* |
 | `search_shodan` | Shodan API | Open ports, banners, CVEs |
 | `search_virustotal` | VirusTotal API v3 | Verdict from 70+ antivirus engines |
 | `search_ip2location` | IP2Location.io API | Enhanced IP intel: VPN/Proxy/Tor/datacenter flags *(sponsored)* |
@@ -170,10 +167,73 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | `search_rdap` | RDAP (IANA bootstrap, keyless) | Registrar, registration/expiry dates, name servers, status; registrant contacts redacted by policy |
 | `search_gdelt_geo` | GDELT 15-minute GKG feed (keyless) | Recent worldwide news placed on a map: headline, link, place; GeoJSON output |
 | `search_dorks_live` | Bright Data SERP API | Live Google search results for dork queries (title, URL, snippet) |
-| `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown |
+| `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown *(touches the target, off by default)* |
 | `search_footprint` | Bright Data SERP API | Entity-type-aware public search-engine footprint: detects email/username/domain/phone/name and returns structured results + Entity Correlation Graph nodes/edges |
 
 Full per-tool documentation, CLI flags, and output formats: [openosint.tech](https://openosint.tech/).
+
+## Passive by default
+
+OpenOSINT starts in **passive mode**: agents and MCP clients are only offered tools that query third-party data sources or compute locally. Tools that touch the target's infrastructure, or that send many requests about the target from your IP, are **off until you opt in**. They are not just refused when called; they are not offered to the model at all, and an MCP client does not see them in `tools/list`.
+
+| Level | Meaning |
+|---|---|
+| passive | Queries third-party data sources or computes locally; sends no request from your machine to the target's own infrastructure. Standard DNS lookups are the one indirect exception: they reach the target's nameservers through your resolver (see `search_dns`). |
+| touches target | Makes requests the target's infrastructure can see (their web server, DNS probes, or a service fetching their URL for you). |
+| noisy | High request volume, or requests to many third-party services about the target; expect rate limits, WAF blocks, and possible alerts. |
+| unverified | Network behavior not yet verified with a traffic capture; treated as non-passive. |
+| inherits | A fan-out tool; it only runs what the current mode allows. |
+
+**Passive is not private.** Every third-party service you query sees what you searched for, and usually your API key or IP. Treat queries to Shodan, HIBP, VirusTotal, Bright Data and similar services as visible to those providers.
+
+Enable active tools explicitly (each is labeled with its noise level):
+
+| Where | How |
+|---|---|
+| CLI / REPL | `openosint --allow-active …` |
+| Any process | `OPENOSINT_ALLOW_ACTIVE=1` |
+| Web UI | Settings → "Enable active tools" (loopback only) |
+| MCP server | `openosint-mcp --allow-active` or set `OPENOSINT_ALLOW_ACTIVE=1` in the client's `env` block |
+
+A publicly reachable or demo instance can never enable active tools, whatever the settings. If a disabled tool is requested anyway it returns a structured `disabled_in_passive_mode` result that says how to enable it.
+
+**Tool-call cap.** Each user request is limited by `OPENOSINT_MAX_TOOL_CALLS` (default: 15 calls; each new message resets it). `investigate_multi` shares one cap across all targets (`OPENOSINT_MAX_TOOL_CALLS_MULTI`, default 30). When the cap is reached the investigation stops with an explicit message. An MCP client that drives the tools itself is not capped by the server; only `investigate_multi` is.
+
+<!-- NOISE-TABLE:START (generated by `python -m openosint.tool_policy`; do not edit by hand) -->
+| Tool | Level | Default | What it actually sends, and where |
+|---|---|---|---|
+| `generate_dorks` | passive | on | Builds Google search URLs locally; sends nothing. |
+| `graph_export` | passive | on | Reads the local graph database only. |
+| `graph_neighbors` | passive | on | Reads the local graph database only. |
+| `graph_review_candidates` | passive | on | Reads the local graph database only. |
+| `investigate_graph` | inherits | on | Chains tools from a seed; in passive mode it routes only to passive tools. |
+| `investigate_multi` | inherits | on | Runs one agent per target under a shared tool-call cap; passive unless active is enabled. |
+| `scrape_url` | touches target | **off** | Bright Data fetches the URL, so the target's server logs a request (from Bright Data's IP, not yours). |
+| `search_abuseipdb` | passive | on | One request to api.abuseipdb.com. |
+| `search_breach` | passive | on | One request to haveibeenpwned.com. |
+| `search_censys` | passive | on | Censys API; returns data Censys already holds. |
+| `search_dns` | passive | on | Record lookups go through your DNS resolver; the target's nameservers see the resolver, not you. **Active part:** 9 DKIM selector probes (enumeration) run only with active tools enabled. |
+| `search_domain` | noisy | **off** | sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks. |
+| `search_dorks_live` | passive | on | Google results via Bright Data; the target is sent to those two services. |
+| `search_email` | noisy | **off** | holehe probes many sites' sign-up/reset flows with the email from your IP; may notify the account owner or trigger security alerts. |
+| `search_footprint` | passive | on | Up to 3 Google queries via Bright Data; the target is sent to those two services. |
+| `search_gdelt_geo` | passive | on | Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine. |
+| `search_github` | passive | on | A few requests to api.github.com. |
+| `search_ip` | passive | on | One request to ipinfo.io. |
+| `search_ip2location` | passive | on | One request to api.ip2location.io. |
+| `search_paste` | passive | on | One request to psbdmp.ws. |
+| `search_phone` | unverified | **off** | Runs phoneinfoga; what it sends over the network has not been verified with a traffic capture. |
+| `search_rdap` | passive | on | Queries IANA and the registry's RDAP server, not the target. |
+| `search_shodan` | passive | on | Shodan API; reads Shodan's existing index, requests no new scan. |
+| `search_username` | noisy | **off** | sherlock sends requests from your IP to hundreds of sites; expect rate limits and WAF blocks. |
+| `search_virustotal` | passive | on | IP, domain and hash lookups read VirusTotal's existing data. URL submission is a separate active mode (see the next row). |
+| `search_virustotal (URL submission)` | touches target | **off** | VirusTotal fetches the submitted URL, and the URL becomes visible to the VirusTotal community, which can reveal your investigation. |
+| `search_whois` | passive | on | Queries the registry/registrar WHOIS server, not the target. |
+<!-- NOISE-TABLE:END -->
+
+The Apify Actors in `actors/` are separate products with their own documented behavior (they are not governed by passive mode); see each Actor's README.
+
+This table says what each tool does according to its code. It is not a guarantee about what a remote service, or a third-party binary such as holehe, sherlock, sublist3r or phoneinfoga, does with a request.
 
 ### search_email
 
@@ -612,6 +672,8 @@ upward search from that arbitrary cwd — but for a `pip install`ed
 client's own `env` block above, as shown, is the one option guaranteed to
 work regardless of how the host launches the process.
 
+By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. To expose them, pass `--allow-active` (for example `"args": [".../mcp_server.py", "--allow-active"]`) or set `OPENOSINT_ALLOW_ACTIVE=1` in the client's `env` block. Each tool description carries its noise label.
+
 **Agentic use via Claude Code:**
 
 ```text
@@ -786,6 +848,7 @@ On a fresh install with no keys at all, these still work: `generate_dorks`,
 | `openosint sponsors` | List current sponsors and featured integrations |
 | `openosint prompts` | Show info about the AI OSINT Prompt Pack |
 | `openosint shell` | Explicit alias for the default REPL |
+| `--allow-active` | Enable active tools (noisy or touch the target). Off by default; same as `OPENOSINT_ALLOW_ACTIVE=1` |
 | `-v, --verbose` | Enable debug logging to stderr |
 | `-t, --timeout N` | Override subprocess timeout (seconds) |
 | `--api-key KEY` | Anthropic API key (overrides env var) |
@@ -861,10 +924,12 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
 - **The entity graph module (`openosint[graph]`) is additive, not
   authoritative.** `same_as` links are scored candidates for human review,
   not verified identity matches — see [docs/graph.md](docs/graph.md).
-- **The AI agent can only call the 21 tools above.** It cannot browse the
-  open web freely, run arbitrary code, or invent data — every finding comes
-  from a real tool call, but the agent's tool selection can still be wrong
-  or incomplete for a given target.
+- **AI output is a lead, not proof.** The agent can only call the tools above
+  (and, by default, only the passive ones). Tool results come from real
+  executions and are shown with the tool call that produced them, but the
+  model can still misread, misattribute or over-weight a result, and its tool
+  selection can be wrong or incomplete for a given target. Check the raw tool
+  output before acting on a conclusion.
 
 ## Resources
 
