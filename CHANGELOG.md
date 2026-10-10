@@ -9,6 +9,13 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.33.1] — 2026-10-10
+
+### Fixed
+
+- Web UI: the "Tools & noise level" section, including the "Enable active tools" toggle, is now in the main Settings panel in both local and demo mode. In local mode it was hidden inside the collapsed "Use only for this browser session" section. In demo mode the toggle stays locked with its existing message.
+- The `search_virustotal` noise note is now self-contained: "URL submission is a separate active mode, off by default: it makes VirusTotal fetch the URL and makes it visible to the VirusTotal community." It no longer says "see the next row", which made no sense in the web UI, tool descriptions and MCP clients. The README table and a new drift test keep it in sync.
+
 ## [2.33.0] — 2026-10-10
 
 OpenOSINT is now passive by default. Agents and MCP clients are only offered tools that query third-party data sources or compute locally; noisy and target-touching tools are an explicit opt-in. Every agent loop has a per-request tool-call cap, every tool carries a noise label (web UI, tool descriptions, README table), and the docs no longer claim that hallucination is impossible.
