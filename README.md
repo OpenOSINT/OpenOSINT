@@ -125,7 +125,7 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
 | 21 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | All 21 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
+| Native MCP server | Passive tools (20) exposed by default, all 25 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no install |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -186,7 +186,7 @@ Enable active tools explicitly (each is labeled with its noise level):
 | CLI / REPL | `openosint --allow-active …` |
 | Any process | `OPENOSINT_ALLOW_ACTIVE=1` |
 | Web UI | Settings → "Enable active tools" (loopback only) |
-| MCP server | `openosint-mcp --allow-active` or set `OPENOSINT_ALLOW_ACTIVE=1` in the client's `env` block |
+| MCP server | `uvx --from openosint openosint-mcp --allow-active` (or `openosint-mcp --allow-active` if installed), or set `OPENOSINT_ALLOW_ACTIVE=1` in the client's `env` block |
 
 A publicly reachable or demo instance can never enable active tools, whatever the settings. If a disabled tool is requested anyway it returns a structured `disabled_in_passive_mode` result that says how to enable it.
 
@@ -634,38 +634,65 @@ Full per-tool reference, CLI flags, and configuration options at [openosint.tech
 
 ### MCP Server
 
-Expose all 21 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 21 tools during conversations.
+Expose OpenOSINT to any MCP-compatible AI client with no install step. [`uv`](https://docs.astral.sh/uv/getting-started/installation/) must be installed; `uvx` then fetches and runs `openosint` on demand. The server offers the 20 passive tools by default and 25 with `--allow-active` (see [Passive by default](#passive-by-default)).
+
+The command every client runs is the same:
+
+```bash
+uvx --from openosint openosint-mcp              # 20 passive tools
+uvx --from openosint openosint-mcp --allow-active   # 25 tools: adds username, email, phone, domain, scrape_url
+```
+
+GUI clients (Claude Desktop, Cursor) often launch with a minimal `PATH` that does not include `uvx`. If the server fails to start, replace `"uvx"` with the absolute path from `which uvx` (macOS/Linux) or `where uvx` (Windows).
 
 **Claude Code:**
 
 ```bash
-claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py
+claude mcp add openosint -- uvx --from openosint openosint-mcp
+# with active tools and API keys (flags go before the `--`):
+claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- uvx --from openosint openosint-mcp --allow-active
 claude mcp list
 ```
 
-**Claude Desktop** — add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+**Claude Desktop** — edit `claude_desktop_config.json`, then restart the app:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "openosint": {
-      "command": "python",
-      "args": ["/absolute/path/to/OpenOSINT/openosint/mcp_server.py"],
-      "env": { "OPENOSINT_ENV_FILE": "/absolute/path/to/your/.env" }
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp", "--allow-active"],
+      "env": {
+        "SHODAN_API_KEY": "your-key",
+        "HIBP_API_KEY": "your-key"
+      }
     }
   }
 }
 ```
 
-MCP hosts launch this server with a cwd that has nothing to do with your
-`.env` (often your home directory, or wherever the host itself runs from).
-The server falls back to a repo-root `.env` for a source checkout, then an
-upward search from that arbitrary cwd — but for a `pip install`ed
-`openosint`, neither is reliable. Setting `OPENOSINT_ENV_FILE` in the
-client's own `env` block above, as shown, is the one option guaranteed to
-work regardless of how the host launches the process.
+Drop `"--allow-active"` for passive-only. Alternatively, keep `args` unchanged and add `"OPENOSINT_ALLOW_ACTIVE": "1"` to `env`.
 
-By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. To expose them, pass `--allow-active` (for example `"args": [".../mcp_server.py", "--allow-active"]`) or set `OPENOSINT_ALLOW_ACTIVE=1` in the client's `env` block. Each tool description carries its noise label.
+**Cursor** — add the same block to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per project):
+
+```json
+{
+  "mcpServers": {
+    "openosint": {
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp", "--allow-active"],
+      "env": { "SHODAN_API_KEY": "your-key" }
+    }
+  }
+}
+```
+
+API keys go in the client's `env` block (any variable from the [environment table](#environment-variables) works). MCP hosts launch the server with a cwd unrelated to your project, so a `.env` file is not picked up reliably; to use one, set `"OPENOSINT_ENV_FILE": "/absolute/path/to/.env"` in the same `env` block.
+
+By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.33.0`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
 
 **Agentic use via Claude Code:**
 
