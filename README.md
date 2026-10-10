@@ -125,7 +125,7 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
 | 21 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | Passive tools (20) exposed by default, all 25 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no install |
+| Native MCP server | Passive tools (20) exposed by default, all 25 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
@@ -634,13 +634,12 @@ Full per-tool reference, CLI flags, and configuration options at [openosint.tech
 
 ### MCP Server
 
-Expose OpenOSINT to any MCP-compatible AI client with no install step. [`uv`](https://docs.astral.sh/uv/getting-started/installation/) must be installed; `uvx` then fetches and runs `openosint` on demand. The server offers the 20 passive tools by default and 25 with `--allow-active` (see [Passive by default](#passive-by-default)).
+Expose OpenOSINT to any MCP-compatible AI client with no separate install step. [`uv`](https://docs.astral.sh/uv/getting-started/installation/) must be installed; `uvx` then fetches and runs `openosint` on demand. The server offers the 20 passive tools by default and 25 with `--allow-active` (see [Passive by default](#passive-by-default)).
 
 The command every client runs is the same:
 
 ```bash
-uvx --from openosint openosint-mcp              # 20 passive tools
-uvx --from openosint openosint-mcp --allow-active   # 25 listed: adds username, email, phone, domain, scrape_url
+uvx --from openosint openosint-mcp   # passive tools only (20 listed)
 ```
 
 GUI clients (Claude Desktop, Cursor) often launch with a minimal `PATH` that does not include `uvx`. If the server fails to start, replace `"uvx"` with the absolute path from `which uvx` (macOS/Linux) or `where uvx` (Windows).
@@ -649,10 +648,16 @@ GUI clients (Claude Desktop, Cursor) often launch with a minimal `PATH` that doe
 
 ```bash
 claude mcp add openosint -- uvx --from openosint openosint-mcp
-# with active tools and API keys (flags go before the `--`):
-claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- uvx --from openosint openosint-mcp --allow-active
 claude mcp list
 ```
+
+Add API keys (`-e` flags go before the `--`):
+
+```bash
+claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- uvx --from openosint openosint-mcp
+```
+
+> **Optional, enables active tools:** append `--allow-active` after `openosint-mcp`, or add `-e OPENOSINT_ALLOW_ACTIVE=1`. This exposes the noisy and target-touching tools (25 listed instead of 20); see the [noise table](#passive-by-default) first.
 
 **Claude Desktop** — edit `claude_desktop_config.json`, then restart the app:
 
@@ -664,7 +669,7 @@ claude mcp list
   "mcpServers": {
     "openosint": {
       "command": "uvx",
-      "args": ["--from", "openosint", "openosint-mcp", "--allow-active"],
+      "args": ["--from", "openosint", "openosint-mcp"],
       "env": {
         "SHODAN_API_KEY": "your-key",
         "HIBP_API_KEY": "your-key"
@@ -674,16 +679,16 @@ claude mcp list
 }
 ```
 
-Drop `"--allow-active"` for passive-only. Alternatively, keep `args` unchanged and add `"OPENOSINT_ALLOW_ACTIVE": "1"` to `env`.
+> **Optional, enables active tools:** add `"--allow-active"` to `args`, or add `"OPENOSINT_ALLOW_ACTIVE": "1"` to `env`. This exposes the noisy and target-touching tools (25 listed instead of 20); see the [noise table](#passive-by-default) first.
 
-**Cursor** — add the same block to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per project):
+**Cursor** — add the same block to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per project); the optional active-tools change above applies here too:
 
 ```json
 {
   "mcpServers": {
     "openosint": {
       "command": "uvx",
-      "args": ["--from", "openosint", "openosint-mcp", "--allow-active"],
+      "args": ["--from", "openosint", "openosint-mcp"],
       "env": { "SHODAN_API_KEY": "your-key" }
     }
   }
