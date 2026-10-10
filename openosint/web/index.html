@@ -246,6 +246,41 @@
       </button>
     </div>
 
+    <!-- Tool noise level: passive by default, active tools are an explicit opt-in -->
+    <div class="mb-5" :class="saveToComputer ? 'mt-5' : ''" data-testid="tools-noise">
+      <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">Tools &amp; noise level</p>
+      <label class="flex items-start gap-2 text-xs text-primary mb-2">
+        <input type="checkbox" class="mt-0.5"
+               :checked="policy.allow_active"
+               :disabled="!policy.can_change"
+               @change="setAllowActive($event.target.checked)">
+        <span>
+          Enable active tools (noisy or touches the target)
+          <span class="text-muted block">
+            Off by default. Turning this on lets the agent run tools that send many requests from your IP or contact
+            the target's infrastructure, which can trigger rate limits, WAF blocks and alerts. Max
+            <span x-text="policy.max_tool_calls"></span> tool calls per request.
+          </span>
+        </span>
+      </label>
+      <p x-show="policy.restricted" class="text-xs text-warning mb-2">Active tools are not available on this public/restricted instance<span x-show="policy.restriction_reason"> (<span x-text="policy.restriction_reason"></span>)</span>.</p>
+      <p x-show="policyMsg" class="text-xs text-error mb-2" x-text="policyMsg"></p>
+      <ul class="space-y-1">
+        <template x-for="t in tools" :key="t.name">
+          <li class="text-xs">
+            <span class="font-mono text-secondary" x-text="t.name"></span>
+            <span class="font-mono px-1 py-0.5 rounded border border-app bg-surface"
+                  :class="t.noise === 'passive' || t.noise === 'inherits' ? 'text-muted' : 'text-warning'"
+                  x-text="t.noise"></span>
+            <span x-show="!t.enabled" class="text-muted">(off)</span>
+            <span class="text-muted block" x-text="t.noise_note + (t.active_part ? ' ' + t.active_part : '')"></span>
+          </li>
+        </template>
+      </ul>
+    </div>
+
+    <div class="border-t border-app my-5"></div>
+
     <!-- Browser-only keys (sessionStorage). The default on the public demo; secondary on a local install. -->
     <div x-show="!saveToComputer || showSessionOnly" x-cloak data-testid="browser-only-keys"
          :class="saveToComputer ? 'mt-3 pt-3 border-t border-app' : ''">
@@ -347,40 +382,6 @@
 
     <div class="border-t border-app my-5"></div>
 
-    <!-- Tool noise level: passive by default, active tools are an explicit opt-in -->
-    <div class="mb-5">
-      <p class="text-xs font-medium text-muted uppercase tracking-wider mb-2">Tools &amp; noise level</p>
-      <label class="flex items-start gap-2 text-xs text-primary mb-2">
-        <input type="checkbox" class="mt-0.5"
-               :checked="policy.allow_active"
-               :disabled="!policy.can_change"
-               @change="setAllowActive($event.target.checked)">
-        <span>
-          Enable active tools (noisy or touches the target)
-          <span class="text-muted block">
-            Off by default. Turning this on lets the agent run tools that send many requests from your IP or contact
-            the target's infrastructure, which can trigger rate limits, WAF blocks and alerts. Max
-            <span x-text="policy.max_tool_calls"></span> tool calls per request.
-          </span>
-        </span>
-      </label>
-      <p x-show="policy.restricted" class="text-xs text-warning mb-2">Active tools are not available on this public/restricted instance<span x-show="policy.restriction_reason"> (<span x-text="policy.restriction_reason"></span>)</span>.</p>
-      <p x-show="policyMsg" class="text-xs text-error mb-2" x-text="policyMsg"></p>
-      <ul class="space-y-1">
-        <template x-for="t in tools" :key="t.name">
-          <li class="text-xs">
-            <span class="font-mono text-secondary" x-text="t.name"></span>
-            <span class="font-mono px-1 py-0.5 rounded border border-app bg-surface"
-                  :class="t.noise === 'passive' || t.noise === 'inherits' ? 'text-muted' : 'text-warning'"
-                  x-text="t.noise"></span>
-            <span x-show="!t.enabled" class="text-muted">(off)</span>
-            <span class="text-muted block" x-text="t.noise_note + (t.active_part ? ' ' + t.active_part : '')"></span>
-          </li>
-        </template>
-      </ul>
-    </div>
-
-    <div class="border-t border-app my-5"></div>
 
     <!-- Tool API Keys — driven by /api/tools required_keys -->
     <div class="flex items-center justify-between mb-3">
