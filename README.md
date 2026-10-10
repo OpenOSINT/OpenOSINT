@@ -17,7 +17,6 @@ mcp-name: io.github.OpenOSINT/openosint
 [![MCP](https://img.shields.io/badge/protocol-MCP-blueviolet?style=flat-square)](https://modelcontextprotocol.io/)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-published-blueviolet?style=flat-square)](https://registry.modelcontextprotocol.io/servers/io.github.OpenOSINT/openosint)
 [![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)
-[![Sponsored by RapidProxy](https://img.shields.io/badge/sponsored%20by-RapidProxy-F2622B?style=flat-square)](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)
 [![Sponsored by TestMu AI](https://img.shields.io/badge/sponsored%20by-TestMu%20AI-000000?style=flat-square)](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)
 
 </div>
@@ -90,19 +89,13 @@ One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week
 
 > Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
 
-<a href="https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy" rel="noopener sponsored"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-dark.png"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-light.png" alt="RapidProxy logo" width="400"></picture></a>
-
-**[RapidProxy](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)** · [Integration guide](docs/integrations/rapidproxy.md)
-
-> Reliable Residential Proxies for Data Collection & Automation — 90M+ IPs across 200+ countries. 10% off: RAPID10.
-
 <a href="https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab" rel="noopener sponsored"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg" alt="TestMu AI logo" width="353"></picture></a>
 
 **[TestMu AI](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)**
 
 > TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.
 
-_Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [SPONSORSHIP.md](SPONSORSHIP.md)._
+_Open: Breach / Compromised-Credential Data · Email / Identity Lookup · Residential Proxies — see [SPONSORSHIP.md](SPONSORSHIP.md)._
 
 <!-- SPONSORS:END -->
 
@@ -885,7 +878,6 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
 | Service | URL | Tool | Tier | Auth |
 |---------|-----|------|------|------|
 | IP2Location.io | https://www.ip2location.io | `search_ip2location` | Featured (sponsored) | API key — free tier |
-| RapidProxy | https://www.rapidproxy.io/?ref=openosint | — | Featured (sponsored) | — |
 | AbuseIPDB | https://www.abuseipdb.com | `search_abuseipdb` | Community | API key — free tier |
 | Censys | https://censys.io | `search_censys` | Community | API key — free tier |
 | GitHub | https://github.com | `search_github` | Community | Token optional |

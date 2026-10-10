@@ -40,6 +40,10 @@ OpenOSINT is now passive by default. Agents and MCP clients are only offered too
 - README, docs and the hallucination article no longer claim that hallucination is "structurally impossible". The accurate claim: tool results come from real executions and every finding is shown with the tool call that produced it; the model can still misread or misattribute them, and AI output is a lead, not proof.
 - `search_domain` is no longer described as "passive": it scrapes search engines and aggregators from your IP.
 
+### Removed
+
+- RapidProxy is no longer listed as a sponsor (README, SPONSORSHIP.md, docs pages, `sponsors.json`); its integration page and logo assets are deleted.
+
 ### Fixed
 
 - The Ollama and OpenAI-compatible agent loops (CLI/REPL and web chat) could loop on tool calls with no bound.
