@@ -60,14 +60,11 @@
 
 <h2>CONFIGURING OPENOSINT AS AN MCP SERVER</h2>
 <div class="indent">
-<p>Install OpenOSINT at a known absolute path:</p>
-<pre>git clone https://github.com/OpenOSINT/OpenOSINT.git
-cd OpenOSINT
-pip install -e .</pre>
+<p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>; nothing else is needed. Passive tools (20) are exposed by default; append <code>--allow-active</code> to the command for all 25.</p>
 <p>Register with Claude Code:</p>
-<pre>claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py
+<pre>claude mcp add openosint -- uvx --from openosint openosint-mcp
 claude mcp list
-# openosint  python /path/to/mcp_server.py  (connected)</pre>
+# openosint: uvx --from openosint openosint-mcp - ✓ Connected</pre>
 <p>Set environment variables before launching so API-dependent tools work:</p>
 <pre>export ANTHROPIC_API_KEY=sk-ant-...
 export ABUSEIPDB_API_KEY=...       # IP abuse reputation

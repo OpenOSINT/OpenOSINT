@@ -85,12 +85,12 @@ export HIBP_API_KEY=...          # HaveIBeenPwned breach lookup</pre>
 
 <h2>CONFIGURE CLAUDE DESKTOP</h2>
 <div class="indent">
-<p>Edit <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) or the equivalent Windows path:</p>
+<p>Edit <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) or <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows). Requires <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>:</p>
 <pre>{
   "mcpServers": {
     "openosint": {
-      "command": "python",
-      "args": ["/absolute/path/to/OpenOSINT/openosint/mcp_server.py"]
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp"]
     }
   }
 }</pre>
@@ -100,7 +100,7 @@ export HIBP_API_KEY=...          # HaveIBeenPwned breach lookup</pre>
 <h2>CONFIGURE CLAUDE CODE</h2>
 <div class="indent">
 <p>From any terminal with Claude Code installed:</p>
-<pre>claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py
+<pre>claude mcp add openosint -- uvx --from openosint openosint-mcp
 claude mcp list</pre>
 <p>Now inside a Claude Code session you can ask it to investigate targets and it will call the appropriate OSINT tools automatically.</p>
 </div>

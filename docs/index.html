@@ -506,16 +506,18 @@ $ openosint abuseipdb 198.51.100.1 -t 30</pre>
 <h2 id="mcp">MCP SERVER CONFIGURATION</h2>
 <div class="indent">
 <p><b>Claude Code</b></p>
-<pre>$ claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py
+<p>Requires <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. Passive tools (20) by default; add <code>--allow-active</code> for all 25.</p>
+<pre>$ claude mcp add openosint -- uvx --from openosint openosint-mcp
 $ claude mcp list</pre>
 
 <p><b>Claude Desktop</b></p>
-<p>Add to <code>~/Library/Application Support/Claude/claude_desktop_config.json</code>:</p>
+<p>Add to <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) or <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows). Cursor uses the same block in <code>~/.cursor/mcp.json</code>.</p>
 <pre>{
   "mcpServers": {
     "openosint": {
-      "command": "python",
-      "args": ["/absolute/path/to/OpenOSINT/openosint/mcp_server.py"]
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp", "--allow-active"],
+      "env": { "SHODAN_API_KEY": "your-key" }
     }
   }
 }</pre>

@@ -187,13 +187,13 @@
 <p><b>Claude Code</b></p>
 <pre>claude mcp add openosint-cloud \
   --env OPENOSINT_API_KEY=YOUR_KEY \
-  python /path/to/OpenOSINT/openosint/mcp_server.py</pre>
+  -- uvx --from openosint openosint-mcp</pre>
 <p><b>Claude Desktop</b> &mdash; add to <code>claude_desktop_config.json</code>:</p>
 <pre>{
   "mcpServers": {
     "openosint-cloud": {
-      "command": "python",
-      "args": ["/path/to/OpenOSINT/openosint/mcp_server.py"],
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp"],
       "env": { "OPENOSINT_API_KEY": "YOUR_KEY" }
     }
   }
