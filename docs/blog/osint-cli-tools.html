@@ -89,7 +89,7 @@
 
 <h2>DOMAIN AND SUBDOMAIN TOOLS</h2>
 <div class="indent">
-<p><strong>sublist3r</strong>: passive subdomain enumeration using search engines and DNS aggregators. Install: <code>pip install sublist3r</code>. Combines Google, Bing, VirusTotal, and DNSdumpster results. Good starting point; supplement with amass or subfinder for broader coverage. OpenOSINT's <code>search_domain</code> wraps sublist3r.</p>
+<p><strong>sublist3r</strong>: subdomain enumeration by scraping search engines and DNS aggregators. It does not touch the target, but it sends many requests to third parties from your IP, so expect captchas and blocks; OpenOSINT therefore keeps <code>search_domain</code> off unless you pass <code>--allow-active</code>. Install: <code>pip install sublist3r</code>. Combines Google, Bing, VirusTotal, and DNSdumpster results. Good starting point; supplement with amass or subfinder for broader coverage. OpenOSINT's <code>search_domain</code> wraps sublist3r.</p>
 <p><strong>python-whois</strong>: WHOIS data retrieval with Python parsing. <code>pip install python-whois</code>. Returns registrar, creation date, name servers, and registrant fields (when not privacy-redacted). OpenOSINT's <code>search_whois</code> uses this library with timeout enforcement. The <a href="/blog/whois-lookup-automation.html">WHOIS automation guide</a> covers bulk lookup patterns.</p>
 </div>
 

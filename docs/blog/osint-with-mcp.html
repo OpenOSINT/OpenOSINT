@@ -55,7 +55,7 @@
 <h2>INTRODUCTION</h2>
 <div class="indent">
 <p>Model Context Protocol (MCP) lets AI assistants call external tools in real time. OpenOSINT ships a full MCP server that exposes all 14 OSINT tools over stdio, letting Claude Desktop or Claude Code run live intelligence lookups on your behalf &mdash; no terminal switching required.</p>
-<p>When an investigation is underway, the AI decides which tools to chain based on your question, executes them in Python, and feeds the real output back. Tool results cannot be hallucinated because the code runs locally.</p>
+<p>When an investigation is underway, the AI decides which tools to chain based on your question, executes them in Python, and feeds the real output back. Tool results come from real executions on your machine; the model can still misread or misattribute them, so check the raw output before acting on a conclusion.</p>
 </div>
 
 <h2>WHAT YOU GET</h2>

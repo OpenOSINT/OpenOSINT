@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -20,6 +21,37 @@ from typing import NamedTuple
 from openosint.tools.exceptions import ToolNotFoundError, ToolTimeoutError
 
 logger = logging.getLogger(__name__)
+
+
+# Upstream banners, social and donation lines, and promotions that a wrapped CLI prints
+# around its results. They are not findings: left in, they reach the model and the user as
+# if the tool had reported them. Credit to the tool is OpenOSINT's own attribution_line().
+_PROMO_LINE_RE = re.compile(
+    r"go deeper than a username"  # sherlock -> OSINTSearch
+    r"|try osintsearch"  # sherlock -> OSINTSearch
+    r"|^twitter\s*:"  # holehe credit
+    r"|^github\s*:"  # holehe credit
+    r"|^for btc donations"  # holehe donation address
+    r"|coded by ahmed aboul-ela",  # sublist3r banner
+    re.IGNORECASE,
+)
+
+_UPSTREAM_URLS = {
+    "sherlock": "https://github.com/sherlock-project/sherlock",
+    "holehe": "https://github.com/megadose/holehe",
+    "sublist3r": "https://github.com/aboul3la/Sublist3r",
+}
+
+
+def strip_promotions(raw: str) -> str:
+    """Drop upstream banner, social, donation and promotion lines from a wrapped tool's stdout."""
+    kept = [line for line in raw.splitlines() if not _PROMO_LINE_RE.search(line.strip())]
+    return "\n".join(kept).strip()
+
+
+def attribution_line(tool: str) -> str:
+    """OpenOSINT's own credit line for the open-source tool behind a result."""
+    return f"Results via {tool} ({_UPSTREAM_URLS[tool]})"
 
 
 class SubprocessResult(NamedTuple):

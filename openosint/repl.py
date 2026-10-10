@@ -31,6 +31,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from openosint import __version__
+from openosint.tool_policy import active_enabled, max_tool_calls
 from openosint.agent import OllamaAgent, OpenAICompatibleAgent, OpenOSINTAgent
 
 logger = logging.getLogger(__name__)
@@ -118,6 +119,16 @@ def _print_banner(provider: str, model: str) -> None:
             padding=(0, 2),
         )
     )
+    if active_enabled():
+        console.print(
+            "  [yellow]Active tools ON[/] [dim]— noisy tools may rate-limit or alert; "
+            f"max {max_tool_calls()} tool calls per request[/]"
+        )
+    else:
+        console.print(
+            "  [dim]Passive mode (default): only tools that query third-party data sources. "
+            f"Max {max_tool_calls()} tool calls per request. Restart with --allow-active for noisy tools.[/]"
+        )
     console.print(
         "  Type a target or question. [dim]'help'[/] for commands. [dim]'exit'[/] to quit.\n"
     )

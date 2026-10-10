@@ -2,6 +2,8 @@
 
 Give it a domain, get back an A-F email-spoofing grade, its full DNS footprint, RDAP registration data, and ready-to-use dork URLs — **$0.02 per domain**, up to 50 domains per run, no API keys to configure. Nonexistent domains are reported but never charged.
 
+> **What this Actor sends, and from where.** It runs active checks by default, including DKIM selector probes: 9 extra DNS queries per domain for common selector names, plus the standard record lookups. They are sent from the Actor's environment through its DNS resolver, so the domain's nameservers see that resolver, not you. Registration data comes from the registry's RDAP server. Only run it against domains you are entitled to check.
+
 ## ✨ What you get
 
 - DNS records: A, AAAA, MX, NS, TXT, CNAME, SOA (via [dnspython](https://www.dnspython.org/))

@@ -11,8 +11,9 @@ from __future__ import annotations
 import logging
 
 from openosint.proxy import get_subprocess_env
+from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError
-from openosint.utils import run_subprocess
+from openosint.utils import attribution_line, run_subprocess, strip_promotions
 
 logger = logging.getLogger(__name__)
 
@@ -37,16 +38,20 @@ def _format_domain_results(raw: str, domain: str) -> str:
     """Return a structured string suitable for CLI display and LLM consumption."""
     lines = [
         line.strip()
-        for line in raw.splitlines()
+        for line in strip_promotions(raw).splitlines()
         if line.strip() and domain in line and not line.startswith("[")
     ]
+    credit = attribution_line("sublist3r")
     if not lines:
-        return f"No subdomains found for '{domain}'."
-    return f"Subdomains found for '{domain}':\n\n" + "\n".join(
-        f"[+] {subdomain}" for subdomain in lines
+        return f"No subdomains found for '{domain}'.\n\n{credit}"
+    return (
+        f"Subdomains found for '{domain}':\n\n"
+        + "\n".join(f"[+] {subdomain}" for subdomain in lines)
+        + f"\n\n{credit}"
     )
 
 
+@requires_active("search_domain")
 async def run_domain_osint(
     domain: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,

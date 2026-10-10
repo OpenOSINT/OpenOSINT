@@ -30,7 +30,7 @@ import time
 from collections import OrderedDict
 from collections import deque as _deque
 from pathlib import Path
-from typing import AsyncIterator, Callable
+from typing import Any, AsyncIterator, Callable
 from urllib.parse import urlparse as _urlparse
 
 import requests as _requests
@@ -52,6 +52,20 @@ from openosint.agent import default_anthropic_model
 from openosint.brightdata import BRIGHTDATA_LINK_WEB
 from openosint.env import load_env_or_exit
 from openosint.tools.generate_dorks import run_dork_osint
+from openosint.tool_policy import (
+    ENV_ALLOW_ACTIVE,
+    TOOL_POLICY,
+    ToolBudget,
+    describe,
+    disabled_result,
+    env_allows_active,
+    filter_definitions,
+    is_tool_enabled,
+    label,
+    max_tool_calls,
+    forced_passive,
+    is_forced_passive,
+)
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
 from openosint.tools.search_breach import run_breach_osint
@@ -152,10 +166,20 @@ def _compute_demo_mode(host: str | None) -> bool:
     return exposed or _env_forces_demo_mode()
 
 
+def _compute_demo_reason(host: str | None) -> str:
+    """Why DEMO_MODE is on: the bind address if that is what restricts, else the env override."""
+    if not _is_loopback_host(host) and not _restriction_lifted_by_declaration(host):
+        return "this instance is not bound to loopback"
+    if _env_forces_demo_mode():
+        return "demo mode is forced by OPENOSINT_DEMO_MODE"
+    return ""
+
+
 # Set for real by create_app(host=...) before routes are built; None here
 # means "undetermined" until then, which _compute_demo_mode treats as
 # not-loopback (restricted) — see _is_loopback_host.
 DEMO_MODE: bool = _compute_demo_mode(None)
+DEMO_REASON: str = _compute_demo_reason(None)
 
 # Trust CF-Connecting-IP / X-Forwarded-For for rate limiting only when
 # explicitly enabled — prevents IP spoofing in local dev.
@@ -243,7 +267,7 @@ def _request_restriction(request: "Request") -> tuple[bool, str]:
     silent, unexplained restriction.
     """
     if DEMO_MODE:
-        return True, "this instance is not bound to loopback"
+        return True, DEMO_REASON or "demo mode"
     if _forwarding_headers_look_inconsistent(request):
         return True, "forwarding headers on this request are internally inconsistent"
     if _request_carries_forwarding_signals(request):
@@ -1147,9 +1171,21 @@ def _select_chat_backend(req: "ChatRequest") -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _run_tool(tool_name: str, tool_input: str, timeout: int = 120) -> str:
+def _offered_tools() -> list[dict]:
+    """Tool schemas the current mode offers to a model, each with its noise label."""
+    return filter_definitions(_CLAUDE_TOOLS)
+
+
+async def _run_tool(
+    tool_name: str, tool_input: str, timeout: int = 120, budget: ToolBudget | None = None
+) -> str:
+    # Refused and unknown requests count too, so a model can't loop on them forever.
+    if budget is not None and not budget.try_consume():
+        return budget.message()
     if tool_name not in _RUNNERS:
         return f"Unknown tool: {tool_name}"
+    if not is_tool_enabled(tool_name):
+        return disabled_result(tool_name)
     if not str(tool_input).strip():
         return (
             f"Tool call error: 'input' is required for {tool_name} but was not provided. "
@@ -1179,21 +1215,17 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
 
     client = _anthropic.AsyncAnthropic(api_key=api_key)
     msgs = list(messages)
-    _MAX_TOOL_ROUNDS = 5
-    _tool_rounds = 0
+    budget = ToolBudget()  # one per user request; bounds the loop below
 
     system_prompt = (
         "You are OpenOSINT, an AI-powered OSINT investigation assistant. "
         "When the user asks you to investigate a target, use the available tools to gather intelligence. "
         "Summarize findings clearly and highlight anything suspicious or notable. "
-        "Always clarify what tools you used and what each result means."
+        "Always clarify what tools you used and what each result means. "
+        "Use only the tools you are given; if a tool result says it is disabled, do not retry it."
     )
 
     while True:
-        _tool_rounds += 1
-        if _tool_rounds > _MAX_TOOL_ROUNDS:
-            yield {"type": "error", "message": "Tool call limit reached (5 rounds)."}
-            return
         full_content: list[dict] = []
         pending_tool_results: list[dict] = []
         current_block: dict | None = None
@@ -1205,7 +1237,7 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
                 model=default_anthropic_model(),
                 max_tokens=4096,
                 system=system_prompt,
-                tools=_CLAUDE_TOOLS,
+                tools=_offered_tools(),
                 messages=msgs,
             ) as stream:
                 async for event in stream:
@@ -1263,7 +1295,7 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
                             }
 
                             t0 = time.monotonic()
-                            result = await _run_tool(tool_name, str(tool_input))
+                            result = await _run_tool(tool_name, str(tool_input), budget=budget)
                             elapsed = round(time.monotonic() - t0, 2)
 
                             yield {
@@ -1293,6 +1325,10 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
             yield {"type": "error", "message": str(exc)}
             return
 
+        if budget.denied:
+            yield {"type": "error", "message": budget.message()}
+            return
+
         if stop_reason != "tool_use" or not pending_tool_results:
             break
 
@@ -1311,19 +1347,20 @@ async def _stream_ollama(
     host = ollama_host.rstrip("/")
     msgs = list(messages)
 
-    ollama_tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": t["input_schema"],
-            },
-        }
-        for t in _CLAUDE_TOOLS
-    ]
+    budget = ToolBudget()
 
     while True:
+        ollama_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            }
+            for t in _offered_tools()
+        ]
         try:
             payload = {
                 "model": ollama_model,
@@ -1389,12 +1426,16 @@ async def _stream_ollama(
             yield {"type": "tool_start", "tool": tool_name, "input": str(tool_input)}
 
             t0 = time.monotonic()
-            result = await _run_tool(tool_name, str(tool_input))
+            result = await _run_tool(tool_name, str(tool_input), budget=budget)
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
             model_text, _ = split_geojson_fence(result)
             tool_results_for_next.append({"role": "tool", "content": model_text})
+
+        if budget.denied:
+            yield {"type": "error", "message": budget.message()}
+            return
 
         msgs = (
             msgs
@@ -1419,19 +1460,20 @@ async def _stream_openai(
         headers["Authorization"] = f"Bearer {api_key}"
     msgs = list(messages)
 
-    openai_tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": t["input_schema"],
-            },
-        }
-        for t in _CLAUDE_TOOLS
-    ]
+    budget = ToolBudget()
 
     while True:
+        openai_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            }
+            for t in _offered_tools()
+        ]
         payload = {
             "model": model,
             "messages": msgs,
@@ -1504,7 +1546,7 @@ async def _stream_openai(
             yield {"type": "tool_start", "tool": tool_name, "input": str(tool_input)}
 
             t0 = time.monotonic()
-            result = await _run_tool(tool_name, str(tool_input))
+            result = await _run_tool(tool_name, str(tool_input), budget=budget)
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
@@ -1516,6 +1558,10 @@ async def _stream_openai(
                     "content": model_text,
                 }
             )
+
+        if budget.denied:
+            yield {"type": "error", "message": budget.message()}
+            return
 
         msgs = (
             msgs
@@ -1663,14 +1709,32 @@ async def _demo_chat_stream(message: str) -> AsyncIterator[dict]:
 # ---------------------------------------------------------------------------
 
 
+class PassiveModeMiddleware:
+    """Pure ASGI. Marks every request that must be demo-restricted as forced-passive, so
+    no setting, env var or header can enable active tools for a public instance. Only
+    restricts; nothing here can turn active tools on."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        restricted, _ = _request_restriction(Request(scope))
+        with forced_passive(restricted):
+            await self.app(scope, receive, send)
+
+
 def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     """Build the FastAPI app. `host` is the address this process will be
     bound to, if known — it decides the DEMO_MODE network-exposure invariant
     (see the module note near DEMO_MODE's definition). Leave it unset only
     when the bind address genuinely isn't known yet; that fails closed to
     restricted, not open."""
-    global DEMO_MODE
+    global DEMO_MODE, DEMO_REASON
     DEMO_MODE = _compute_demo_mode(host)
+    DEMO_REASON = _compute_demo_reason(host)
 
     app = FastAPI(
         title="OpenOSINT",
@@ -1687,6 +1751,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         allow_headers=["*"],
     )
     app.add_middleware(RequestGuardMiddleware, loopback_bind=_is_loopback_host(host), port=port)
+    app.add_middleware(PassiveModeMiddleware)
 
     # ------------------------------------------------------------------
     # GET /api/health
@@ -1717,10 +1782,23 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
         result = []
         for meta in _TOOL_CATALOG:
             available, reason = _check_available(meta)
+            policy = TOOL_POLICY[meta["name"]]
+            is_enabled = is_tool_enabled(meta["name"])
+            if not is_enabled:
+                available = False
+                reason = (
+                    f"Disabled in passive mode ({policy.noise.value}). "
+                    + ("Not available on this public instance." if is_forced_passive() else "Turn on active tools in Settings.")
+                )
             result.append(
                 {
                     "name": meta["name"],
-                    "description": meta["description"],
+                    "description": describe(meta["name"], meta["description"]),
+                    "noise": policy.noise.value,
+                    "noise_label": label(meta["name"]),
+                    "noise_note": policy.note,
+                    "active_part": policy.active_part,
+                    "enabled": is_enabled,
                     "input_label": meta["input_label"],
                     "input_placeholder": meta["input_placeholder"],
                     "category": meta["category"],
@@ -1743,6 +1821,64 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                 }
             )
         return result
+
+    # ------------------------------------------------------------------
+    # GET/POST /api/policy  — passive/active mode and the per-request call cap
+    # ------------------------------------------------------------------
+
+    @app.get("/api/policy")
+    async def get_policy(request: Request):
+        restricted, restriction_reason = _request_restriction(request)
+        return {
+            "allow_active": is_tool_enabled("search_username"),
+            "restricted": restricted,
+            "can_change": _is_loopback_request(request) and not restricted,
+            "max_tool_calls": max_tool_calls(),
+            "restriction_reason": restriction_reason if restricted else None,
+            "active_tools": [
+                {"name": n, "noise": p.noise.value, "note": p.note}
+                for n, p in TOOL_POLICY.items()
+                if not p.is_passive
+            ],
+        }
+
+    @app.post("/api/policy")
+    async def set_policy(request: Request):
+        restricted, reason = _request_restriction(request)
+        if restricted:
+            return JSONResponse(
+                {"status": "error", "message": f"Active tools cannot be enabled here: {reason}."},
+                status_code=403,
+            )
+        if not _setup_request_is_authorized(request):
+            return JSONResponse({"status": "error", "message": _SETUP_FORBIDDEN_MESSAGE}, status_code=403)
+        if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
+            return JSONResponse(
+                {"status": "error", "message": "Content-Type must be application/json."}, status_code=415
+            )
+        body = await request.json()
+        if not isinstance(body, dict) or not isinstance(body.get("allow_active"), bool):
+            return JSONResponse(
+                {"status": "error", "message": 'Body must be {"allow_active": true|false}.'}, status_code=400
+            )
+        if value_source(ENV_ALLOW_ACTIVE) == "environment":
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "message": f"{ENV_ALLOW_ACTIVE} is set as a real environment variable; change it there.",
+                },
+                status_code=409,
+            )
+        value = "1" if body["allow_active"] else "0"
+        try:
+            write_config({ENV_ALLOW_ACTIVE: value})
+        except OSError as exc:
+            return JSONResponse(
+                {"status": "error", "message": f"Could not save to {config_path()}: {exc.strerror or 'write failed'}."},
+                status_code=500,
+            )
+        os.environ[ENV_ALLOW_ACTIVE] = value
+        return {"status": "ok", "allow_active": env_allows_active()}
 
     # ------------------------------------------------------------------
     # GET /api/sponsors
@@ -1821,6 +1957,17 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                     "elapsed": 0,
                 },
                 status_code=404,
+            )
+
+        if not is_tool_enabled(tool_name):
+            return JSONResponse(
+                {
+                    "status": "disabled_in_passive_mode",
+                    "output": disabled_result(tool_name),
+                    "tool": tool_name,
+                    "elapsed": 0,
+                },
+                status_code=403,
             )
 
         # Rate-limit keyless tools per real client IP
@@ -1930,6 +2077,14 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                 yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
 
             return EventSourceResponse(_err(), ping=15)
+
+        if not is_tool_enabled(tool_name):
+
+            async def _disabled() -> AsyncIterator[dict]:
+                yield {"data": json.dumps({"line": disabled_result(tool_name), "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_disabled(), ping=15)
 
         # This endpoint has no BYOK parameter — it always falls back to a
         # locally-held env-var key. When restricted that must never happen,

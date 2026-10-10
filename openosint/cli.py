@@ -38,6 +38,7 @@ from openosint.proxy import (  # noqa: E402
     redact_proxy_url,
     set_cli_proxy_url,
 )
+from openosint.tool_policy import ENV_ALLOW_ACTIVE, disabled_result, humanize, is_tool_enabled  # noqa: E402
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
@@ -121,6 +122,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "\n"
             "Learn the method: AI OSINT Operator's Playbook (paid guide, $39)\n"
             "  https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=cli&utm_medium=help&utm_campaign=operator_playbook\n"
+        ),
+    )
+    parser.add_argument(
+        "--allow-active",
+        action="store_true",
+        dest="allow_active",
+        help=(
+            "Enable active tools. Off by default: OpenOSINT runs passive tools only. Active tools "
+            "either touch the target (scrape_url, VirusTotal URL submission, DNS DKIM probes) or are "
+            "noisy (search_username, search_email, search_domain: hundreds of requests from your IP, "
+            "rate limits, WAF blocks, possible alerts to the account owner) or unverified (search_phone). "
+            "Same as OPENOSINT_ALLOW_ACTIVE=1."
         ),
     )
     parser.add_argument(
@@ -603,7 +616,12 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 
+# Direct subcommands that run one non-passive tool; refused up front in passive mode.
+_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url"}
+
+
 def _print_result(result: str) -> None:
+    result = humanize(result)
     print(_DIVIDER)
     print(" SCAN RESULTS ".center(60, "="))
     print(_DIVIDER)
@@ -612,6 +630,7 @@ def _print_result(result: str) -> None:
 
 
 def _print_result_labeled(label: str, result: str) -> None:
+    result = humanize(result)
     print(_DIVIDER)
     print(f" {label} ".center(60, "="))
     print(_DIVIDER)
@@ -1030,6 +1049,12 @@ async def _async_main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
     _configure_logging(args.verbose)
+    if args.allow_active:
+        os.environ[ENV_ALLOW_ACTIVE] = "1"
+    disabled_tool = _COMMAND_TOOLS.get(args.command or "")
+    if disabled_tool and not is_tool_enabled(disabled_tool):
+        print(humanize(disabled_result(disabled_tool)), file=sys.stderr)
+        sys.exit(2)
 
     set_cli_proxy_url(getattr(args, "proxy", None))
     try:

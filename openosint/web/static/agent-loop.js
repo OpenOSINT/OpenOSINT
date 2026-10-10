@@ -12,6 +12,7 @@
  *   { type: 'tool_demo_badge',tool }
  *   { type: 'key_required',   tool, missing_keys, how_to_get }
  *   { type: 'max_rounds' }
+ *   { type: 'max_tool_calls', limit, message }   — per-request tool-call cap reached
  *   { type: 'error',          message }
  *   { type: 'done' }
  * signal:          optional AbortSignal for cancellation
@@ -20,22 +21,31 @@
 import { createAdapter } from '/static/adapters.js';
 import { splitGeojsonFence } from '/static/geo-extractor.js';
 
-const MAX_ROUNDS = 8;
+const DEFAULT_MAX_TOOL_CALLS = 15;
 const TOOL_TIMEOUT_MS = 120_000;
 
 // ---------------------------------------------------------------------------
 // Tool catalog cache (fetched once per page load)
 // ---------------------------------------------------------------------------
 
-let _toolCatalog = null;
-
+// Fetched per request, not cached: which tools are enabled depends on the
+// passive/active setting, which the user can flip between messages.
 async function _fetchToolCatalog() {
-  if (_toolCatalog) return _toolCatalog;
   const base = (window.OPENOSINT_CONFIG?.proxyBaseUrl || '').replace(/\/$/, '');
   const resp = await fetch(`${base}/api/tools`);
   if (!resp.ok) throw new Error(`Failed to fetch tool catalog: HTTP ${resp.status}`);
-  _toolCatalog = await resp.json();
-  return _toolCatalog;
+  return resp.json();
+}
+
+async function _fetchMaxToolCalls() {
+  try {
+    const base = (window.OPENOSINT_CONFIG?.proxyBaseUrl || '').replace(/\/$/, '');
+    const resp = await fetch(`${base}/api/policy`);
+    const n = resp.ok ? (await resp.json()).max_tool_calls : NaN;
+    return Number.isInteger(n) && n >= 1 ? n : DEFAULT_MAX_TOOL_CALLS;
+  } catch {
+    return DEFAULT_MAX_TOOL_CALLS;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -82,7 +92,8 @@ function _getDemoOutput(toolName) {
 // ---------------------------------------------------------------------------
 
 function _buildToolDefs(catalog) {
-  return catalog.map(t => ({
+  // Only tools the current mode enables are offered to the model.
+  return catalog.filter(t => t.enabled !== false).map(t => ({
     name: t.name,
     description: t.description,
     input_schema: t.parameters || {
@@ -193,11 +204,15 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
   }
   messages.push({ role: 'user', content: message });
 
+  // One budget per user message. Every round makes at least one call, so
+  // rounds are bounded by the call cap too.
+  const maxToolCalls = await _fetchMaxToolCalls();
+  let toolCallsUsed = 0;
   let rounds = 0;
 
   while (true) {
     rounds++;
-    if (rounds > MAX_ROUNDS) {
+    if (rounds > maxToolCalls + 1) {
       onEvent({ type: 'max_rounds' });
       return;
     }
@@ -221,6 +236,15 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
     }
 
     for (const call of response.toolCalls) {
+      if (toolCallsUsed >= maxToolCalls) {
+        onEvent({
+          type: 'max_tool_calls',
+          limit: maxToolCalls,
+          message: `Tool call limit reached (${maxToolCalls} calls for this request). Investigation stopped; results so far are above. Send another message to continue, or raise OPENOSINT_MAX_TOOL_CALLS to allow more.`,
+        });
+        return;
+      }
+      toolCallsUsed++;
       const tool = toolMap[call.name];
       const inputValue =
         call.input?.input ||
@@ -232,7 +256,16 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
 
       let resultText;
 
-      if (!tool || tool.tool_type === 'B') {
+      if (tool && tool.enabled === false) {
+        // The model asked for a tool this mode doesn't offer: say so, don't run it.
+        resultText = JSON.stringify({
+          status: 'disabled_in_passive_mode',
+          tool: call.name,
+          noise: tool.noise,
+          reason: tool.unavailable_reason,
+        });
+        onEvent({ type: 'tool_result', tool: call.name, output: resultText, elapsed: 0, isError: true });
+      } else if (!tool || tool.tool_type === 'B') {
         // Type-B: return demo stub, never call the backend.
         resultText = _getDemoOutput(call.name);
         onEvent({ type: 'tool_result', tool: call.name, output: resultText, elapsed: 0, isDemo: true });

@@ -16,15 +16,22 @@ to redact registrant PII by default.
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 from datetime import datetime, timezone
 
 from apify import Actor
 
+from openosint.tool_policy import ENV_ALLOW_ACTIVE
 from openosint.tools.exceptions import OSINTError
 from openosint.tools.generate_dorks import build_dork_urls
 from openosint.tools.search_dns import analyze_email_security, collect_dns_records
 from openosint.tools.search_rdap import fetch_rdap_bootstrap, fetch_rdap_data, parse_rdap_domain
+
+# This Actor's purpose is a customer-initiated email-security audit of domains they
+# submit, which includes the DKIM selector probes that interactive OpenOSINT keeps
+# behind --allow-active. An explicit operator setting still wins.
+os.environ.setdefault(ENV_ALLOW_ACTIVE, "1")
 
 # Event name — this MUST match exactly what you configure in the Apify
 # Console under Publication > Monetization.

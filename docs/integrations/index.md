@@ -18,7 +18,6 @@ exclusivity, not a merit ranking.
 | Category | Status | Page |
 |---|---|---|
 | IP Geolocation & Threat Intelligence | Featured — IP2Location.io | [ip2location.md](ip2location.md) |
-| Residential Proxies | Featured — RapidProxy | [rapidproxy.md](rapidproxy.md) |
 | Breach / Compromised-Credential Data | **Open** | see [SPONSORSHIP.md](../../SPONSORSHIP.md) |
 | Email / Identity Lookup | **Open** | see [SPONSORSHIP.md](../../SPONSORSHIP.md) |
 

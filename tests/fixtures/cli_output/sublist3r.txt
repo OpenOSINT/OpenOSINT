@@ -1,0 +1,6 @@
+
+                # Coded By Ahmed Aboul-Ela - @aboul3la
+    
+[-] Enumerating subdomains now for example.com
+www.example.com
+mail.example.com

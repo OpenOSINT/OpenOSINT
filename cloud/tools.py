@@ -16,6 +16,7 @@ from typing import Any, Callable, Coroutine
 
 from cloud.config import TOOL_TIMEOUT_SECONDS
 from openosint.json_output import format_tool_result
+from openosint.tool_policy import disabled_result, humanize, is_tool_enabled
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
 from openosint.tools.search_censys import run_censys_osint
 from openosint.tools.search_dns import run_dns_osint
@@ -70,7 +71,11 @@ async def dispatch(tool: str, target: str, api_key: str | None = None) -> dict:
     """
     if tool not in ALLOW_LIST:
         raise ValueError(f"Tool '{tool}' is not available in v1")
-    raw = await ALLOW_LIST[tool](target, api_key)
+    # Passive by default, like every other surface. A disabled tool (or a disabled mode of
+    # an enabled one, e.g. a VirusTotal URL) comes back as a "Scan error:" so it is not charged.
+    raw = disabled_result(tool) if not is_tool_enabled(tool) else await ALLOW_LIST[tool](target, api_key)
+    if raw.startswith('{"status": "disabled_in_passive_mode"'):
+        raw = f"Scan error: {humanize(raw)}"
     result = format_tool_result(tool, target, raw)
     attribution = ATTRIBUTION.get(tool)
     if attribution:

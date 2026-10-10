@@ -19,6 +19,7 @@ from typing import NamedTuple
 import dns.exception
 import dns.resolver
 
+from openosint.tool_policy import active_enabled
 from openosint.tools.exceptions import OSINTError
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ class RecordSet(NamedTuple):
     dmarc: list[str]
     dkim_found: list[str]
     dkim_wildcard: bool = False
+    dkim_probed: bool = True
 
 
 _GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "F": 4}
@@ -225,6 +227,7 @@ def analyze_email_security(rs: RecordSet) -> dict:
         "dmarc": rs.dmarc[0].strip('"') if rs.dmarc else None,
         "dkimSelectorsFound": rs.dkim_found,
         "dkimWildcard": rs.dkim_wildcard,
+        "dkimProbed": rs.dkim_probed,
         "mailProfile": mail_profile,
         "grade": grade,
         "issues": issues,
@@ -276,7 +279,9 @@ def compute_email_security_grade(
             _cap("B")
 
     if mail_profile != "no-mail":
-        if rs.dkim_wildcard:
+        if not rs.dkim_probed:
+            issues.append("DKIM not checked: selector probing is enumeration and needs active tools enabled.")
+        elif rs.dkim_wildcard:
             issues.append(
                 "DKIM cannot be verified — this domain's DNS answers any selector "
                 "(wildcard), so real key presence is unknown."
@@ -292,6 +297,9 @@ def compute_email_security_grade(
 async def collect_dns_records(domain: str, timeout_seconds: int = _DEFAULT_TIMEOUT) -> RecordSet:
     """
     Collect DNS records for domain as structured data.
+
+    The 9 DKIM selector probes are enumeration, so they run only when active
+    tools are enabled (see openosint.tool_policy).
 
     Raises
     ------
@@ -316,9 +324,10 @@ async def collect_dns_records(domain: str, timeout_seconds: int = _DEFAULT_TIMEO
         pass
 
     loop = asyncio.get_running_loop()
+    is_probing = active_enabled()
 
     def _collect() -> RecordSet:
-        dkim_found, dkim_wildcard = _probe_dkim(resolver, domain)
+        dkim_found, dkim_wildcard = _probe_dkim(resolver, domain) if is_probing else ([], False)
         return RecordSet(
             a=_query(resolver, domain, "A"),
             aaaa=_query(resolver, domain, "AAAA"),
@@ -330,6 +339,7 @@ async def collect_dns_records(domain: str, timeout_seconds: int = _DEFAULT_TIMEO
             dmarc=_query(resolver, f"_dmarc.{domain}", "TXT"),
             dkim_found=dkim_found,
             dkim_wildcard=dkim_wildcard,
+            dkim_probed=is_probing,
         )
 
     try:
@@ -374,7 +384,9 @@ def _build_output(domain: str, rs: RecordSet) -> str:
         lines.append(f"[DNS] DMARC: {rs.dmarc[0][:120]}")
     lines.extend(dmarc_warnings)
 
-    if rs.dkim_wildcard:
+    if not rs.dkim_probed:
+        lines.append("[DNS] DKIM not checked: selector probing is enumeration (needs --allow-active).")
+    elif rs.dkim_wildcard:
         lines.append("[!] DKIM cannot be verified — this domain answers ANY selector (wildcard DNS).")
     elif rs.dkim_found:
         lines.append("[DNS] DKIM selectors found:")

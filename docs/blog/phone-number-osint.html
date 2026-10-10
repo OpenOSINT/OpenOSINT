@@ -103,7 +103,7 @@ print(phonenumbers.geocoder.description_for_number(n, "en"))</pre>
 <div class="indent">
 <p>phoneinfoga is the primary open-source tool for phone number OSINT. It operates in two modes: local scan and remote scan.</p>
 
-<p>The local scan runs purely from the number structure using <code>libphonenumber</code>: format validation, country extraction, geocoding, and carrier assignment from number range databases. This never touches the network and produces results instantly. The remote scan queries multiple external sources: Google dork URLs generated for the number, Numverify (if key is configured), and the phoneinfoga REST API server (which can optionally be self-hosted).</p>
+<p>The local scan runs purely from the number structure using <code>libphonenumber</code>: format validation, country extraction, geocoding, and carrier assignment from number range databases. This should not need the network and produces results instantly. The remote scan queries multiple external sources: Google dork URLs generated for the number, Numverify (if key is configured), and the phoneinfoga REST API server (which can optionally be self-hosted). OpenOSINT's <code>search_phone</code> runs <code>phoneinfoga scan</code>; its network traffic has not been verified with a capture, so the tool is labeled unverified and is off unless you pass <code>--allow-active</code>.</p>
 
 <p>OpenOSINT's <code>search_phone</code> wraps phoneinfoga's output and structures it for the AI agent:</p>
 

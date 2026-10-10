@@ -188,7 +188,7 @@ openosint [<b>-v</b>] [<b>--api-key</b> <u>key</u>]</pre>
 <p><b>Interactive REPL</b> (default) &mdash; a Claude Code-style terminal where you type targets or questions in natural language. The AI agent decides which tools to run, chains them based on findings, and compiles a structured report.</p>
 <p><b>Direct CLI</b> &mdash; run individual OSINT tools without AI for scripting or quick lookups.</p>
 <p><b>MCP Server</b> &mdash; expose all 21 tools to any MCP-compatible AI client (Claude Code, Claude Desktop).</p>
-<p>The AI layer uses the Anthropic native tool use API. The model issues hard stops when it needs a tool — the real tool executes and real output goes back. Hallucination in tool results is structurally impossible.</p>
+<p>The AI layer uses the Anthropic native tool use API. The model issues hard stops when it needs a tool — the real tool executes and real output goes back. Tool results come from real executions and every finding is shown with the tool call that produced it; the model can still misread or misattribute them, so treat AI summaries as leads to verify, not proof.</p>
 </div>
 
 <h2 id="commercial">FOR TEAMS &amp; ORGANIZATIONS</h2>
@@ -338,8 +338,8 @@ openosint web</pre>
 <p>Quick reference:</p>
 <table>
 <tr><th>Tool</th><th>Method</th><th>What it finds</th></tr>
-<tr><td><code>search_email</code></td><td>holehe</td><td>Social accounts linked to an email</td></tr>
-<tr><td><code>search_username</code></td><td>sherlock</td><td>Accounts across 300+ platforms</td></tr>
+<tr><td><code>search_email</code></td><td>holehe</td><td>Social accounts linked to an email (noisy, off by default; enable with --allow-active)</td></tr>
+<tr><td><code>search_username</code></td><td>sherlock</td><td>Accounts across 300+ platforms (noisy, off by default; enable with --allow-active)</td></tr>
 <tr><td><code>search_breach</code></td><td>HaveIBeenPwned API</td><td>Data breach exposure and leaked data</td></tr>
 <tr><td><code>search_whois</code></td><td>python-whois</td><td>Domain registrant, registrar, dates</td></tr>
 <tr><td><code>search_ip</code></td><td>ipinfo.io</td><td>Geolocation, ASN, hostname</td></tr>
@@ -375,7 +375,7 @@ openosint web</pre>
 
 <hr>
 <h3>search_username</h3>
-<p>Searches 300+ platforms using <a href="https://github.com/sherlock-project/sherlock" target="_blank" rel="noopener">sherlock</a>.</p>
+<p>Searches 300+ platforms using <a href="https://github.com/sherlock-project/sherlock" target="_blank" rel="noopener">sherlock</a>. <b>Noisy and off by default:</b> it sends requests from your IP to hundreds of sites, which can trigger rate limits and WAF blocks. Enable with <code>--allow-active</code>.</p>
 <p><b>MCP parameter:</b> <code>username</code> (string, required)</p>
 <pre>$ openosint username johndoe99</pre>
 <pre>OSINT results for username 'johndoe99':
@@ -618,7 +618,7 @@ $ pip install -e .</pre>
 
 <h2 id="sponsors">SPONSORS</h2>
 <div class="indent">
-<p>OpenOSINT is proudly sponsored by <b><a href="https://www.ip2location.com" target="_blank" rel="noopener sponsored">IP2Location</a></b> (IP Geolocation &amp; Threat Intelligence category) and <b><a href="https://www.rapidproxy.io/?ref=openosint" target="_blank" rel="noopener sponsored">RapidProxy</a></b> (Residential Proxies category).</p>
+<p>OpenOSINT is proudly sponsored by <b><a href="https://www.ip2location.com" target="_blank" rel="noopener sponsored">IP2Location</a></b> (IP Geolocation &amp; Threat Intelligence category).</p>
 <p>Featured Integration sponsorships are available for two open categories: <b>breach/compromised-credential data</b> and <b>email/identity lookup</b>. One vendor per category — exclusive placement in the README, docs, CLI banner, and Web UI.</p>
 <p>&rarr; <a href="/sponsors.html"><b>Full media kit and pricing</b></a> &mdash; <a href="https://opencollective.com/openosint_oss" target="_blank" rel="noopener">Open Collective</a> &mdash; <a href="mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry">commercial@openosint.tech</a></p>
 </div>
@@ -634,7 +634,7 @@ $ pip install -e .</pre>
 <div id="footer">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OpenOSINT 2.32.0</td>
+<td class="mhead-l">OpenOSINT 2.33.0</td>
 <td class="mhead-c">August 2026</td>
 <td class="mhead-r">OPENOSINT(1)</td>
 </tr>

@@ -10,8 +10,8 @@ Implements the agentic loop using either:
 
 All agents share the same ``run()`` interface and return an ``AgentResponse``.
 No manual JSON parsing.  The model issues hard stops when it needs a tool,
-the real tool executes, the output goes back.  Hallucination in tool results
-is structurally impossible.
+the real tool executes, the output goes back.  Tool results come from real
+executions; the model can still misread or misattribute them.
 """
 
 from __future__ import annotations
@@ -46,6 +46,14 @@ from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 from openosint.tools.search_footprint import run_footprint_osint
 from openosint.pivot import investigate_graph_for_agent
+from openosint.tool_policy import (
+    ToolBudget,
+    current_budget,
+    disabled_result,
+    filter_definitions,
+    is_tool_enabled,
+    use_budget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -586,6 +594,7 @@ class AgentResponse:
     content: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     error: str = ""
+    limit_reached: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -606,12 +615,74 @@ async def _execute_tool(
     tool_input: dict[str, Any],
     on_tool_call: Any,
 ) -> str:
-    """Invoke on_tool_call callback then run the tool, returning its string result."""
+    """Invoke on_tool_call callback then run the tool, returning its string result.
+
+    A tool the current mode doesn't offer returns a structured "disabled" result even
+    if the model asks for it anyway; a call past the request's budget is refused.
+    """
+    # Every request counts against the budget, including unknown and disabled tools: a model
+    # that keeps asking for a refused tool must still hit the cap instead of looping forever.
+    budget = current_budget()
+    if budget is not None and not budget.try_consume():
+        return budget.message()
+    if tool_name not in _TOOL_MAP:
+        return f"Error: unknown tool '{tool_name}'."
+    if not is_tool_enabled(tool_name):
+        return disabled_result(tool_name)
     if on_tool_call is not None:
         await on_tool_call(tool_name, tool_input)
-    if tool_name in _TOOL_MAP:
-        return await _TOOL_MAP[tool_name](tool_input)
-    return f"Error: unknown tool '{tool_name}'."
+    return await _TOOL_MAP[tool_name](tool_input)
+
+
+def _system_prompt() -> str:
+    """SYSTEM_PROMPT plus a note that only the offered tools exist in this mode."""
+    return (
+        SYSTEM_PROMPT
+        + "\n\nAVAILABLE TOOLS: use only the tools you are given; some tools mentioned above may be "
+        "disabled in this mode. If a tool result says a tool is disabled, do not retry it; tell the "
+        "user how to enable it. Each user request has a tool-call limit; prefer the most informative calls."
+    )
+
+
+def _capped_response(
+    budget: ToolBudget, tool_calls: list[ToolCall], last_text: str, history: list[dict[str, Any]]
+) -> AgentResponse:
+    """End the turn with an explicit message when the model asked for more calls than allowed."""
+    content = f"{last_text}\n\n⚠ {budget.message()}".strip()
+    history.append({"role": "assistant", "content": content})
+    return AgentResponse(content=content, tool_calls=tool_calls, limit_reached=True)
+
+
+class _BudgetedRun:
+    """Mixin: ``run()`` gives each user request its own tool-call budget (or a shared one)."""
+
+    async def run(
+        self,
+        prompt: str,
+        on_tool_call: Any = None,
+        budget: ToolBudget | None = None,
+    ) -> AgentResponse:
+        """
+        Execute one agent turn.
+
+        Parameters
+        ----------
+        prompt:
+            User message or OSINT target description.
+        on_tool_call:
+            Optional async callback invoked before each tool execution.
+            Signature: ``async def on_tool_call(name: str, input: dict) -> None``
+        budget:
+            Tool-call budget. Defaults to a fresh ``OPENOSINT_MAX_TOOL_CALLS`` budget per
+            call; investigate_multi passes one shared budget for all targets.
+
+        Returns
+        -------
+        AgentResponse
+            Final text response and list of tool calls made.
+        """
+        with use_budget(budget or ToolBudget()):
+            return await self._run(prompt, on_tool_call)  # type: ignore[attr-defined]
 
 
 async def _process_tool_turn(
@@ -682,7 +753,7 @@ async def _process_ollama_tool_turn(
 # ---------------------------------------------------------------------------
 
 
-class OpenOSINTAgent:
+class OpenOSINTAgent(_BudgetedRun):
     """
     Stateful OSINT agent backed by the Anthropic API.
 
@@ -705,37 +776,18 @@ class OpenOSINTAgent:
         """Reset conversation memory."""
         self.history = []
 
-    async def run(
-        self,
-        prompt: str,
-        on_tool_call: Any = None,
-    ) -> AgentResponse:
-        """
-        Execute one agent turn.
-
-        Parameters
-        ----------
-        prompt:
-            User message or OSINT target description.
-        on_tool_call:
-            Optional async callback invoked before each tool execution.
-            Signature: ``async def on_tool_call(name: str, input: dict) -> None``
-
-        Returns
-        -------
-        AgentResponse
-            Final text response and list of tool calls made.
-        """
+    async def _run(self, prompt: str, on_tool_call: Any = None) -> AgentResponse:
         self.history.append({"role": "user", "content": prompt})
         messages: list[dict[str, Any]] = list(self.history)
         tool_calls: list[ToolCall] = []
+        budget = current_budget() or ToolBudget()
         try:
             while True:
                 response = await self.client.messages.create(
                     model=self.model,
                     max_tokens=_MAX_TOKENS,
-                    system=SYSTEM_PROMPT,
-                    tools=TOOL_DEFINITIONS,  # type: ignore[arg-type]
+                    system=_system_prompt(),
+                    tools=filter_definitions(TOOL_DEFINITIONS),  # type: ignore[arg-type]
                     messages=messages,  # type: ignore[arg-type]
                 )
                 if response.stop_reason == "end_turn":
@@ -745,6 +797,10 @@ class OpenOSINTAgent:
                 if response.stop_reason == "tool_use":
                     messages.append({"role": "assistant", "content": response.content})
                     await _process_tool_turn(messages, tool_calls, on_tool_call, response.content)
+                    if budget.denied:
+                        return _capped_response(
+                            budget, tool_calls, _extract_first_text(response.content), self.history
+                        )
                 else:
                     break
         except anthropic.AuthenticationError:
@@ -794,10 +850,9 @@ def _to_ollama_tools(defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-_OLLAMA_TOOLS = _to_ollama_tools(TOOL_DEFINITIONS)
 
 
-class OllamaAgent:
+class OllamaAgent(_BudgetedRun):
     """
     Stateful OSINT agent backed by a local Ollama model.
 
@@ -821,26 +876,7 @@ class OllamaAgent:
         """Reset conversation memory."""
         self.history = []
 
-    async def run(
-        self,
-        prompt: str,
-        on_tool_call: Any = None,
-    ) -> AgentResponse:
-        """
-        Execute one agent turn via Ollama.
-
-        Parameters
-        ----------
-        prompt:
-            User message or OSINT target description.
-        on_tool_call:
-            Optional async callback — same signature as ``OpenOSINTAgent.run``.
-
-        Returns
-        -------
-        AgentResponse
-            Final text response and list of tool calls made.
-        """
+    async def _run(self, prompt: str, on_tool_call: Any = None) -> AgentResponse:
         try:
             import ollama  # type: ignore
         except ImportError:
@@ -863,10 +899,11 @@ class OllamaAgent:
 
         self.history.append({"role": "user", "content": prompt})
         messages: list[Any] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": _system_prompt()},
             *self.history,
         ]
         tool_calls: list[ToolCall] = []
+        budget = current_budget() or ToolBudget()
 
         try:
             client = ollama.AsyncClient(host=self.host)
@@ -874,7 +911,7 @@ class OllamaAgent:
                 response = await client.chat(
                     model=self.model,
                     messages=messages,
-                    tools=_OLLAMA_TOOLS,
+                    tools=_to_ollama_tools(filter_definitions(TOOL_DEFINITIONS)),
                 )
                 msg = response.message
                 if not msg.tool_calls:
@@ -882,6 +919,8 @@ class OllamaAgent:
                     self.history.append({"role": "assistant", "content": text})
                     return AgentResponse(content=text, tool_calls=tool_calls)
                 await _process_ollama_tool_turn(messages, tool_calls, on_tool_call, msg)
+                if budget.denied:
+                    return _capped_response(budget, tool_calls, msg.content or "", self.history)
         except Exception as exc:
             err_str = str(exc)
             # Surface a clear, actionable error when the Ollama server is not running
@@ -916,8 +955,7 @@ class OllamaAgent:
 # ---------------------------------------------------------------------------
 
 
-# OpenAI and Ollama share the same function-tool schema.
-_OPENAI_TOOLS = _OLLAMA_TOOLS
+# OpenAI and Ollama share the same function-tool schema (_to_ollama_tools).
 
 
 def _build_openai_assistant_message(msg: Any) -> dict[str, Any]:
@@ -966,7 +1004,7 @@ async def _process_openai_tool_turn(
         )
 
 
-class OpenAICompatibleAgent:
+class OpenAICompatibleAgent(_BudgetedRun):
     """
     Stateful OSINT agent backed by any OpenAI-compatible chat-completions API.
 
@@ -994,26 +1032,7 @@ class OpenAICompatibleAgent:
         """Reset conversation memory."""
         self.history = []
 
-    async def run(
-        self,
-        prompt: str,
-        on_tool_call: Any = None,
-    ) -> AgentResponse:
-        """
-        Execute one agent turn via an OpenAI-compatible endpoint.
-
-        Parameters
-        ----------
-        prompt:
-            User message or OSINT target description.
-        on_tool_call:
-            Optional async callback — same signature as ``OpenOSINTAgent.run``.
-
-        Returns
-        -------
-        AgentResponse
-            Final text response and list of tool calls made.
-        """
+    async def _run(self, prompt: str, on_tool_call: Any = None) -> AgentResponse:
         try:
             import openai  # type: ignore
         except ImportError:
@@ -1028,10 +1047,11 @@ class OpenAICompatibleAgent:
 
         self.history.append({"role": "user", "content": prompt})
         messages: list[Any] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": _system_prompt()},
             *self.history,
         ]
         tool_calls: list[ToolCall] = []
+        budget = current_budget() or ToolBudget()
 
         try:
             client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key)
@@ -1039,7 +1059,7 @@ class OpenAICompatibleAgent:
                 response = await client.chat.completions.create(
                     model=self.model,
                     messages=messages,
-                    tools=_OPENAI_TOOLS,
+                    tools=_to_ollama_tools(filter_definitions(TOOL_DEFINITIONS)),
                     tool_choice="auto",
                     max_tokens=_MAX_TOKENS,
                 )
@@ -1057,6 +1077,8 @@ class OpenAICompatibleAgent:
                     self.history.append({"role": "assistant", "content": text})
                     return AgentResponse(content=text, tool_calls=tool_calls)
                 await _process_openai_tool_turn(messages, tool_calls, on_tool_call, msg)
+                if budget.denied:
+                    return _capped_response(budget, tool_calls, msg.content or "", self.history)
         except openai.AuthenticationError:
             return AgentResponse(
                 content="",

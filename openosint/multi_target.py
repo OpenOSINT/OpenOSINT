@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 
 from openosint.agent import AgentResponse, OpenOSINTAgent
+from openosint.tool_policy import ENV_MAX_CALLS, ENV_MAX_CALLS_MULTI, ToolBudget, max_tool_calls_multi
 
 logger = logging.getLogger(__name__)
 
@@ -47,11 +48,12 @@ async def _investigate_one(
     api_key: str | None,
     reports_dir: Path,
     date_prefix: str,
+    budget: ToolBudget,
 ) -> tuple[str, AgentResponse]:
     """Run one investigation and persist its report."""
     agent = OpenOSINTAgent(api_key=api_key)
     logger.info("Multi-target: investigating %s", target)
-    response = await agent.run(prompt=f"Investigate: {target}")
+    response = await agent.run(prompt=f"Investigate: {target}", budget=budget)
 
     if response.content and "##" in response.content and len(response.content) > 300:
         safe = "".join(c if c.isalnum() or c in "-_." else "_" for c in target)
@@ -142,10 +144,14 @@ async def run_multi_target(
     reports_dir.mkdir(exist_ok=True)
     date_prefix = datetime.now().strftime("%Y-%m-%d")
 
-    tasks = [_investigate_one(target, api_key, reports_dir, date_prefix) for target in targets]
+    # One budget for the whole run: N targets must not mean N x OPENOSINT_MAX_TOOL_CALLS.
+    budget = ToolBudget(limit=max_tool_calls_multi())
+    tasks = [_investigate_one(target, api_key, reports_dir, date_prefix, budget) for target in targets]
     results: list[tuple[str, AgentResponse]] = await asyncio.gather(*tasks)
 
     summary = _build_summary(results, date_prefix)
+    if budget.denied:
+        summary = f"> ⚠ {budget.message().replace(ENV_MAX_CALLS, ENV_MAX_CALLS_MULTI)}\n\n" + summary
 
     summary_path = reports_dir / f"{date_prefix}_summary.md"
     summary_path.write_text(summary, encoding="utf-8")
