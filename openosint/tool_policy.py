@@ -79,7 +79,8 @@ TOOL_POLICY: dict[str, ToolPolicy] = {
     "search_virustotal": ToolPolicy(
         Noise.PASSIVE,
         "IP, domain and hash lookups read VirusTotal's existing data. "
-        "URL submission is a separate active mode (see the next row).",
+        "URL submission is a separate active mode, off by default: it makes VirusTotal "
+        "fetch the URL and makes it visible to the VirusTotal community.",
     ),
     # Mode of search_virustotal, not a separate registered tool: gated inside it.
     "search_virustotal_url": ToolPolicy(

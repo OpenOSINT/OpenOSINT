@@ -763,3 +763,14 @@ async def test_web_claude_loop_is_capped_and_filtered(monkeypatch):
     assert events[-1]["type"] == "error" and "Tool call limit reached (2" in events[-1]["message"]
     assert not set(tools_seen[0]) & set(NON_PASSIVE)
 
+
+
+def test_readme_table_notes_match_policy_and_are_self_contained():
+    from pathlib import Path
+
+    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    for name, policy in TOOL_POLICY.items():
+        assert "next row" not in policy.note, f"{name}: note must be self-contained"
+        if name in {"investigate_graph", "graph_export", "graph_neighbors", "graph_review_candidates", "investigate_multi"}:
+            continue  # not rows of the noise table
+        assert policy.note in readme, f"README noise table out of sync with TOOL_POLICY for {name}"

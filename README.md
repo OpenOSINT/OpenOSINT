@@ -219,7 +219,7 @@ A publicly reachable or demo instance can never enable active tools, whatever th
 | `search_rdap` | passive | on | Queries IANA and the registry's RDAP server, not the target. |
 | `search_shodan` | passive | on | Shodan API; reads Shodan's existing index, requests no new scan. |
 | `search_username` | noisy | **off** | sherlock sends requests from your IP to hundreds of sites; expect rate limits and WAF blocks. |
-| `search_virustotal` | passive | on | IP, domain and hash lookups read VirusTotal's existing data. URL submission is a separate active mode (see the next row). |
+| `search_virustotal` | passive | on | IP, domain and hash lookups read VirusTotal's existing data. URL submission is a separate active mode, off by default: it makes VirusTotal fetch the URL and makes it visible to the VirusTotal community. |
 | `search_virustotal (URL submission)` | touches target | **off** | VirusTotal fetches the submitted URL, and the URL becomes visible to the VirusTotal community, which can reveal your investigation. |
 | `search_whois` | passive | on | Queries the registry/registrar WHOIS server, not the target. |
 <!-- NOISE-TABLE:END -->
@@ -697,7 +697,7 @@ claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- 
 
 API keys go in the client's `env` block. MCP hosts launch the server with a cwd unrelated to your project, so a `.env` file is not picked up reliably; to use one, set `"OPENOSINT_ENV_FILE": "/absolute/path/to/.env"` in the same `env` block.
 
-By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.33.0`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
+By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.33.1`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
 
 **Agentic use via Claude Code:**
 
@@ -1022,7 +1022,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.33.0 — October 2026*
+*OpenOSINT v2.33.1 — October 2026*
 
 ## Star History
 
