@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -20,6 +21,25 @@ from typing import NamedTuple
 from openosint.tools.exceptions import ToolNotFoundError, ToolTimeoutError
 
 logger = logging.getLogger(__name__)
+
+
+# Self-promotion and credit lines that wrapped CLIs print after their results. They are not
+# findings: left in, they reach the model and the user as if the tool had reported them.
+_PROMO_LINE_RE = re.compile(
+    r"go deeper than a username"  # sherlock
+    r"|try osintsearch"  # sherlock
+    r"|^twitter\s*:\s*@palenath"  # holehe
+    r"|^github\s*:\s*https://github\.com/megadose/holehe"  # holehe
+    r"|^for btc donations"  # holehe
+    r"|coded by ahmed aboul-ela",  # sublist3r banner
+    re.IGNORECASE,
+)
+
+
+def strip_promo_footer(raw: str) -> str:
+    """Drop third-party promotion/credit lines from a wrapped tool's stdout."""
+    kept = [line for line in raw.splitlines() if not _PROMO_LINE_RE.search(line.strip())]
+    return "\n".join(kept).strip()
 
 
 class SubprocessResult(NamedTuple):

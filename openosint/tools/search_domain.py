@@ -13,7 +13,7 @@ import logging
 from openosint.proxy import get_subprocess_env
 from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError
-from openosint.utils import run_subprocess
+from openosint.utils import run_subprocess, strip_promo_footer
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def _format_domain_results(raw: str, domain: str) -> str:
     """Return a structured string suitable for CLI display and LLM consumption."""
     lines = [
         line.strip()
-        for line in raw.splitlines()
+        for line in strip_promo_footer(raw).splitlines()
         if line.strip() and domain in line and not line.startswith("[")
     ]
     if not lines:
