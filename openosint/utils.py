@@ -23,23 +23,31 @@ from openosint.tools.exceptions import ToolNotFoundError, ToolTimeoutError
 logger = logging.getLogger(__name__)
 
 
-# Self-promotion and credit lines that wrapped CLIs print after their results. They are not
+# Promotions of OTHER products that a wrapped CLI prints after its results. They are not
 # findings: left in, they reach the model and the user as if the tool had reported them.
+# Credit to the tool itself is kept, and every result carries attribution_line() below.
 _PROMO_LINE_RE = re.compile(
-    r"go deeper than a username"  # sherlock
-    r"|try osintsearch"  # sherlock
-    r"|^twitter\s*:\s*@palenath"  # holehe
-    r"|^github\s*:\s*https://github\.com/megadose/holehe"  # holehe
-    r"|^for btc donations"  # holehe
-    r"|coded by ahmed aboul-ela",  # sublist3r banner
+    r"go deeper than a username"  # sherlock -> OSINTSearch
+    r"|try osintsearch",  # sherlock -> OSINTSearch
     re.IGNORECASE,
 )
 
+_UPSTREAM_URLS = {
+    "sherlock": "https://github.com/sherlock-project/sherlock",
+    "holehe": "https://github.com/megadose/holehe",
+    "sublist3r": "https://github.com/aboul3la/Sublist3r",
+}
 
-def strip_promo_footer(raw: str) -> str:
-    """Drop third-party promotion/credit lines from a wrapped tool's stdout."""
+
+def strip_promotions(raw: str) -> str:
+    """Drop lines that advertise another product from a wrapped tool's stdout."""
     kept = [line for line in raw.splitlines() if not _PROMO_LINE_RE.search(line.strip())]
     return "\n".join(kept).strip()
+
+
+def attribution_line(tool: str) -> str:
+    """OpenOSINT's own credit line for the open-source tool behind a result."""
+    return f"Results via {tool} ({_UPSTREAM_URLS[tool]})"
 
 
 class SubprocessResult(NamedTuple):

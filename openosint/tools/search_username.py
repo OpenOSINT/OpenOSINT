@@ -14,7 +14,7 @@ import logging
 from openosint.proxy import get_sherlock_proxy_args
 from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
-from openosint.utils import run_subprocess, strip_promo_footer
+from openosint.utils import attribution_line, run_subprocess, strip_promotions
 
 logger = logging.getLogger(__name__)
 
@@ -45,10 +45,11 @@ async def _run_sherlock(username: str, timeout_seconds: int) -> str:
 
 def _format_username_results(raw: str, username: str) -> str:
     """Return a structured string suitable for CLI display and LLM consumption."""
-    raw = strip_promo_footer(raw)
+    raw = strip_promotions(raw)
+    credit = attribution_line("sherlock")
     if not raw:
-        return f"No accounts found for username '{username}'."
-    return f"OSINT results for username '{username}':\n\n{raw}"
+        return f"No accounts found for username '{username}'.\n\n{credit}"
+    return f"OSINT results for username '{username}':\n\n{raw}\n\n{credit}"
 
 
 @requires_active("search_username")

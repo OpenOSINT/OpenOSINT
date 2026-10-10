@@ -43,7 +43,7 @@ OpenOSINT is now passive by default. Agents and MCP clients are only offered too
 ### Fixed
 
 - The Ollama and OpenAI-compatible agent loops (CLI/REPL and web chat) could loop on tool calls with no bound.
-- Third-party promotion and credit lines (sherlock's OSINTSearch footer, holehe's donation/credit lines, sublist3r's banner) no longer appear in `search_username`, `search_email` and `search_domain` results.
+- sherlock's OSINTSearch promotion no longer appears in `search_username` results. Credit to the underlying tools stays: `search_username`, `search_email` and `search_domain` results now end with "Results via sherlock / holehe / sublist3r (project URL)".
 - In demo mode on a loopback bind (`OPENOSINT_DEMO_MODE`), `restriction_reason` no longer says "this instance is not bound to loopback"; it reports the real reason, in `/api/health`, `/api/policy` and the Settings UI.
 
 ## [2.32.0] — 2026-10-09

@@ -13,7 +13,7 @@ import logging
 from openosint.proxy import get_subprocess_env
 from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
-from openosint.utils import run_subprocess, strip_promo_footer
+from openosint.utils import attribution_line, run_subprocess, strip_promotions
 
 logger = logging.getLogger(__name__)
 
@@ -38,10 +38,11 @@ async def _run_holehe(email: str, timeout_seconds: int) -> str:
 
 def _format_email_results(raw: str, email: str) -> str:
     """Return a structured string suitable for CLI display and LLM consumption."""
-    raw = strip_promo_footer(raw)
+    raw = strip_promotions(raw)
+    credit = attribution_line("holehe")
     if not raw:
-        return f"No registered services found for {email}."
-    return f"OSINT results for '{email}':\n\n{raw}"
+        return f"No registered services found for {email}.\n\n{credit}"
+    return f"OSINT results for '{email}':\n\n{raw}\n\n{credit}"
 
 
 @requires_active("search_email")
