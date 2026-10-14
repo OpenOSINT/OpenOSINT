@@ -21,6 +21,10 @@ mcp-name: io.github.OpenOSINT/openosint
 
 </div>
 
+> **Hosted version — [OpenOSINT Monitor](https://app.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=monitor).**
+> Weekly external checks of your domain's email authentication (SPF/DKIM/DMARC), TLS, security headers and lookalike domains. Ownership-verified; free for one domain.
+> Prefer to run it yourself? Everything below is free and MIT-licensed.
+
 ## Self-host (free, MIT)
 
 ```bash
@@ -48,57 +52,6 @@ openosint email target@example.com
 
 **[Try the live demo →](https://demo.openosint.tech)** — bring your own Anthropic / OpenRouter / Ollama key, no signup.
 
-## ☁️ OpenOSINT Cloud — no install, pay per use
-
-Run OpenOSINT tools with zero install as pay-per-use Apify Actors, in your browser or as MCP tools in Claude, Cursor, and Windsurf.
-
-| Actor | Input | Output | Price | |
-|---|---|---|---|---|
-| OpenOSINT Email Recon | an email address | linked accounts across 100+ services | from $0.015/run | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
-| OpenOSINT Username Recon | one or more usernames | every platform where each is registered | $0.04/username | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-username-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
-| OpenOSINT Domain Recon | one or more domains | A-F email-security grade, RDAP data, dork URLs | $0.02/domain | [▶ Run on Apify](https://apify.com/complete_analogy/openosint-domain-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) |
-<!-- Add one row per new Actor here as they ship -->
-
-All three are also available as MCP tools with no server to run: `https://mcp.apify.com?tools=complete_analogy/openosint-email-recon,complete_analogy/openosint-username-recon,complete_analogy/openosint-domain-recon`
-
-**Cloud or self-host?** Cloud: zero setup, pay per call, hosted by us — cloud usage funds ongoing development of the self-hosted project. Self-host: free forever, your own API keys, full control.
-
-### 📬 Agents & OSINT — the newsletter
-
-One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
-**[Subscribe →](https://agentsosint.substack.com)**
-
-![OpenOSINT globe view: an agent investigation triggered from a chat prompt lands as a point on an interactive 3D globe, clicking the point pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
-*Investigation results land live on the globe — click a point to pivot. [Watch the sharper MP4](docs/assets/globe-demo.mp4).*
-
-<div align="center">
-  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
-       alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed independently by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel listing each statement with its dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field — matching values green, differing values amber — with the name-match feature explanation that produced the score; the reviewer clicks Accept and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
-       width="900" />
-  <p><em>Deterministic, synthetic-data demo — every entity shown is fictional; regenerate with <a href="demo/web_demo.py">demo/web_demo.py</a>.<br>
-  The entities are seeded at the statement layer, not produced by today's mappers — see <a href="demo/README.md">demo/README.md</a>.</em></p>
-</div>
-
-<!-- SPONSORS:START -->
-
-### Featured Integrations
-
-<a href="https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png" alt="IP2Location.io logo" height="40"></a>
-
-**[IP2Location.io](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)** — powers `search_ip2location` · [Integration guide](docs/integrations/ip2location.md)
-
-> Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
-
-<a href="https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab" rel="noopener sponsored"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg" alt="TestMu AI logo" width="353"></picture></a>
-
-**[TestMu AI](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)**
-
-> TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.
-
-_Open: Breach / Compromised-Credential Data · Email / Identity Lookup · Residential Proxies — see [SPONSORSHIP.md](SPONSORSHIP.md)._
-
-<!-- SPONSORS:END -->
-
 ## Usage
 
 Start the REPL and investigate any target — the agent decides which tools to run and chains them on findings:
@@ -116,14 +69,12 @@ openosint > investigate target@example.com
   Report saved -> reports/2026-05-11_14-32-11_report.md
 ```
 
-Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($55)](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=tool-section)
-
 ## Features
 
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 21 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
+| 21 modular tools | Email, username, breach, WHOIS, RDAP, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, GDELT news geo, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
 | Native MCP server | Passive tools (20) exposed by default, all 25 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
@@ -131,6 +82,16 @@ Want the full investigation workflow behind this? → [AI OSINT Complete Kit ($5
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
 | Web UI | Browser-based AI chat with streaming output, tool cards, light/dark theme |
 
+![OpenOSINT globe view: an agent investigation triggered from a chat prompt lands as a point on an interactive 3D globe, clicking the point pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
+*Investigation results land live on the globe — click a point to pivot. [Watch the sharper MP4](docs/assets/globe-demo.mp4).*
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
+       alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed independently by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel listing each statement with its dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field — matching values green, differing values amber — with the name-match feature explanation that produced the score; the reviewer clicks Accept and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
+       width="900" />
+  <p><em>Deterministic, synthetic-data demo — every entity shown is fictional; regenerate with <a href="demo/web_demo.py">demo/web_demo.py</a>.<br>
+  The entities are seeded at the statement layer, not produced by today's mappers — see <a href="demo/README.md">demo/README.md</a>.</em></p>
+</div>
 ---
 
 > **Legal Disclaimer**: OpenOSINT is intended for **legal and authorized use only**.
@@ -796,7 +757,7 @@ pip install -e .
 | Binary | Purpose | Install |
 |--------|---------|---------|
 | `holehe` | Email account enumeration | `pip install holehe` |
-| `sherlock` | Username enumeration (300+ platforms) | `pip install sherlock-project` |
+| `sherlock` | Username enumeration (400+ platforms) | `pip install sherlock-project` |
 | `sublist3r` | Subdomain enumeration | `pip install sublist3r` |
 | `phoneinfoga` | Phone number intelligence | [Download binary](https://github.com/sundowndev/phoneinfoga/releases) |
 
@@ -982,33 +943,37 @@ The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSIN
   selection can be wrong or incomplete for a given target. Check the raw tool
   output before acting on a conclusion.
 
-## Resources
+## Support & commercial
 
-- [AI OSINT Prompts — 5-prompt Starter Set (free)](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) — one prompt per investigation stage, instant PDF
-- [AI OSINT Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources) — Prompt Pack + Operator's Playbook, bundled
+OpenOSINT is free and MIT-licensed. These are optional ways to support it or buy a hosted or contracted version.
 
-Purchases directly fund OpenOSINT's development.
+- **Hosted monitoring:** [OpenOSINT Monitor](https://app.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=monitor), free for one domain.
+- **Pay-per-use, no install (Apify Actors, also usable as MCP tools in Claude, Cursor and Windsurf):** [Email Recon](https://apify.com/complete_analogy/openosint-email-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) (from $0.015/run) · [Username Recon](https://apify.com/complete_analogy/openosint-username-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) ($0.04/username) · [Domain Recon](https://apify.com/complete_analogy/openosint-domain-recon?utm_source=github&utm_medium=readme&utm_campaign=cloud-table) ($0.02/domain). MCP endpoint: `https://mcp.apify.com?tools=complete_analogy/openosint-email-recon,complete_analogy/openosint-username-recon,complete_analogy/openosint-domain-recon`. Cloud usage funds the self-hosted project.
+- **Newsletter:** [Agents & OSINT](https://agentsosint.substack.com), one AI-OSINT workflow plus a roundup, weekly.
+- **Guides:** [free 5-prompt starter set](https://tommasodev.gumroad.com/l/free-osint-prompts?utm_source=github&utm_medium=readme&utm_campaign=free-osint-prompts&utm_content=resources) · [AI OSINT Complete Kit, $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=ai-osint-complete-kit&utm_content=resources). Purchases fund development.
+- **Sponsor:** [Open Collective](https://opencollective.com/openosint_oss) · tiers and media kit in [SPONSORSHIP.md](SPONSORSHIP.md) · [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry). Current sponsors are listed below.
+- **Affiliate program:** 30-45% commission on the guides above. [Details & terms](https://openosint.tech/affiliates/).
+- **Commercial license & support:** vendor contract, warranty, indemnification, SLA or priority support for procurement, from €300/year. The software itself needs no purchase. See [COMMERCIAL.md](./COMMERCIAL.md) or [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Commercial%20Plan%20Inquiry).
 
-## Sponsor this project
+<!-- SPONSORS:START -->
 
-OpenOSINT is used by OSINT practitioners, security researchers, and developers actively evaluating intelligence APIs. Every time a user configures an integration, the docs route them to that provider's sign-up page — high-intent exposure at the moment of adoption.
+### Featured Integrations
 
-**Featured Integration** ($2,000/year or $220/month): recommended/default provider for one tool category, exclusive. Logo + badge across README, docs, CLI banner, and Web UI. One vendor per category.
+<a href="https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png" alt="IP2Location.io logo" height="40"></a>
 
-Current sponsors and open categories are listed in the sponsor block at the top of this README. Full media kit, pricing, and the referral funnel: [SPONSORSHIP.md](SPONSORSHIP.md).
+**[IP2Location.io](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)** — powers `search_ip2location` · [Integration guide](docs/integrations/ip2location.md)
 
-[Open Collective](https://opencollective.com/openosint_oss) · [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry) · [SPONSORSHIP.md](SPONSORSHIP.md)
+> Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
 
-## Affiliate program
+<a href="https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab" rel="noopener sponsored"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg" alt="TestMu AI logo" width="353"></picture></a>
 
-Earn 30–45% commission promoting the AI OSINT Prompt Pack, Operator's Playbook, and Complete Kit.
-Good fit for OSINT/infosec newsletter authors, security YouTube channels, and tool-directory maintainers.
+**[TestMu AI](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)**
 
-**→ [Affiliate program details & terms](https://openosint.tech/affiliates/)**
+> TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.
 
-## Commercial License & Support
+_Open: Breach / Compromised-Credential Data · Email / Identity Lookup · Residential Proxies — see [SPONSORSHIP.md](SPONSORSHIP.md)._
 
-OpenOSINT is free and MIT-licensed for everyone — personal projects, commercial products, SaaS, and closed-source are all covered with no purchase required. Organizations that additionally need a vendor contract, written warranty, indemnification, SLA, or priority support for procurement and compliance can purchase a commercial plan. Three tiers available from €300/year — see [COMMERCIAL.md](./COMMERCIAL.md) for full details and pricing. Contact: [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Commercial%20Plan%20Inquiry).
+<!-- SPONSORS:END -->
 
 ## Contributing
 

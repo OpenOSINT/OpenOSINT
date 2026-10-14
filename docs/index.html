@@ -256,7 +256,7 @@ $ export ANTHROPIC_API_KEY=sk-ant-...</pre>
 <table>
 <tr><th>Binary</th><th>Purpose</th><th>Install</th></tr>
 <tr><td><code>holehe</code></td><td>Email account enumeration</td><td><code>pip install holehe</code></td></tr>
-<tr><td><code>sherlock</code></td><td>Username enumeration (300+ platforms)</td><td><code>pip install sherlock-project</code></td></tr>
+<tr><td><code>sherlock</code></td><td>Username enumeration (400+ platforms)</td><td><code>pip install sherlock-project</code></td></tr>
 <tr><td><code>sublist3r</code></td><td>Subdomain enumeration</td><td><code>pip install sublist3r</code></td></tr>
 <tr><td><code>phoneinfoga</code></td><td>Phone number intelligence</td><td><a href="https://github.com/sundowndev/phoneinfoga/releases" target="_blank" rel="noopener">Download binary</a></td></tr>
 </table>
@@ -339,7 +339,7 @@ openosint web</pre>
 <table>
 <tr><th>Tool</th><th>Method</th><th>What it finds</th></tr>
 <tr><td><code>search_email</code></td><td>holehe</td><td>Social accounts linked to an email (noisy, off by default; enable with --allow-active)</td></tr>
-<tr><td><code>search_username</code></td><td>sherlock</td><td>Accounts across 300+ platforms (noisy, off by default; enable with --allow-active)</td></tr>
+<tr><td><code>search_username</code></td><td>sherlock</td><td>Accounts across 400+ platforms (noisy, off by default; enable with --allow-active)</td></tr>
 <tr><td><code>search_breach</code></td><td>HaveIBeenPwned API</td><td>Data breach exposure and leaked data</td></tr>
 <tr><td><code>search_whois</code></td><td>python-whois</td><td>Domain registrant, registrar, dates</td></tr>
 <tr><td><code>search_ip</code></td><td>ipinfo.io</td><td>Geolocation, ASN, hostname</td></tr>
@@ -375,7 +375,7 @@ openosint web</pre>
 
 <hr>
 <h3>search_username</h3>
-<p>Searches 300+ platforms using <a href="https://github.com/sherlock-project/sherlock" target="_blank" rel="noopener">sherlock</a>. <b>Noisy and off by default:</b> it sends requests from your IP to hundreds of sites, which can trigger rate limits and WAF blocks. Enable with <code>--allow-active</code>.</p>
+<p>Searches 400+ platforms using <a href="https://github.com/sherlock-project/sherlock" target="_blank" rel="noopener">sherlock</a>. <b>Noisy and off by default:</b> it sends requests from your IP to hundreds of sites, which can trigger rate limits and WAF blocks. Enable with <code>--allow-active</code>.</p>
 <p><b>MCP parameter:</b> <code>username</code> (string, required)</p>
 <pre>$ openosint username johndoe99</pre>
 <pre>OSINT results for username 'johndoe99':

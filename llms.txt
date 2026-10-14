@@ -18,7 +18,7 @@ Claude Desktop / Cursor: `{"mcpServers": {"openosint": {"command": "uvx", "args"
 
 ## Available MCP tools (20)
 - `search_email` — enumerate online services registered against an email address (via holehe)
-- `search_username` — search a username across 300+ platforms (via sherlock); noisy, off by default (--allow-active)
+- `search_username` — search a username across 400+ platforms (via sherlock); noisy, off by default (--allow-active)
 - `search_breach` — check if an email appears in known data breaches (HaveIBeenPwned v3 API, requires HIBP_API_KEY)
 - `search_whois` — retrieve WHOIS registration data for a domain
 - `search_ip` — geolocation, ASN, hostname, and org data for an IP address (via ipinfo.io)
