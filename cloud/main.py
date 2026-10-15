@@ -20,7 +20,7 @@ from cloud.config import DATABASE_URL, resolve_session_secret
 from cloud.routes import dashboard, enrich, usage, waitlist
 from cloud.routes import keys as keys_route
 from cloud.routes import oauth as oauth_routes
-from cloud.routes.mcp_gateway import create_mcp_asgi_app
+from cloud.routes.mcp_gateway import _mcp, create_mcp_asgi_app
 
 # Only the public site and local dev need browser cross-origin access —
 # every other route here is called server-to-server (curl, MCP client) or
@@ -51,7 +51,12 @@ logging.getLogger("openosint.tools").setLevel(logging.CRITICAL + 1)
 async def _lifespan(app: FastAPI):
     await db.init_pool()
     keys.init_keys()
-    yield
+    # Starlette never runs the lifespan of a mounted sub-app, so the
+    # StreamableHTTPSessionManager created by streamable_http_app() must be
+    # entered here. Otherwise every /mcp request fails with
+    # "RuntimeError: Task group is not initialized".
+    async with _mcp.session_manager.run():
+        yield
     await db.close_pool()
 
 
