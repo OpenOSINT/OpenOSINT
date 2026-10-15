@@ -9,7 +9,9 @@ _SEVERITY_ORDER = ("critical", "high", "medium", "low", "info")
 
 def render(rep: ExposureReport) -> str:
     lines = [f"External exposure report: {rep.domain}", f"Registrable domain: {rep.registrable_domain}", f"Checked {rep.checked_at} ({rep.duration_ms} ms)", ""]
-    if rep.grade == "incomplete":
+    if rep.not_run:
+        lines.append(f"Not graded: only some checks were selected (not run: {', '.join(rep.not_run)}).")
+    elif rep.grade == "incomplete":
         missing = [c for c in rep.excluded_checks if c in ("email", "tls")]
         score = f"partial score {rep.score}/100" if rep.score is not None else "no score"
         lines.append(f"Grade: INCOMPLETE ({score}). Required checks did not complete: {', '.join(missing)}")

@@ -188,6 +188,11 @@ def _summary(cat: dict, rep: ExposureReport, priorities: list[Finding]) -> str:
     ui = cat["ui"]
     score = "-" if rep.score is None else rep.score
     issues = [f for f in rep.findings if f.severity != "info"]
+    if rep.not_run:
+        first = ui["summary_not_graded"].format(not_run=", ".join(cat["category"][c] for c in rep.not_run))
+        if not issues:
+            return f'{first} {ui["summary_none"]}'
+        return f'{first} {ui["summary_issues"].format(n=len(issues), counts=_counts_phrase(ui, issues))} {ui["summary_top"].format(title=_title(cat, priorities[0]))}'
     if rep.grade != INCOMPLETE and issues:
         counts = _counts_phrase(ui, issues)
         first = ui["summary_grade_counts"].format(grade=rep.grade, score=score, counts=counts)
@@ -367,10 +372,10 @@ def render_html(rep: ExposureReport, lang: str = "en") -> str:
     ui = cat["ui"]
     priorities = top_priorities(rep.findings)
     anchors = {id(f): f"f-{i}" for i, f in enumerate(rep.findings)}
-    is_incomplete = rep.grade == INCOMPLETE
-    badge_text = ui["grade_incomplete"] if is_incomplete else (rep.grade or "-")
+    is_incomplete = rep.grade == INCOMPLETE or bool(rep.not_run)
+    badge_text = ui["grade_not_graded"] if rep.not_run else ui["grade_incomplete"] if is_incomplete else (rep.grade or "-")
     badge_class = "g-incomplete" if is_incomplete else f"g-{rep.grade}"
-    score_label = f"{ui['score_partial']} " if is_incomplete else ""
+    score_label = f"{ui['score_partial']} " if rep.grade == INCOMPLETE else ""
     score = "-" if rep.score is None else f"{rep.score}/100"
     meaning = "" if is_incomplete else ui["grade_meaning"].get(rep.grade or "", "")
     meaning_html = f'<div class="meaning">{esc(meaning)}</div>' if meaning else ""

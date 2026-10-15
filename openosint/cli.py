@@ -417,6 +417,14 @@ def _build_parser() -> argparse.ArgumentParser:
         "CGNAT, ...) and vet every redirect hop. For hosted use; ignores proxy settings.",
     )
     exposure_cmd.add_argument(
+        "--checks",
+        type=_check_names,
+        metavar="NAMES",
+        default=None,
+        help="Comma-separated checks to run: email, registration, tls, http_headers (default: all). "
+        "email,registration never contact the target. A selection is not graded.",
+    )
+    exposure_cmd.add_argument(
         "--lang", choices=("en", "it"), default="en", help="Report language (default: en). Used with --report."
     )
 
@@ -835,6 +843,15 @@ async def _handle_dns(
         _print_result(result)
 
 
+def _check_names(value: str) -> tuple[str, ...]:
+    from openosint.exposure.runner import select_checks
+
+    try:
+        return select_checks([n.strip() for n in value.split(",") if n.strip()])
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
+
+
 def _ip_literal(value: str) -> str:
     from openosint.exposure.dns_auth import parse_ip
 
@@ -852,13 +869,16 @@ async def _handle_exposure(
     lookalikes: bool = False,
     resolver: str | None = None,
     public_only: bool = False,
+    checks: tuple[str, ...] | None = None,
 ) -> None:
     from openosint.exposure import run_exposure
     from openosint.exposure.render import render
 
     print(f"[*] Exposure report: {domain}", file=sys.stderr)
     try:
-        extra = {"public_only": True} if public_only else {}  # the call is identical to before unless the flag is given
+        extra = {"public_only": True} if public_only else {}  # the call is identical to before unless a flag is given
+        if checks:
+            extra["checks"] = checks
         report = await run_exposure(domain, lookalikes, resolver, **extra)
     except ValueError as exc:
         print(f"[!] {exc}", file=sys.stderr)
@@ -1225,7 +1245,7 @@ async def _async_main() -> None:
     elif args.command == "exposure":
         await _handle_exposure(
             args.domain, json_output=json_output, report_path=args.report, lang=args.lang, lookalikes=args.lookalikes, resolver=args.resolver,
-            public_only=args.public_only,
+            public_only=args.public_only, checks=args.checks,
         )
     elif args.command == "abuseipdb":
         await _handle_abuseipdb(args.ip, args.timeout, json_output=json_output)

@@ -152,13 +152,14 @@ class ExposureReport:
     checked_at: str  # UTC ISO 8601
     duration_ms: int
     checks: tuple[CheckResult, ...]
-    score: int | None  # None when no check completed
-    grade: str | None  # A-F, "incomplete" (email or TLS missing), or None
+    score: int | None  # None when no check completed, or when `checks=` selected only some
+    grade: str | None  # A-F, "incomplete" (email or TLS missing), or None (also for a selection)
     score_is_partial: bool  # True when grade is "incomplete"
     grade_capped_by_critical: bool
     excluded_checks: tuple[str, ...]  # every check with status error/skipped
     findings: tuple[Finding, ...]
     lookalikes: LookalikeScan | None = None  # None unless --lookalikes was given
+    not_run: tuple[str, ...] = ()  # checks left out by `checks=`; non-empty means the report is not graded
 
     def to_dict(self) -> dict:
         return {
@@ -171,6 +172,7 @@ class ExposureReport:
             "score_is_partial": self.score_is_partial,
             "grade_capped_by_critical": self.grade_capped_by_critical,
             "excluded_checks": list(self.excluded_checks),
+            "not_run": list(self.not_run),
             "checks": {
                 c.name: {"status": c.status, "reason": c.reason, "reason_code": c.reason_code, "detail": c.detail, "noise": c.noise, "notes": list(c.notes), "dns_lookups": [{"name": lk.name, "type": lk.rtype, "dns_source": lk.dns_source, "ns_ip": lk.ns_ip} for lk in c.dns_lookups], "passed": [{"id": p.id, "data": dict(p.data)} for p in c.passed]}
                 for c in self.checks

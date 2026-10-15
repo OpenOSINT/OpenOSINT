@@ -5,7 +5,8 @@ import pytest
 from openosint.exposure import api
 
 EXPECTED = {
-    "DomainNotRegistered", "ExposureReport", "normalize_domain", "registrable_domain", "render_html", "run_exposure",
+    "CHECK_NAMES", "DomainNotRegistered", "ExposureReport", "PASSIVE_CHECKS", "normalize_domain",
+    "registrable_domain", "render_html", "run_exposure",
 }
 
 

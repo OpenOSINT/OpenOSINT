@@ -9,6 +9,17 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.36.0] — 2026-10-15
+
+### Added
+
+- `run_exposure(..., checks=...)` and `openosint exposure --checks email,registration`: run only some of the four checks. `PASSIVE_CHECKS` (`email`, `registration`) never connect to the target, so a hosted service can stay strictly passive; `CHECK_NAMES` lists all four. Both are part of `openosint.exposure.api`. An unknown name, an empty selection or a bare string raises `ValueError` before any network call. The default (`checks=None`) is unchanged.
+- `ExposureReport.not_run` (and `"not_run"` in `to_dict()`): the checks left out by a selection. It is empty for a normal run.
+
+### Changed
+
+- A report from a selection is **not graded**: `grade` and `score` are `None` and the terminal and HTML reports say "Not graded" (EN and IT). A letter computed from some checks would read like a full result. A run that selects all four checks is graded exactly as before.
+
 ## [2.35.0] — 2026-10-13
 
 ### Added

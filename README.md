@@ -488,7 +488,10 @@ openosint exposure example.com --json                # structured JSON
 openosint exposure example.com --report out.html --lang it   # self-contained HTML report (it or en)
 openosint exposure example.com --lookalikes          # also look for registered typo/homoglyph/TLD-swap domains
 openosint exposure example.com --resolver 1.1.1.1    # recursive resolver for lookups outside the domain's own nameservers
+openosint exposure example.com --checks email,registration   # passive checks only: never contacts the target
 ```
+
+`--checks` takes any of `email`, `registration`, `tls`, `http_headers` (default: all four). A selection is **not graded**: the report has no letter and no score, because a grade from some of the checks would read like a full result. In Python: `run_exposure("example.com", checks=PASSIVE_CHECKS)` (both names import from `openosint.exposure.api`); the report's `not_run` lists what was left out.
 
 | Check | Noise level | What it contacts |
 |---|---|---|
@@ -684,7 +687,7 @@ claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- 
 
 API keys go in the client's `env` block. MCP hosts launch the server with a cwd unrelated to your project, so a `.env` file is not picked up reliably; to use one, set `"OPENOSINT_ENV_FILE": "/absolute/path/to/.env"` in the same `env` block.
 
-By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.35.0`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
+By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.36.0`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
 
 **Agentic use via Claude Code:**
 
@@ -1014,7 +1017,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.35.0 — October 2026*
+*OpenOSINT v2.36.0 — October 2026*
 
 ## Star History
 

@@ -6,6 +6,7 @@ import asyncio
 import re
 import socket
 import time
+from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
@@ -46,6 +47,25 @@ CHECKS = {
     "tls": (tls_check.run, Noise.TOUCHES_TARGET.value),
     "http_headers": (headers_check.run, Noise.TOUCHES_TARGET.value),
 }
+
+
+CHECK_NAMES = tuple(CHECKS)
+PASSIVE_CHECKS = tuple(name for name, (_fn, noise) in CHECKS.items() if noise == Noise.PASSIVE.value)
+
+
+def select_checks(checks: Iterable[str] | None) -> tuple[str, ...]:
+    """The checks to run, in their fixed order. None means all of them; anything else is validated."""
+    if checks is None:
+        return CHECK_NAMES
+    if isinstance(checks, str):
+        raise ValueError("checks must be a collection of check names, not a single string.")
+    wanted = set(checks)
+    if not wanted:
+        raise ValueError("checks is empty. Pass None to run every check.")
+    unknown = sorted(wanted - set(CHECKS))
+    if unknown:
+        raise ValueError(f"Unknown check(s): {', '.join(unknown)}. Choose from: {', '.join(CHECK_NAMES)}.")
+    return tuple(name for name in CHECK_NAMES if name in wanted)
 
 
 DNS_CHECKS = frozenset({"email"})  # the checks that do recursive DNS and so take the run's DnsConfig
@@ -119,17 +139,27 @@ def _lookalike_scan(registrable: str, dns_config: DnsConfig) -> LookalikeScan:
 
 
 async def run_exposure(
-    domain: str, lookalikes: bool = False, resolver: str | None = None, public_only: bool = False
+    domain: str,
+    lookalikes: bool = False,
+    resolver: str | None = None,
+    public_only: bool = False,
+    checks: Iterable[str] | None = None,
 ) -> ExposureReport:
-    """public_only: the TLS and header checks refuse targets that resolve to non-public addresses (hosted use)."""
+    """public_only: the TLS and header checks refuse targets that resolve to non-public addresses (hosted use).
+
+    checks: names to run (CHECK_NAMES), or None for all four. PASSIVE_CHECKS (email, registration) never connect to
+    the target. A selection is not graded: score and grade are None and `not_run` lists what was left out, because a
+    letter computed from some of the checks would read like a full result. Unknown or empty selections raise ValueError.
+    """
+    selected = select_checks(checks)
     domain = normalize_domain(domain)
     dns_config = DnsConfig.of(resolver)  # ValueError for a non-IP; applies to the recursive path only
     registrable = registrable_domain(domain)
     started = time.monotonic()
     loop = asyncio.get_running_loop()
     # ponytail: threads cannot be killed; per-call 5-10s timeouts bound stragglers. Add process isolation if that proves false.
-    pool = ThreadPoolExecutor(max_workers=len(CHECKS))
-    tasks = {name: loop.run_in_executor(pool, _guarded, name, domain, registrable, dns_config, public_only) for name in CHECKS}
+    pool = ThreadPoolExecutor(max_workers=len(selected))
+    tasks = {name: loop.run_in_executor(pool, _guarded, name, domain, registrable, dns_config, public_only) for name in selected}
     done, pending = await asyncio.wait(tasks.values(), timeout=OVERALL_TIMEOUT, return_when=asyncio.FIRST_EXCEPTION)
     pool.shutdown(wait=False, cancel_futures=True)
     for task in done:  # an unregistered domain aborts the whole report
@@ -139,9 +169,11 @@ async def run_exposure(
     checks = tuple(
         tasks[n].result() if tasks[n] in done
         else CheckResult(n, STATUS_ERROR, CHECKS[n][1], reason=f"timed out after {OVERALL_TIMEOUT:.0f}s", reason_code="timeout")
-        for n in CHECKS
+        for n in selected
     )
-    score, grade, capped = assess(checks)  # lookalikes are never passed in: they do not affect the grade
+    not_run = tuple(n for n in CHECK_NAMES if n not in selected)
+    # lookalikes are never passed in: they do not affect the grade; a partial selection is not graded at all
+    score, grade, capped = (None, None, False) if not_run else assess(checks)
     # After the scored checks, never alongside them: the lookalike pool competes for the same resolver.
     scan = await loop.run_in_executor(None, _lookalike_scan, registrable, dns_config) if lookalikes else None
     return ExposureReport(
@@ -157,4 +189,5 @@ async def run_exposure(
         excluded_checks=tuple(c.name for c in checks if c.status != "ok"),
         findings=tuple(f for c in checks if c.status == "ok" for f in c.findings),
         lookalikes=scan,
+        not_run=not_run,
     )
