@@ -29,6 +29,7 @@ import asyncio  # noqa: E402
 import json  # noqa: E402
 import logging  # noqa: E402
 import os  # noqa: E402
+import shutil  # noqa: E402
 import sys  # noqa: E402
 
 from openosint.json_output import format_tool_result  # noqa: E402
@@ -61,7 +62,19 @@ from openosint.tools.search_virustotal import run_virustotal_osint  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-_DIVIDER = "=" * 60
+_DIVIDER_WIDTH = 60
+
+
+def _divider_width() -> int:
+    """Width for CLI divider lines: terminal width capped at _DIVIDER_WIDTH."""
+    try:
+        return max(20, min(shutil.get_terminal_size().columns, _DIVIDER_WIDTH))
+    except OSError:
+        return _DIVIDER_WIDTH
+
+
+def _divider() -> str:
+    return "=" * _divider_width()
 
 
 # ---------------------------------------------------------------------------
@@ -668,20 +681,20 @@ _COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrap
 
 def _print_result(result: str) -> None:
     result = humanize(result)
-    print(_DIVIDER)
-    print(" SCAN RESULTS ".center(60, "="))
-    print(_DIVIDER)
+    print(_divider())
+    print(" SCAN RESULTS ".center(_divider_width(), "="))
+    print(_divider())
     print(result)
-    print(_DIVIDER)
+    print(_divider())
 
 
 def _print_result_labeled(label: str, result: str) -> None:
     result = humanize(result)
-    print(_DIVIDER)
-    print(f" {label} ".center(60, "="))
-    print(_DIVIDER)
+    print(_divider())
+    print(f" {label} ".center(_divider_width(), "="))
+    print(_divider())
     print(result)
-    print(_DIVIDER)
+    print(_divider())
 
 
 def _emit_json(data: dict | list) -> None:
@@ -1027,9 +1040,9 @@ def _handle_sponsors() -> None:
         print(f"[!] sponsors.json error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    print(_DIVIDER)
-    print(" SPONSORS & FEATURED INTEGRATIONS ".center(60, "="))
-    print(_DIVIDER)
+    print(_divider())
+    print(" SPONSORS & FEATURED INTEGRATIONS ".center(_divider_width(), "="))
+    print(_divider())
 
     tier_order = [
         ("featured", "Featured Integrations"),
@@ -1048,7 +1061,7 @@ def _handle_sponsors() -> None:
             print(f"    {s['url']}")
 
     print("\n  Full prospectus: SPONSORSHIP.md")
-    print(_DIVIDER)
+    print(_divider())
 
 
 # ---------------------------------------------------------------------------
