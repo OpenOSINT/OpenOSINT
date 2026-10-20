@@ -25,6 +25,7 @@ from typing import Any
 
 import anthropic
 
+from openosint.pivot import investigate_graph_for_agent
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
@@ -34,6 +35,7 @@ from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_footprint import run_footprint_osint
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
@@ -43,8 +45,6 @@ from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
-from openosint.tools.search_footprint import run_footprint_osint
-from openosint.pivot import investigate_graph_for_agent
 
 logger = logging.getLogger(__name__)
 
@@ -816,9 +816,14 @@ async def _process_openai_tool_turn(
     tool_calls: list[ToolCall],
     on_tool_call: Any,
     openai_msg: Any,
+    preserve_response: bool = False,
 ) -> None:
     """Execute all tool calls from one OpenAI response and append results to messages."""
-    messages.append(_build_openai_assistant_message(openai_msg))
+    messages.append(
+        openai_msg.model_dump(exclude_none=True)
+        if preserve_response
+        else _build_openai_assistant_message(openai_msg)
+    )
     for openai_tool_call in openai_msg.tool_calls:
         tool_name = openai_tool_call.function.name
         raw_args = openai_tool_call.function.arguments
@@ -853,6 +858,7 @@ class OpenAICompatibleAgent:
     provider_name = "OpenAI-compatible"
     api_key_env = "OPENAI_API_KEY"
     retry_command = "openosint --provider openai"
+    _preserve_response_history = False
 
     def __init__(
         self,
@@ -931,9 +937,15 @@ class OpenAICompatibleAgent:
                 msg = response.choices[0].message
                 if not msg.tool_calls:
                     text = msg.content or ""
-                    self.history.append({"role": "assistant", "content": text})
+                    if self._preserve_response_history:
+                        # MiniMax requires complete reasoning and tool history on later turns.
+                        self.history = [*messages[1:], msg.model_dump(exclude_none=True)]
+                    else:
+                        self.history.append({"role": "assistant", "content": text})
                     return AgentResponse(content=text, tool_calls=tool_calls)
-                await _process_openai_tool_turn(messages, tool_calls, on_tool_call, msg)
+                await _process_openai_tool_turn(
+                    messages, tool_calls, on_tool_call, msg, self._preserve_response_history
+                )
         except openai.AuthenticationError:
             return AgentResponse(
                 content="",
@@ -961,7 +973,7 @@ class OpenAICompatibleAgent:
 # ---------------------------------------------------------------------------
 
 
-MINIMAX_MODELS = ("MiniMax-M3", "MiniMax-M2.7")
+MINIMAX_MODELS = ("MiniMax-M3.1-Flash", "MiniMax-M3")
 MINIMAX_BASE_URLS = {
     "global": "https://api.minimax.io/v1",
     "cn": "https://api.minimaxi.com/v1",
@@ -974,6 +986,7 @@ class MiniMaxAgent(OpenAICompatibleAgent):
     provider_name = "MiniMax"
     api_key_env = "MINIMAX_API_KEY"
     retry_command = "openosint --provider minimax"
+    _preserve_response_history = True
 
     def __init__(
         self,

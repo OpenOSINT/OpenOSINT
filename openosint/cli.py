@@ -210,9 +210,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--minimax-model",
         type=str,
         default=os.environ.get("MINIMAX_MODEL", MINIMAX_MODELS[0]),
-        choices=MINIMAX_MODELS,
         metavar="MODEL",
-        help="MiniMax model (default: MiniMax-M3). Used when --provider minimax.",
+        help=(
+            f"MiniMax model (default: {MINIMAX_MODELS[0]}). "
+            f"Recommended: {', '.join(MINIMAX_MODELS)}. "
+            "Explicit custom or legacy model IDs are also accepted. Used when --provider minimax."
+        ),
     )
     parser.add_argument(
         "--minimax-region",

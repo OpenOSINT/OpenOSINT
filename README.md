@@ -452,6 +452,18 @@ openosint --provider openai \
   --openai-model gpt-4o-mini
 ```
 
+For MiniMax in the CLI/REPL, install `openosint[openai]`, set `MINIMAX_API_KEY`,
+then run `openosint --provider minimax`. The default model is `MiniMax-M3.1-Flash`;
+use `--minimax-model MiniMax-M3` to select M3. Explicit custom or legacy model IDs
+from `--minimax-model` or `MINIMAX_MODEL` are passed through unchanged.
+`--minimax-region global` (the default) uses `https://api.minimax.io/v1`;
+`--minimax-region cn` uses `https://api.minimaxi.com/v1`. `MINIMAX_REGION` also
+sets the region, and `--minimax-api-key` overrides the environment key.
+This provider selection applies to the CLI/REPL; the web interface has its own
+backend settings, and the MCP server exposes OSINT tools to the calling client.
+See the [MiniMax SDK documentation](https://platform.minimax.io/docs/api-reference/text-openai-api)
+for model availability and thinking behavior.
+
 ### Live Documentation
 
 Full per-tool reference, CLI flags, and configuration options at [openosint.tech](https://openosint.tech/).
@@ -541,6 +553,9 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`) |
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
+| `MINIMAX_API_KEY` | MiniMax CLI/REPL | When selected | API key for the selected MiniMax region |
+| `MINIMAX_MODEL` | MiniMax CLI/REPL | Optional | Model ID (default: `MiniMax-M3.1-Flash`; also recommends `MiniMax-M3`) |
+| `MINIMAX_REGION` | MiniMax CLI/REPL | Optional | Endpoint region: `global` (default) or `cn` |
 | `HIBP_API_KEY` | `search_breach` | Optional | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
 | `IPINFO_TOKEN` | `search_ip` | Optional | ipinfo.io higher rate limits |
 | `SHODAN_API_KEY` | `search_shodan` | Optional | Shodan API — [get one](https://account.shodan.io) |
@@ -575,7 +590,10 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | `--api-key KEY` | Anthropic API key (overrides env var) |
 | `--parallel` | Run complementary tools concurrently |
 | `--json` | Output results as structured JSON |
-| `--provider {anthropic,ollama,openai}` | AI provider (default: `anthropic`) |
+| `--provider {anthropic,ollama,openai,minimax}` | AI provider for the CLI/REPL (default: `anthropic`) |
+| `--minimax-model MODEL` | MiniMax model (default: `MiniMax-M3.1-Flash`; env: `MINIMAX_MODEL`) |
+| `--minimax-region {global,cn}` | MiniMax endpoint region (default: `global`; env: `MINIMAX_REGION`) |
+| `--minimax-api-key KEY` | MiniMax API key (env: `MINIMAX_API_KEY`) |
 | `--ollama-model MODEL` | Ollama model name (default: `llama3.2`) |
 | `--ollama-host URL` | Ollama server URL (default: `http://localhost:11434`) |
 | `--openai-base-url URL` | OpenAI-compatible endpoint base URL (env: `OPENAI_BASE_URL`) |
