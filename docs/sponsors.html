@@ -1,248 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sponsor OpenOSINT — Reach OSINT Practitioners &amp; Security Researchers</title>
-<meta name="description" content="Sponsor OpenOSINT and reach active OSINT practitioners, security researchers, and developers evaluating intelligence APIs. Featured Integration sponsorships available.">
-<meta name="keywords" content="sponsor OpenOSINT, OSINT sponsorship, security research sponsorship, MCP sponsorship, developer sponsorship">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sponsor OpenOSINT | Reach OSINT practitioners</title>
+<meta name="description" content="Featured Integration sponsorships for two open categories, breach data and email lookup, with media kit and current sponsors. One vendor per category.">
 <link rel="canonical" href="https://openosint.tech/sponsors.html">
-<meta property="og:title" content="Sponsor OpenOSINT — Reach OSINT Practitioners &amp; Security Researchers">
-<meta property="og:description" content="OpenOSINT Featured Integration sponsorships put your API in front of active users at the exact moment they adopt a new intelligence provider.">
-<meta property="og:url" content="https://openosint.tech/sponsors.html">
-<meta property="og:type" content="website">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
-<link rel="icon" type="image/svg+xml" href="logo.svg">
-<link rel="stylesheet" href="style.css">
-<script src="assets/metrics.js" defer></script>
-<style>
-  .sponsor-logo-box {
-    display: inline-block;
-    background: #ffffff;
-    border: 1px solid #cccccc;
-    border-radius: 3px;
-    padding: 6px 12px;
-    vertical-align: middle;
-  }
-  .sponsor-logo-box img {
-    display: block;
-    height: 28px;
-    width: auto;
-  }
-  .tier-box {
-    border: 2px solid #000000;
-    padding: 16px 20px;
-    margin: 12px 0 22px 0;
-  }
-  .tier-box h3 {
-    font-family: monospace;
-    font-size: 13px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0 0 12px 0;
-  }
-  .tier-price {
-    font-family: monospace;
-    font-size: 24px;
-    font-weight: bold;
-    margin: 4px 0 2px 0;
-  }
-  .tier-price-note {
-    font-family: monospace;
-    font-size: 12px;
-    color: #555555;
-    margin-bottom: 14px;
-  }
-  .pill {
-    display: inline-block;
-    font-family: monospace;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 2px 7px;
-    border-radius: 2px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    vertical-align: middle;
-    margin-left: 6px;
-  }
-  .pill-open   { background: #000000; color: #3fb950; border: 1px solid #3fb950; }
-  .pill-taken  { background: #eeeeee; color: #555555; border: 1px solid #cccccc; }
-  .placement-list {
-    list-style: none;
-    margin: 0 0 4px 0;
-    padding: 0;
-  }
-  .placement-list li {
-    font-family: monospace;
-    font-size: 13px;
-    padding: 4px 0;
-    border-bottom: 1px solid #eeeeee;
-  }
-  .placement-list li::before {
-    content: "\2192  ";
-    color: #3fb950;
-  }
-  .cta-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin: 16px 0;
-  }
-  .cta-btn {
-    display: inline-block;
-    font-family: monospace;
-    font-size: 13px;
-    font-weight: bold;
-    text-decoration: none;
-    padding: 9px 20px;
-    border: 2px solid #000000;
-    color: #000000;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-  .cta-btn:visited { color: #000000; }
-  .cta-btn-primary { background: #000000; color: #ffffff !important; }
-  .cta-btn-primary:visited { color: #ffffff !important; }
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-    border: 1px solid #000000;
-    margin: 10px 0 20px 0;
-  }
-  .metric-cell {
-    padding: 14px 16px;
-    border-right: 1px solid #cccccc;
-    border-bottom: 1px solid #cccccc;
-  }
-  .metric-cell:last-child { border-right: none; }
-  .metric-num   { font-family: monospace; font-size: 26px; font-weight: bold; }
-  .metric-label { font-family: monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #666666; margin-top: 2px; }
-  .category-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 0;
-    border-bottom: 1px solid #cccccc;
-    font-family: monospace;
-    font-size: 13px;
-  }
-  .category-name { flex: 1; font-weight: bold; }
-
-  /* ---- Sponsor cards ---- */
-  .sponsors-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 16px;
-    margin: 14px 0;
-  }
-  .sponsor-card {
-    border: 1px solid #000000;
-    background: #f8f8f8;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    text-decoration: none;
-    color: inherit;
-  }
-  .sponsor-card:hover { border-color: #3fb950; background: #f0f0f0; text-decoration: none; }
-  .sponsor-card-logo {
-    display: inline-block;
-    background: #ffffff;
-    border: 1px solid #cccccc;
-    padding: 6px 10px;
-    align-self: flex-start;
-    line-height: 0;
-  }
-  .sponsor-card-logo img { height: 28px; width: auto; display: block; }
-  .sponsor-card-name {
-    font-family: monospace;
-    font-size: 14px;
-    font-weight: bold;
-    color: #000000;
-    margin-top: 2px;
-  }
-  .sponsor-card-category {
-    font-family: monospace;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #555555;
-  }
-  .sponsor-card-desc {
-    font-size: 14px;
-    color: #222222;
-    flex: 1;
-  }
-  .sponsor-card-link {
-    font-family: monospace;
-    font-size: 12px;
-    color: #3fb950;
-    align-self: flex-start;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .sponsor-logo-box { background: #ffffff; border-color: #555; }
-    .sponsor-card          { border-color: #555555; background: #141414; }
-    .sponsor-card:hover    { border-color: #00ff88; background: #1a1a1a; }
-    .sponsor-card-logo     { background: #ffffff; border-color: #444; }
-    .sponsor-card-name     { color: #d8d8d8; }
-    .sponsor-card-category { color: #888888; }
-    .sponsor-card-desc     { color: #aaaaaa; }
-    .sponsor-card-link     { color: #00ff88; }
-    .tier-box          { border-color: #d8d8d8; }
-    .tier-box h3       { color: #d8d8d8; }
-    .tier-price        { color: #00ff88; }
-    .tier-price-note   { color: #999999; }
-    .pill-open         { background: #0d0d0d; color: #00ff88; border-color: #00ff88; }
-    .pill-taken        { background: #2a2a2a; color: #999999; border-color: #555; }
-    .placement-list li { border-bottom-color: #333; }
-    .placement-list li::before { color: #00ff88; }
-    .cta-btn           { border-color: #d8d8d8; color: #d8d8d8 !important; }
-    .cta-btn:visited   { color: #d8d8d8 !important; }
-    .cta-btn-primary   { background: #d8d8d8; color: #0d0d0d !important; }
-    .cta-btn-primary:visited { color: #0d0d0d !important; }
-    .metrics-grid      { border-color: #555; }
-    .metric-cell       { border-right-color: #444; border-bottom-color: #444; }
-    .metric-label      { color: #888888; }
-    .category-row      { border-bottom-color: #444; }
-  }
-</style>
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sponsor OpenOSINT | Reach OSINT practitioners">
+<meta property="og:description" content="Featured Integration sponsorships for two open categories, breach data and email lookup, with media kit and current sponsors. One vendor per category.">
+<meta property="og:url" content="https://openosint.tech/sponsors.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sponsor OpenOSINT | Reach OSINT practitioners">
+<meta name="twitter:description" content="Featured Integration sponsorships for two open categories, breach data and email lookup, with media kit and current sponsors. One vendor per category.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 </head>
 <body>
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">&#8592; Back to App</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-<span class="nav-sep">|</span><a href="https://opencollective.com/openosint_oss" target="_blank" rel="noopener" class="nav-cta">&#10084; Sponsor</a>
-</div>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="content">
-
-<div id="masthead">
-<table width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr>
-<td class="mhead-l">OPENOSINT-SPONSORS(1)</td>
-<td class="mhead-c">OpenOSINT Media Kit</td>
-<td class="mhead-r">OPENOSINT-SPONSORS(1)</td>
-</tr>
-</table>
-</div>
-
-<hr>
-
-<h2 id="name">NAME</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <h1>Sponsor OpenOSINT</h1>
+    <h2 id="name">Name</h2>
 <div class="indent">
 <p><b>openosint-sponsors</b> &mdash; media kit for vendors reaching OSINT practitioners, security researchers, and developers adopting intelligence APIs</p>
 </div>
 
-<h2 id="description">DESCRIPTION</h2>
+<h2 id="description">Description</h2>
 <div class="indent">
-<p>OpenOSINT is a modular OSINT framework with four interfaces: an interactive AI REPL, a direct CLI, an MCP server for Claude Code and Claude Desktop, and a browser-based Web UI. Behind the scenes, 19 intelligence tools wrap external APIs and binaries. When a user configures a new integration, the documentation routes them directly to the provider's sign-up or pricing page.</p>
+<p>OpenOSINT is a modular OSINT framework with four interfaces: an interactive AI REPL, a direct CLI, an MCP server for Claude Code and Claude Desktop, and a browser-based Web UI. Behind the scenes, 21 intelligence tools wrap external APIs and binaries. When a user configures a new integration, the documentation routes them directly to the provider's sign-up or pricing page.</p>
 <p>A Featured Integration sponsor is named as the <b>recommended, default provider</b> for one tool category &mdash; and <b>no competitor gets that placement while you hold it</b>. One vendor per category.</p>
+<p>Featured Integration sponsorships are available for two open categories: <b>breach/compromised-credential data</b> and <b>email/identity lookup</b>. One vendor per category &mdash; exclusive placement in the README, docs, CLI banner, and Web UI.</p>
 
 <div class="cta-row">
   <a href="https://opencollective.com/openosint_oss" target="_blank" rel="noopener" class="cta-btn cta-btn-primary">Become a sponsor &#8599;</a>
@@ -250,7 +74,7 @@
 </div>
 </div>
 
-<h2 id="audience">AUDIENCE</h2>
+<h2 id="audience">Audience</h2>
 <div class="indent">
 <p>Who actively uses OpenOSINT:</p>
 <ul>
@@ -263,17 +87,17 @@
 <div class="metrics-grid">
   <div class="metric-cell">
     <img src="https://img.shields.io/github/stars/OpenOSINT/OpenOSINT?style=flat-square" alt="GitHub stars">
-    <div class="metric-label" style="margin-top:6px;">GitHub Stars</div>
+    <div class="metric-label">GitHub Stars</div>
   </div>
   <div class="metric-cell">
     <div class="metric-num" data-metric="forks">172</div>
     <div class="metric-label">GitHub Forks</div>
   </div>
   <div class="metric-cell">
-    <img src="https://img.shields.io/pypi/dm/openosint?style=flat-square&label=PyPI%20downloads%2Fmonth" alt="PyPI downloads per month" style="margin-top:6px;">
+    <img src="https://img.shields.io/pypi/dm/openosint?style=flat-square&label=PyPI%20downloads%2Fmonth" alt="PyPI downloads per month">
   </div>
   <div class="metric-cell">
-    <div class="metric-num">19</div>
+    <div class="metric-num">21</div>
     <div class="metric-label">Intelligence tools</div>
   </div>
   <div class="metric-cell">
@@ -281,13 +105,13 @@
     <div class="metric-label">Official MCP Registry</div>
   </div>
 </div>
-<p style="font-size:12px; font-family:monospace; color:#666;">GitHub traffic (rolling 14-day window, GitHub's reporting limit): 4,958 repo views / 2,375 unique visitors, 831 clones / 529 unique cloners — snapshot dated 2026-07-25.</p>
+<p>GitHub traffic (rolling 14-day window, GitHub's reporting limit): 4,958 repo views / 2,375 unique visitors, 831 clones / 529 unique cloners — snapshot dated 2026-07-25.</p>
 </div>
 
-<h2 id="distribution">DISTRIBUTION</h2>
+<h2 id="distribution">Distribution</h2>
 <div class="indent">
 <p>A Featured Integration appears on every surface a user encounters from install through daily use:</p>
-<table>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
 <tr><th>Surface</th><th>Placement</th><th>User action</th></tr>
 <tr><td>README badge row</td><td>Sponsor badge; visible on every GitHub project-page view</td><td>Click-through to sponsor site</td></tr>
 <tr><td>README Featured Integrations</td><td>Logo, name, tagline, UTM-tracked link</td><td>Direct referral to sign-up</td></tr>
@@ -297,10 +121,10 @@
 <tr><td>Web UI settings panel</td><td>Listed under &ldquo;Featured integrations&rdquo;</td><td>User configures your API key directly from the UI</td></tr>
 <tr><td>MCP Registry listing</td><td>Sponsor credit in <code>io.github.OpenOSINT/openosint</code></td><td>AI-agent builders discover the integration</td></tr>
 <tr><td><code>openosint sponsors</code> command</td><td>Name + URL in terminal output</td><td>Terminal-native referral</td></tr>
-</table>
+</table></div>
 </div>
 
-<h2 id="tiers">TIERS</h2>
+<h2 id="tiers">Tiers</h2>
 <div class="indent">
 <p>One tier. One vendor per category. No logo-grid or banner placements without a live code integration.</p>
 
@@ -336,7 +160,7 @@
 <p>For custom arrangements &mdash; multi-year contracts, invoicing, category inquiries &mdash; email <a href="mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry">commercial@openosint.tech</a>.</p>
 </div>
 
-<h2 id="categories">OPEN CATEGORIES</h2>
+<h2 id="categories">Open categories</h2>
 <div class="indent">
 <p>Each category holds <b>one</b> Featured Integration. A taken category cannot be contested while the sponsorship is active. Open categories are available immediately.</p>
 
@@ -352,15 +176,11 @@
   <div class="category-name">IP Geolocation &amp; Threat Intelligence</div>
   <span class="pill pill-taken">TAKEN &mdash; IP2Location.io</span>
 </div>
-<div class="category-row">
-  <div class="category-name">Residential Proxies</div>
-  <span class="pill pill-taken">TAKEN &mdash; RapidProxy</span>
+
+<p>Your product does not map to any category above? Email us &mdash; new categories can be created alongside a new live tool integration.</p>
 </div>
 
-<p style="margin-top:14px; font-size:14px;">Your product does not map to any category above? Email us &mdash; new categories can be created alongside a new live tool integration.</p>
-</div>
-
-<h2 id="funnel">REFERRAL FUNNEL</h2>
+<h2 id="funnel">Referral funnel</h2>
 <div class="indent">
 <p>The user journey from install to paying customer is four steps:</p>
 <ol>
@@ -372,53 +192,33 @@
 <p>Users arrive <b>motivated</b>: they have already installed an OSINT framework and are actively looking for a provider. This is a high-intent audience, not a general-readership blog.</p>
 </div>
 
-<h2 id="current">CURRENT SPONSORS</h2>
+<h2 id="current">Current sponsors</h2>
 <div class="indent">
 <div id="sponsors-grid"></div>
 </div>
 
-<h2 id="contact">CONTACT</h2>
+<h2 id="contact">Contact</h2>
 <div class="indent">
 <div class="cta-row">
   <a href="https://opencollective.com/openosint_oss" target="_blank" rel="noopener" class="cta-btn cta-btn-primary">Open Collective &#8599;</a>
   <a href="mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry" class="cta-btn">commercial@openosint.tech</a>
 </div>
 
-<table>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
 <tr><th>Channel</th><th>Detail</th></tr>
 <tr><td>Email</td><td><a href="mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry">commercial@openosint.tech</a></td></tr>
 <tr><td>Open Collective</td><td><a href="https://opencollective.com/openosint_oss" target="_blank" rel="noopener">opencollective.com/openosint_oss</a></td></tr>
 <tr><td>GitHub</td><td><a href="https://github.com/OpenOSINT/OpenOSINT/issues" target="_blank" rel="noopener">Open an issue</a></td></tr>
-</table>
+</table></div>
 
 <p>Response time: within 48 hours. For annual contracts or custom invoicing, email directly.</p>
 </div>
 
-<hr>
-<div id="footer">
-<table width="100%" cellpadding="0" cellspacing="0" border="0">
-<tr>
-<td class="mhead-l">OpenOSINT Media Kit</td>
-<td class="mhead-c">Jul 2026</td>
-<td class="mhead-r">OPENOSINT-SPONSORS(1)</td>
-</tr>
-</table>
-</div>
-
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a> &middot;
-<a href="https://opencollective.com/openosint_oss" target="_blank" rel="noopener">Open Collective</a>
-</div>
-
-</div>
 
 <script>
 // ── Sponsor data ──────────────────────────────────────────────────────────────
 // Generated from sponsors.json — do not hand-edit the array below.
-// To add or update a sponsor, edit sponsors.json at the repo root, then run:
+// To add or update a sponsor, edit openosint/sponsors.json, then run:
 //   python scripts/render_sponsors.py --docs-html docs/sponsors.html
 <!-- SPONSORS-HTML:START -->
 var SPONSORS = [
@@ -426,17 +226,19 @@ var SPONSORS = [
     name:        "IP2Location.io",
     url:         "https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location",
     logo:        "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png",
+    logo_dark:   "",
     logo_alt:    "IP2Location.io logo — sponsor for IP Geolocation & Threat Intelligence",
     category:    "IP Geolocation & Threat Intelligence",
     description: "Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection"
   },
   {
-    name:        "RapidProxy",
-    url:         "https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy",
-    logo:        "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg",
-    logo_alt:    "RapidProxy logo — sponsor for Residential Proxies",
-    category:    "Residential Proxies",
-    description: "Reliable Residential Proxies for Data Collection & Automation — 90M+ IPs across 200+ countries. 10% off: RAPID10."
+    name:        "TestMu AI",
+    url:         "https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab",
+    logo:        "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg",
+    logo_dark:   "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg",
+    logo_alt:    "TestMu AI logo — sponsor for AI-Native Testing Platform",
+    category:    "AI-Native Testing Platform",
+    description: "TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants."
   }
 ];
 <!-- SPONSORS-HTML:END -->
@@ -450,10 +252,13 @@ var SPONSORS = [
     return;
   }
   var cards = SPONSORS.map(function (s) {
+    var logoHtml = s.logo_dark
+      ? '<picture><source media="(prefers-color-scheme: dark)" srcset="' + s.logo_dark + '"><img src="' + s.logo + '" alt="' + s.logo_alt + '" height="28"></picture>'
+      : '<img src="' + s.logo + '" alt="' + s.logo_alt + '" height="28">';
     return [
       '<a href="' + s.url + '" target="_blank" rel="noopener sponsored" class="sponsor-card">',
       '  <span class="sponsor-card-logo">',
-      '    <img src="' + s.logo + '" alt="' + s.logo_alt + '" height="28">',
+      '    ' + logoHtml,
       '  </span>',
       '  <span class="sponsor-card-name">' + s.name + '</span>',
       '  <span class="sponsor-card-category">' + s.category + '</span>',
@@ -465,5 +270,43 @@ var SPONSORS = [
   el.innerHTML = '<div class="sponsors-grid">' + cards.join('') + '</div>';
 }());
 </script>
+
+  </article>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script src="/assets/metrics.js" defer></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

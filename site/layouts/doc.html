@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% macro doc_links(groups, current) %}
+<div class="docs-links">
+  {%- for group in groups %}
+  <h2>{{ group.title }}</h2>
+  <ul>
+    {%- for item in group.links %}
+    <li><a href="{{ item.url }}"{% if item.url == current %} aria-current="page"{% endif %}>{{ item.label }}</a></li>
+    {%- endfor %}
+  </ul>
+  {%- endfor %}
+  <p class="docs-version">Version {{ site.version }}</p>
+</div>
+{% endmacro %}
+{% block main %}
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">{{ doc_links(site.docs_groups, page.url) }}</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        {{ doc_links(site.docs_groups, page.url) }}
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          {%- for crumb in page.breadcrumbs %}
+          <li>{% if not loop.last %}<a href="{{ crumb.url }}">{{ crumb.name }}</a>{% else %}{{ crumb.name }}{% endif %}</li>
+          {%- endfor %}
+        </ol>
+      </nav>
+      <h1>{{ page.title }}</h1>
+      {{ page.body|safe }}
+      {%- if page.prev or page.next %}
+      <nav class="pager" aria-label="Previous and next page">
+        {%- if page.prev %}<a class="prev" href="{{ page.prev.url }}" rel="prev"><small>Previous</small>{{ page.prev.label }}</a>{% endif %}
+        {%- if page.next %}<a class="next" href="{{ page.next.url }}" rel="next"><small>Next</small>{{ page.next.label }}</a>{% endif %}
+      </nav>
+      {%- endif %}
+      <p class="edit"><a href="{{ page.edit_url }}" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,89 @@
+---
+title: 'Google Dorks for Security Researchers: A Practical Reference'
+seo_title: Google dorks for security researchers
+description: A practical reference to Google dork operators, recon patterns for exposed files and logins, and how to generate dorks for a target automatically.
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>Why sensitive data ends up indexed</h2>
+<div class="indent">
+<p>Misconfiguration, not malice, accounts for most indexed sensitive data. A Jenkins CI server deployed without a robots.txt gets crawled within days. An S3 bucket set to public serves its directory listing to Googlebot. A developer commits a config file to a public repository that references internal hostnames. A company migrates its internal wiki and accidentally removes the access controls during the cutover. Google doesn't distinguish between what should and shouldn't be publicly accessible &mdash; it indexes what it can reach. Dorks are filters that make that index useful for security research by narrowing results to specific file types, URL patterns, and content signatures.</p>
+<p>The key distinction: dorks don't expose data that wasn't already public. They surface data that is public but not prominently linked. This is entirely passive OSINT &mdash; no target systems are contacted, no authentication is bypassed, and no rate limits are triggered on the target's infrastructure. The only entity receiving requests is Google.</p>
+</div>
+
+<h2>The core operators</h2>
+<div class="indent">
+<p>Five operators do most of the work in practice:</p>
+<table>
+<tr><th>Operator</th><th>Function</th><th>Example</th></tr>
+<tr><td><code>site:</code></td><td>Restrict results to a domain</td><td><code>site:target.com</code></td></tr>
+<tr><td><code>filetype:</code> / <code>ext:</code></td><td>Restrict by file extension</td><td><code>filetype:sql</code></td></tr>
+<tr><td><code>inurl:</code></td><td>Match substring in URL path</td><td><code>inurl:admin</code></td></tr>
+<tr><td><code>intitle:</code></td><td>Match in page &lt;title&gt;</td><td><code>intitle:"index of"</code></td></tr>
+<tr><td><code>"phrase"</code></td><td>Exact phrase match</td><td><code>"internal use only"</code></td></tr>
+</table>
+<p>Combinations multiply specificity. <code>site:target.com inurl:admin filetype:php</code> finds PHP admin panels on a specific domain. <code>site:target.com intitle:"index of" ext:bak</code> finds open directories containing backup files. The operators compose cleanly &mdash; combining four or five in a single query is standard practice.</p>
+<p>Less commonly documented but useful: <code>cache:</code> retrieves Google's cached version of a URL (useful when the live page has since been secured). <code>before:</code> and <code>after:</code> filter by indexing date &mdash; useful for correlating exposures with known deployment or breach windows.</p>
+</div>
+
+<h2>Target-specific recon patterns</h2>
+<div class="indent">
+<p>Generic dorks find generic exposures. High-value recon adapts operators to what you already know about the target:</p>
+<pre># Exposed configuration files
+site:target.com ext:env OR ext:yml OR ext:cfg OR ext:ini
+
+# Open directory listings
+site:target.com intitle:"index of" -htm -html
+
+# Login panels on non-standard paths
+site:target.com inurl:login OR inurl:signin OR inurl:portal
+
+# Database or backup files
+site:target.com ext:sql OR ext:db OR ext:sqlite OR ext:bak
+
+# Email addresses in public pages
+site:target.com intext:"@target.com" filetype:pdf
+
+# The target domain in paste sites
+"target.com" site:pastebin.com OR site:ghostbin.co
+
+# GitHub code containing secrets for this domain
+"target.com" "api_key" OR "password" OR "secret" site:github.com</pre>
+<p>Each pattern reveals a different exposure category. Configuration files contain API keys and database URLs. Open directories contain backups, logs, and deployment artifacts. Login panels on forgotten subdomains may be running outdated software versions. Paste site results link the domain to breach data or leaked credentials. The GitHub pattern surfaces secrets committed to public repositories &mdash; a consistently underestimated exposure vector.</p>
+</div>
+
+<h2>Automating dork generation with OpenOSINT</h2>
+<div class="indent">
+<p>OpenOSINT's <code>generate_dorks</code> tool creates 12 targeted Google search URLs for any query string &mdash; email address, username, domain, or phrase. The patterns cover site-specific searches on major professional and social platforms, breach-focused queries (<code>leaked OR breach OR dump</code>), document-type searches (<code>filetype:pdf</code>, <code>filetype:csv</code>, <code>filetype:xlsx</code>), and forum/paste site queries.</p>
+<pre>openosint &gt; investigate target@example.com
+
+  &rarr; generate_dorks('target@example.com')
+  [+] "target@example.com" site:linkedin.com
+      https://www.google.com/search?q=%22target%40example.com%22+site%3Alinkedin.com
+  [+] "target@example.com" leaked OR breach OR dump
+      https://www.google.com/search?q=...
+  [12 URLs total generated]</pre>
+<p>The tool generates URLs only &mdash; it does not open browsers, scrape Google, or parse results. This is intentional. Automated Google queries trigger CAPTCHAs rapidly and violate Google's ToS at scale. The URLs are for the analyst to open manually. The value is in generating the complete set systematically rather than constructing each URL by hand during a time-pressured investigation.</p>
+<p>In the OpenOSINT AI agent loop, <code>generate_dorks</code> is typically the first tool called for any investigation target. The agent notes the URLs in its working context and includes them in the final report. The analyst opens them as a separate step.</p>
+</div>
+
+<h2>Beyond Google: Infrastructure search engines</h2>
+<div class="indent">
+<p>For infrastructure recon, Shodan and Censys outperform Google because they index services and certificates, not web pages. Shodan scans the internet for open ports and service banners. The query <code>ssl:"target.com"</code> finds every server presenting target.com in its TLS certificate &mdash; including servers that are never linked from a webpage. <code>http.title:"Admin Panel" org:"Target Company"</code> finds administrative interfaces by page title without needing to know the domain.</p>
+<p>Censys focuses on certificate transparency. Every subdomain that ever received a TLS certificate appears in Censys even if the subdomain is no longer DNS-resolvable. This catches decommissioned infrastructure that still has live services, which Google would never index.</p>
+<p>The combined approach for thorough coverage: use Google dorks for page-level content exposure, Shodan/Censys for infrastructure discovery, and GitHub code search for credential and configuration leakage. Each covers a different layer. For comprehensive attack surface mapping, start with <a href="/blog/subdomain-enumeration.html">subdomain enumeration</a> to build the domain inventory, then apply dorks and infrastructure search against each confirmed subdomain. See the <a href="/blog/osint-api-automation.html">OSINT API automation guide</a> for integrating Shodan and Censys programmatically into a pipeline.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/subdomain-enumeration.html">Subdomain enumeration</a> &mdash; build the target domain list before running dorks</li>
+<li><a href="/blog/osint-for-bug-bounty.html">OSINT for bug bounty hunters</a> &mdash; integrating dorks into a full recon workflow</li>
+<li><a href="/blog/osint-api-automation.html">Automating OSINT with APIs</a> &mdash; Shodan and Censys as programmatic alternatives to Google</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

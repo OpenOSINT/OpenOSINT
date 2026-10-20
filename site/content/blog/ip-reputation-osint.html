@@ -1,0 +1,116 @@
+---
+title: 'IP Reputation OSINT: AbuseIPDB & IP2Location Guide'
+seo_title: IP reputation OSINT with AbuseIPDB and IP2Location
+description: Combine AbuseIPDB confidence scores with IP2Location VPN, proxy and Tor detection to judge an IP address, with a two-step workflow.
+date: '2026-05-18'
+modified: '2026-05-18'
+---
+<div class="indent">
+<p><b>Using AbuseIPDB and IP2Location for Layered Intelligence</b></p>
+</div>
+
+<h2>Why IP reputation matters</h2>
+<div class="indent">
+<p>IP addresses appear constantly in OSINT work: server logs, email headers, phishing infrastructure, C2 callbacks, and leaked data sets. Knowing whether an IP belongs to a VPN provider, a Tor exit network, or has been reported for abuse changes how you interpret everything else you find.</p>
+<p>OpenOSINT provides two complementary tools for this: <code>search_abuseipdb</code> for crowd-sourced abuse data and <code>search_ip2location</code> for enriched geolocation and infrastructure classification. Running both gives you a complete picture.</p>
+</div>
+
+<h2>AbuseIPDB — Crowd-sourced abuse reports</h2>
+<div class="indent">
+<p>The <code>search_abuseipdb</code> tool queries the <a href="https://www.abuseipdb.com" target="_blank" rel="noopener">AbuseIPDB</a> v2 API. The database aggregates reports from security teams, honeypots, and network operators worldwide.</p>
+
+<p><b>Key fields returned:</b></p>
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Abuse Confidence Score</td><td>0&ndash;100%. Higher = more confirmed abuse reports</td></tr>
+<tr><td>Total Reports</td><td>Number of individual abuse reports in the database</td></tr>
+<tr><td>Country / ISP / Domain</td><td>Basic attribution data</td></tr>
+<tr><td>Last Reported</td><td>Timestamp of most recent report</td></tr>
+</table>
+
+<p>A warning is displayed when the confidence score exceeds 50%.</p>
+
+<pre>$ openosint abuseipdb 198.51.100.1
+
+[AbuseIPDB] IP: 198.51.100.1
+[AbuseIPDB] Abuse Confidence Score: 87%
+[AbuseIPDB] Total Reports: 143
+[AbuseIPDB] Country: US
+[AbuseIPDB] ISP: Example ISP LLC
+[AbuseIPDB] Last Reported: 2026-05-20T14:33:00+00:00
+&#9888;&#65039;  HIGH ABUSE CONFIDENCE &mdash; flagged by AbuseIPDB</pre>
+
+<p><b>Required:</b> <code>ABUSEIPDB_API_KEY</code> environment variable &mdash; <a href="https://www.abuseipdb.com/register" target="_blank" rel="noopener">register for a free key</a>.</p>
+</div>
+
+<h2>IP2Location — Enriched geolocation &amp; infrastructure</h2>
+<div class="indent">
+<p>The <code>search_ip2location</code> tool (sponsored integration) queries the <a href="https://www.ip2location.io" target="_blank" rel="noopener">IP2Location.io</a> API. Beyond standard geolocation it classifies the IP's infrastructure type.</p>
+
+<p><b>Key fields returned:</b></p>
+<table>
+<tr><th>Field</th><th>What it means</th></tr>
+<tr><td>Country / Region / City</td><td>Physical location to city level</td></tr>
+<tr><td>ISP / Domain / ASN</td><td>Network operator and autonomous system</td></tr>
+<tr><td>Proxy / VPN / TOR</td><td>Infrastructure classification (Security Plan)</td></tr>
+<tr><td>Datacenter</td><td>Whether hosted in a cloud or datacenter range</td></tr>
+<tr><td>Threat</td><td>Aggregate threat classification</td></tr>
+</table>
+
+<pre>$ openosint ip2location 8.8.8.8
+
+[IP2Location] Country: United States (US)
+[IP2Location] City: Mountain View, California
+[IP2Location] ISP: Google LLC
+[IP2Location] ASN: AS15169 Google LLC
+[IP2Location] VPN: No  |  Proxy: No  |  TOR: No
+[IP2Location] Datacenter: Yes
+[IP2Location] Threat: clean</pre>
+
+<p><b>Required:</b> <code>IP2LOCATION_API_KEY</code> environment variable &mdash; <a href="https://www.ip2location.io/pricing" target="_blank" rel="noopener">get one here</a>.</p>
+</div>
+
+<h2>Running both tools in sequence</h2>
+<div class="indent">
+<p>For any IP encountered during an investigation, running both tools gives you:</p>
+<ol>
+<li><b>Hard abuse data</b> &mdash; reports from real incidents (AbuseIPDB)</li>
+<li><b>Infrastructure classification</b> &mdash; is it a VPN, proxy, or datacenter? (IP2Location)</li>
+<li><b>Full geolocation</b> &mdash; city, ASN, ISP for corroboration</li>
+</ol>
+<p>In the OpenOSINT REPL, the AI agent chains both tools automatically:</p>
+<pre>openosint &gt; investigate 198.51.100.1
+
+  &rarr; search_ip('198.51.100.1')
+  &rarr; search_ip2location('198.51.100.1')
+  &rarr; search_abuseipdb('198.51.100.1')
+
+  Summary: This IP is hosted at Example ISP (US). AbuseIPDB shows
+  143 reports with 87% abuse confidence. Last reported 4 days ago.
+  High-risk &mdash; treat with significant suspicion.</pre>
+</div>
+
+<h2>Practical applications</h2>
+<div class="indent">
+<table>
+<tr><th>Scenario</th><th>What to look for</th></tr>
+<tr><td>Phishing investigation</td><td>Datacenter flag + high abuse score = likely bulk-send infrastructure</td></tr>
+<tr><td>Attacker attribution</td><td>VPN/Tor flag = deliberate anonymisation layer</td></tr>
+<tr><td>Log analysis</td><td>High abuse score for a connection source = credible threat</td></tr>
+<tr><td>Infrastructure mapping</td><td>ASN + datacenter flag identifies hosting provider</td></tr>
+</table>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/tools/">Full tools reference</a> &mdash; parameters, output format, and the full tool set</li>
+<li><a href="/blog/osint-with-mcp.html">Claude Desktop setup guide</a> &mdash; run these tools from Claude Desktop automatically</li>
+<li><a href="/docs/">OpenOSINT documentation</a> &mdash; complete manual</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

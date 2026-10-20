@@ -1,73 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Using Claude Code for OSINT: Investigations from Your Terminal</title>
-<meta name="description" content="Claude Code combined with OpenOSINT's MCP server turns your terminal into a full-stack OSINT investigator. Setup guide, example session transcripts, scripting patterns, and known limitations.">
-<meta name="keywords" content="Claude Code OSINT, Claude Code MCP, terminal OSINT, AI OSINT terminal, Claude Code investigation, OpenOSINT Claude Code, MCP OSINT terminal">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using Claude Code for OSINT from your terminal</title>
+<meta name="description" content="Add OpenOSINT to Claude Code as an MCP server, run an example investigation, script repeatable workflows, and know when the REPL is the better tool.">
 <link rel="canonical" href="https://openosint.tech/blog/claude-code-osint.html">
-<meta property="og:title" content="Using Claude Code for OSINT: Investigations from Your Terminal">
-<meta property="og:description" content="Claude Code + OpenOSINT MCP server: full-stack OSINT from the terminal. Setup, example sessions, scripting, and limitations.">
-<meta property="og:url" content="https://openosint.tech/blog/claude-code-osint.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Using Claude Code for OSINT from your terminal">
+<meta property="og:description" content="Add OpenOSINT to Claude Code as an MCP server, run an example investigation, script repeatable workflows, and know when the REPL is the better tool.">
+<meta property="og:url" content="https://openosint.tech/blog/claude-code-osint.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Using Claude Code for OSINT: Investigations from Your Terminal">
-<meta name="twitter:description" content="Configure OpenOSINT as an MCP server in Claude Code for terminal-based OSINT investigations with full AI chaining.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Using Claude Code for OSINT from your terminal">
+<meta name="twitter:description" content="Add OpenOSINT to Claude Code as an MCP server, run an example investigation, script repeatable workflows, and know when the REPL is the better tool.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "Using Claude Code for OSINT: How to Run Investigations from Your Terminal",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "headline": "Using Claude Code for OSINT: Investigations from Your Terminal",
+  "description": "Add OpenOSINT to Claude Code as an MCP server, run an example investigation, script repeatable workflows, and know when the REPL is the better tool.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/claude-code-osint.html",
-  "description": "Claude Code combined with OpenOSINT's MCP server turns your terminal into a full-stack OSINT investigator. Setup guide, example session transcripts, scripting patterns, and known limitations."
+  "mainEntityOfPage": "https://openosint.tech/blog/claude-code-osint.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>USING CLAUDE CODE FOR OSINT</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>WHAT CLAUDE CODE ADDS TO THE OSINT PICTURE</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Using Claude Code for OSINT: Investigations from Your Terminal</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <h2>What Claude code adds to the OSINT picture</h2>
 <div class="indent">
 <p>Claude Code is a terminal AI assistant with access to your filesystem, shell, and MCP tools. When OpenOSINT is configured as its MCP server, it can run any of the 14 OSINT tools on demand &mdash; but it can also do things the OpenOSINT REPL alone cannot: write Python scripts for custom workflows, read and parse output files from previous investigations, cross-reference findings against local data, and generate formatted reports written directly to disk. The combination of terminal AI and OSINT toolset is qualitatively more powerful than either in isolation.</p>
 <p>The critical distinction from using the OpenOSINT REPL directly: Claude Code operates in your workspace. It can read a file of targets, run investigations against each, and write structured results to JSON &mdash; all in one session without you handling the file I/O manually. It also generates Python scripts on request, letting you build reusable automation around OpenOSINT's tool functions.</p>
 </div>
 
-<h2>CONFIGURING OPENOSINT AS AN MCP SERVER</h2>
+<h2>Configuring OpenOSINT as an MCP server</h2>
 <div class="indent">
-<p>Install OpenOSINT at a known absolute path:</p>
-<pre>git clone https://github.com/OpenOSINT/OpenOSINT.git
-cd OpenOSINT
-pip install -e .</pre>
+<p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>; nothing else is needed. Passive tools (20) are exposed by default; append <code>--allow-active</code> to the command for all 25.</p>
 <p>Register with Claude Code:</p>
-<pre>claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py
+<pre>claude mcp add openosint -- uvx --from openosint openosint-mcp
 claude mcp list
-# openosint  python /path/to/mcp_server.py  (connected)</pre>
+# openosint: uvx --from openosint openosint-mcp - ✓ Connected</pre>
 <p>Set environment variables before launching so API-dependent tools work:</p>
 <pre>export ANTHROPIC_API_KEY=sk-ant-...
 export ABUSEIPDB_API_KEY=...       # IP abuse reputation
@@ -77,7 +102,7 @@ claude</pre>
 <p>All 14 OpenOSINT tools now appear in Claude Code's tool palette. Claude Code calls them with JSON parameters, receives real Python-executed output, and uses results to decide next steps. No simulation, no fabrication &mdash; the same structural guarantee as the OpenOSINT REPL.</p>
 </div>
 
-<h2>EXAMPLE INVESTIGATION SESSION</h2>
+<h2>Example investigation session</h2>
 <div class="indent">
 <p>Investigating an unknown suspicious domain from the terminal:</p>
 <pre>$ claude
@@ -108,7 +133,7 @@ infrastructure. High probability of malicious use.</pre>
 <p>The full investigation ran in under 90 seconds. No manual tool selection, no copying output between commands, no context switching.</p>
 </div>
 
-<h2>WRITING CUSTOM WORKFLOWS</h2>
+<h2>Writing custom workflows</h2>
 <div class="indent">
 <p>Claude Code's most powerful OSINT capability: generating Python automation for tasks OpenOSINT doesn't natively cover. Ask in plain language:</p>
 <pre>&gt; Write a Python script that reads domains from targets.txt,
@@ -129,13 +154,13 @@ async def bulk_whois(domains: list[str]) -> list[dict]:
 <p>This pattern extends to any workflow: credential exposure monitoring, bulk IP reputation checks, subdomain enumeration pipelines. The combination of AI code generation and live OSINT tool access makes Claude Code a fast way to build investigation infrastructure that doesn't exist yet.</p>
 </div>
 
-<h2>WHEN TO USE CLAUDE CODE VS. THE OPENOSINT REPL</h2>
+<h2>When to use Claude code vs. the OpenOSINT REPL</h2>
 <div class="indent">
 <p>Use Claude Code when investigations involve file I/O (reading target lists, writing results to disk), custom scripting, multi-session work where results need to persist, or workflows that combine OSINT with local data or other tools already in PATH. Claude Code's terminal integration lets it run arbitrary shell commands alongside tool calls.</p>
 <p>Use the OpenOSINT REPL for interactive single-session investigations, quick lookups, and exploratory work where you don't know ahead of time what you're looking for. The REPL's Rich-rendered markdown output and slash commands (<code>/history</code>, <code>/export</code>, <code>/model</code>) are optimized for the investigative workflow. The MCP server beneath both is identical &mdash; tool availability and execution quality are the same. Only the interaction model differs.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/mcp-protocol-explained.html">Model Context Protocol explained</a> &mdash; the transport layer connecting Claude Code to OpenOSINT</li>
@@ -146,19 +171,44 @@ async def bulk_whois(domains: list[str]) -> list[dict]:
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

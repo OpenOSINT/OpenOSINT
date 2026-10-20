@@ -1,0 +1,74 @@
+# OpenOSINT
+> MCP-native Open Source Intelligence framework for AI agents. Autonomous OSINT investigations from your terminal.
+
+## Overview
+OpenOSINT is a modular OSINT framework that exposes 21 intelligence-gathering tools to large language models via the Model Context Protocol (MCP). It also operates as a standalone CLI, interactive REPL, and browser Web UI for direct human use. No LLM is embedded — OpenOSINT provides the tool surface that an MCP-compatible client (e.g. Claude Code, Claude Desktop) drives autonomously.
+
+## Installation
+- PyPI: `pip install openosint`
+- Source: `git clone https://github.com/OpenOSINT/OpenOSINT.git && pip install -e .`
+- Python 3.10+ required
+
+## Claude Code MCP setup
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/). Passive tools only (20) by default; add `--allow-active` for all 25.
+`claude mcp add openosint -- uvx --from openosint openosint-mcp`
+With a key: `claude mcp add openosint -e SHODAN_API_KEY=your-key -- uvx --from openosint openosint-mcp`
+Optional, enables active tools (noisy; see README "Passive by default"): append `--allow-active` or set OPENOSINT_ALLOW_ACTIVE=1
+Claude Desktop / Cursor: `{"mcpServers": {"openosint": {"command": "uvx", "args": ["--from", "openosint", "openosint-mcp"], "env": {}}}}`
+
+## Available MCP tools (20)
+- `search_email` — enumerate online services registered against an email address (via holehe)
+- `search_username` — search a username across 400+ platforms (via sherlock); noisy, off by default (--allow-active)
+- `search_breach` — check if an email appears in known data breaches (HaveIBeenPwned v3 API, requires HIBP_API_KEY)
+- `search_whois` — retrieve WHOIS registration data for a domain
+- `search_ip` — geolocation, ASN, hostname, and org data for an IP address (via ipinfo.io)
+- `search_domain` — enumerate subdomains of a target domain (via sublist3r)
+- `generate_dorks` — generate 12 targeted Google dork URLs for any target string
+- `search_paste` — search Pastebin dumps for mentions of an email or username
+- `search_phone` — carrier, country, and line type data for a phone number (via phoneinfoga)
+- `search_shodan` — open ports, banners, and CVEs from Shodan (requires SHODAN_API_KEY)
+- `search_virustotal` — file/URL/IP verdicts from 70+ antivirus engines (requires VIRUSTOTAL_API_KEY)
+- `search_censys` — internet-facing infrastructure and certificate search (requires CENSYS_API_ID + CENSYS_SECRET)
+- `search_ip2location` — enhanced IP intelligence: geolocation, ISP, VPN/Proxy/Tor/datacenter flags, sponsored (requires IP2LOCATION_API_KEY)
+- `search_abuseipdb` — IP abuse confidence score, reports, country, ISP (requires ABUSEIPDB_API_KEY)
+- `search_github` — GitHub profile, repos, commit-discovered emails, username/keyword search
+- `search_dns` — A/AAAA/MX/NS/TXT/CNAME/SOA records plus SPF, DMARC, DKIM analysis
+- `search_rdap` — domain registrar, registration/expiry dates, name servers and status via RDAP (keyless)
+- `search_gdelt_geo` — recent worldwide geolocated news (headline, link, place) from the GDELT 15-minute GKG feed, GeoJSON output
+- `search_dorks_live` — live Google search results for dork queries via [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=site&utm_medium=llms) SERP API
+- `scrape_url` — fetch any URL bypassing Cloudflare/CAPTCHA via Bright Data Web Unlocker, returns clean Markdown
+- `search_footprint` — entity-type-aware public search-engine footprint (email/username/domain/phone/name), returns structured results + Entity Correlation Graph nodes/edges
+
+## Optional environment variables
+- `HIBP_API_KEY` — HaveIBeenPwned API key for breach search
+- `IPINFO_TOKEN` — ipinfo.io token for higher rate limits
+- `SHODAN_API_KEY`, `VIRUSTOTAL_API_KEY`, `CENSYS_API_ID`, `CENSYS_SECRET`, `IP2LOCATION_API_KEY`, `ABUSEIPDB_API_KEY` — per-tool API keys, see README for full list
+
+## External binary dependencies
+holehe, sherlock, sublist3r, phoneinfoga — must be present in PATH
+
+## Documentation
+- [Overview](https://openosint.tech/docs/) — what OpenOSINT is and the three ways to use it
+- [Install](https://openosint.tech/docs/install/) — pip, pipx, uv, Docker, extras and how to verify
+- [Quickstart](https://openosint.tech/docs/quickstart/) — first investigation with the CLI and REPL
+- [MCP server](https://openosint.tech/docs/mcp/) — Claude Desktop, Claude Code, Cursor and other MCP clients
+- [Web UI](https://openosint.tech/docs/web-ui/) — local chat, globe and graph
+- [Configuration](https://openosint.tech/docs/configuration/) — API keys and environment variables
+- [Safety](https://openosint.tech/docs/safety/) — passive mode, tool-call cap, noise labels, responsible use
+- [Exposure report](https://openosint.tech/docs/exposure/) — `openosint exposure` external domain grade (beta)
+- [Entity graph](https://openosint.tech/docs/entity-graph/) — chat graph view and the optional graph store
+- [Troubleshooting](https://openosint.tech/docs/troubleshooting/) — common errors and fixes
+- [Tools reference](https://openosint.tech/tools/) — every tool, its noise level and the key it needs
+
+## Hosted products
+The engine is open source; these hosted products are built on it:
+- [OpenOSINT Monitor](https://app.openosint.tech/monitor?utm_source=llms&utm_medium=llms-txt&utm_campaign=monitor) — weekly external checks of a domain's email authentication, TLS, security headers and lookalike domains, with an email when something changes. Free for one domain.
+- [OpenOSINT Diligence](https://app.openosint.tech/diligence?utm_source=llms&utm_medium=llms-txt&utm_campaign=diligence) — official company records compared with the company's public footprint, each signal with its source and retrieval time.
+
+## License
+MIT
+
+## Links
+- GitHub: https://github.com/OpenOSINT/OpenOSINT
+- PyPI: https://pypi.org/project/openosint/
+- Docs: https://openosint.tech/

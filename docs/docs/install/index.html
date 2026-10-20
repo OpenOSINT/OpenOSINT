@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Install OpenOSINT with pip, pipx, uv or Docker</title>
+<meta name="description" content="Install OpenOSINT with pip install openosint (Python 3.10+), pipx, uv or Docker, then check it works with openosint dns example.com. No API key needed.">
+<link rel="canonical" href="https://openosint.tech/docs/install/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Install OpenOSINT with pip, pipx, uv or Docker">
+<meta property="og:description" content="Install OpenOSINT with pip install openosint (Python 3.10+), pipx, uv or Docker, then check it works with openosint dns example.com. No API key needed.">
+<meta property="og:url" content="https://openosint.tech/docs/install/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Install OpenOSINT with pip, pipx, uv or Docker">
+<meta name="twitter:description" content="Install OpenOSINT with pip install openosint (Python 3.10+), pipx, uv or Docker, then check it works with openosint dns example.com. No API key needed.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Install",
+      "item": "https://openosint.tech/docs/install/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/" aria-current="page">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/" aria-current="page">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Install</li>
+        </ol>
+      </nav>
+      <h1>Install OpenOSINT</h1>
+      <h2 id="one-command">One command</h2>
+<pre><code class="language-bash">pip install openosint
+</code></pre>
+<p>OpenOSINT needs <strong>Python 3.10 or newer</strong>. It starts with no API keys and no <code>.env</code> file; keyless tools work immediately.</p>
+<h2 id="other-ways-to-install">Other ways to install</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pipx (isolated CLI)</td>
+<td><code>pipx install openosint</code></td>
+</tr>
+<tr>
+<td>uv, installed</td>
+<td><code>uv tool install openosint</code></td>
+</tr>
+<tr>
+<td>uv, no install</td>
+<td><code>uvx openosint web</code></td>
+</tr>
+<tr>
+<td>From source</td>
+<td><code>git clone https://github.com/OpenOSINT/OpenOSINT.git</code>, then <code>pip install -e .</code> inside it</td>
+</tr>
+<tr>
+<td>Docker</td>
+<td><code>docker compose up --build</code> from a source checkout; the web UI is then at <code>http://localhost:8080</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>With Docker, one-off commands run as <code>docker compose run --rm openosint email target@example.com --json</code>. Reports go to <code>./reports/</code>; the graph database and session history live in the <code>openosint-data</code> volume.</p>
+<h2 id="optional-extras">Optional extras</h2>
+<p>Install an extra with <code>pip install "openosint[name]"</code>.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Extra</th>
+<th>Adds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ollama</code></td>
+<td>Local models through Ollama</td>
+</tr>
+<tr>
+<td><code>openai</code></td>
+<td>Any OpenAI-compatible endpoint</td>
+</tr>
+<tr>
+<td><code>shodan</code>, <code>censys</code></td>
+<td>The Shodan and Censys API clients</td>
+</tr>
+<tr>
+<td><code>socks</code></td>
+<td>SOCKS proxy support</td>
+</tr>
+<tr>
+<td><code>graph</code></td>
+<td>The FollowTheMoney library for <code>.ftm</code> export (builds PyICU, needs libicu and a C++ compiler)</td>
+</tr>
+<tr>
+<td><code>graph-dedup</code></td>
+<td>Same-entity scoring for the graph (Python 3.11+)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="external-programs">External programs</h2>
+<p>Four tools call a separate program, which must be on your <code>PATH</code>. They are noisy or unverified, so they are off until you pass <code>--allow-active</code> (see <a href="/docs/safety/">Safety</a>).</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Program</th>
+<th>Install</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>search_email</code></td>
+<td>holehe</td>
+<td><code>pip install holehe</code></td>
+</tr>
+<tr>
+<td><code>search_username</code></td>
+<td>sherlock</td>
+<td><code>pip install sherlock-project</code></td>
+</tr>
+<tr>
+<td><code>search_domain</code></td>
+<td>sublist3r</td>
+<td><code>pip install sublist3r</code></td>
+</tr>
+<tr>
+<td><code>search_phone</code></td>
+<td>phoneinfoga</td>
+<td>see its project page</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Docker image already includes holehe, sherlock and sublist3r.</p>
+<h2 id="check-that-it-works">Check that it works</h2>
+<pre><code class="language-bash">openosint --help
+openosint dns example.com
+</code></pre>
+<p><code>--help</code> lists every command. The <code>dns</code> lookup needs no key and no AI provider; it prints the domain's records and its SPF and DMARC analysis. There is no <code>--version</code> flag: run <code>pip show openosint</code>, or look at the banner when you start the REPL.</p>
+<h2 id="next">Next</h2>
+<p><a href="/docs/quickstart/">Run your first investigation</a>.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/" rel="prev"><small>Previous</small>Overview</a><a class="next" href="/docs/quickstart/" rel="next"><small>Next</small>Quickstart</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/install.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

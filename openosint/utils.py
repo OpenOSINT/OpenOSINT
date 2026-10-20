@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -22,12 +23,54 @@ from openosint.tools.exceptions import ToolNotFoundError, ToolTimeoutError
 logger = logging.getLogger(__name__)
 
 
+# Upstream banners, social and donation lines, and promotions that a wrapped CLI prints
+# around its results. They are not findings: left in, they reach the model and the user as
+# if the tool had reported them. Credit to the tool is OpenOSINT's own attribution_line().
+_PROMO_LINE_RE = re.compile(
+    r"go deeper than a username"  # sherlock -> OSINTSearch
+    r"|try osintsearch"  # sherlock -> OSINTSearch
+    r"|^twitter\s*:"  # holehe credit
+    r"|^github\s*:"  # holehe credit
+    r"|^for btc donations"  # holehe donation address
+    r"|coded by ahmed aboul-ela",  # sublist3r banner
+    re.IGNORECASE,
+)
+
+_UPSTREAM_URLS = {
+    "sherlock": "https://github.com/sherlock-project/sherlock",
+    "holehe": "https://github.com/megadose/holehe",
+    "sublist3r": "https://github.com/aboul3la/Sublist3r",
+}
+
+
+def strip_promotions(raw: str) -> str:
+    """Drop upstream banner, social, donation and promotion lines from a wrapped tool's stdout."""
+    kept = [line for line in raw.splitlines() if not _PROMO_LINE_RE.search(line.strip())]
+    return "\n".join(kept).strip()
+
+
+def attribution_line(tool: str) -> str:
+    """OpenOSINT's own credit line for the open-source tool behind a result."""
+    return f"Results via {tool} ({_UPSTREAM_URLS[tool]})"
+
+
 class SubprocessResult(NamedTuple):
     """Result of a completed external subprocess call."""
 
     stdout: str
     stderr: str
     return_code: int
+
+
+def find_binary(binary: str) -> str | None:
+    """Resolve *binary* the way tools run it: this interpreter's bin dir, then PATH.
+
+    The interpreter's own bin dir comes first so console scripts installed next
+    to OpenOSINT (a venv, or the environment `uvx` builds) are found without
+    being on the user's PATH.
+    """
+    venv_bin = str(Path(sys.executable).parent)
+    return shutil.which(binary, path=os.pathsep.join([venv_bin, os.environ.get("PATH", "")]))
 
 
 async def run_subprocess(
@@ -61,11 +104,7 @@ async def run_subprocess(
     ToolTimeoutError
         When the process exceeds timeout_seconds.
     """
-    # Prepend the venv/uv-tool bin dir so co-installed tools are found even
-    # when the venv is not activated and its bin is absent from the user's PATH.
-    venv_bin = str(Path(sys.executable).parent)
-    search_path = os.pathsep.join([venv_bin, os.environ.get("PATH", "")])
-    resolved = shutil.which(binary, path=search_path)
+    resolved = find_binary(binary)
     if not resolved:
         detail = f" {install_hint}" if install_hint else ""
         raise ToolNotFoundError(f"'{binary}' is not installed or not in PATH.{detail}")

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT quickstart: first investigation in 5 minutes</title>
+<meta name="description" content="Run a DNS lookup and an exposure report with no API key, then start the AI REPL with Anthropic, Ollama or an OpenAI-compatible endpoint.">
+<link rel="canonical" href="https://openosint.tech/docs/quickstart/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT quickstart: first investigation in 5 minutes">
+<meta property="og:description" content="Run a DNS lookup and an exposure report with no API key, then start the AI REPL with Anthropic, Ollama or an OpenAI-compatible endpoint.">
+<meta property="og:url" content="https://openosint.tech/docs/quickstart/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT quickstart: first investigation in 5 minutes">
+<meta name="twitter:description" content="Run a DNS lookup and an exposure report with no API key, then start the AI REPL with Anthropic, Ollama or an OpenAI-compatible endpoint.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Quickstart",
+      "item": "https://openosint.tech/docs/quickstart/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/" aria-current="page">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/" aria-current="page">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Quickstart</li>
+        </ol>
+      </nav>
+      <h1>Quickstart</h1>
+      <p>This takes about five minutes. The first two steps need no API key and no AI provider.</p>
+<h2 id="1-run-a-tool-directly">1. Run a tool directly</h2>
+<pre><code class="language-bash">openosint dns example.com
+</code></pre>
+<pre><code class="language-text">[*] DNS lookup: example.com
+============================================================
+======================= SCAN RESULTS =======================
+============================================================
+[DNS] Domain: example.com
+[DNS] A: 104.20.23.154, 172.66.147.243
+[DNS] NS: elliott.ns.cloudflare.com., hera.ns.cloudflare.com.
+[DNS] SPF: v=spf1 -all
+[DNS] DMARC: &quot;v=DMARC1;p=reject;sp=reject;adkim=s;aspf=s&quot;
+[DNS] DKIM not checked: selector probing is enumeration (needs --allow-active).
+</code></pre>
+<p>Output is trimmed here; the addresses will differ. The last line shows passive mode at work: DKIM selector probing is enumeration, so it waits for <code>--allow-active</code>.</p>
+<p>Add <code>--json</code> before the command for structured output: <code>openosint --json email target@example.com</code>.</p>
+<h2 id="2-grade-a-domains-external-exposure">2. Grade a domain's external exposure</h2>
+<pre><code class="language-bash">openosint exposure example.com --checks email,registration
+</code></pre>
+<pre><code class="language-text">Not graded: only some checks were selected (not run: tls, http_headers).
+
+Checks:
+  email         OK       [passive]
+  registration  OK       [passive]
+
+Findings:
+  [LOW] DMARC has no aggregate report address (dmarc_no_rua)
+      fix: Add rua=mailto:... so you receive reports on who sends mail as your domain.
+</code></pre>
+<p>These two checks never contact the target. See <a href="/docs/exposure/">Exposure report</a>.</p>
+<h2 id="3-start-the-interactive-repl">3. Start the interactive REPL</h2>
+<p>The REPL lets an AI agent choose and chain tools. It needs one provider:</p>
+<pre><code class="language-bash">export ANTHROPIC_API_KEY=sk-ant-...
+openosint
+</code></pre>
+<p>No Anthropic key? Use a local model or any OpenAI-compatible endpoint instead:</p>
+<pre><code class="language-bash">openosint --provider ollama --ollama-model llama3.2
+openosint --provider openai --openai-base-url http://localhost:4000/v1
+</code></pre>
+<p>The banner shows the version, the provider and the current limits: passive mode and the maximum number of tool calls per request. Then type a target or a question, for example <code>investigate target@example.com</code>.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>REPL command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a target or question</td>
+<td>Starts an investigation</td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>Lists the available tools</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>Shows the current configuration</td>
+</tr>
+<tr>
+<td><code>save</code></td>
+<td>Saves the last report to <code>reports/</code></td>
+</tr>
+<tr>
+<td><code>history</code></td>
+<td>Browses saved sessions</td>
+</tr>
+<tr>
+<td><code>clear</code></td>
+<td>Clears conversation memory</td>
+</tr>
+<tr>
+<td><code>help</code>, <code>exit</code></td>
+<td>Shows help, quits</td>
+</tr>
+</tbody>
+</table></div>
+<p>Every result in the session comes from a real tool call and is shown with that call. Treat the AI's summary as a lead to verify.</p>
+<h2 id="4-run-a-fixed-recipe-without-ai">4. Run a fixed recipe without AI</h2>
+<pre><code class="language-bash">openosint playbook domain example.com
+</code></pre>
+<p>Playbooks run a fixed list of tools and write a Markdown report. The bundled recipes are <code>domain</code>, <code>ip</code> and <code>person</code>.</p>
+<h2 id="next">Next</h2>
+<ul>
+<li><a href="/docs/mcp/">Use it from Claude or another MCP client</a></li>
+<li><a href="/docs/configuration/">Add API keys</a></li>
+<li><a href="/docs/safety/">Understand passive mode</a></li>
+</ul>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/install/" rel="prev"><small>Previous</small>Install</a><a class="next" href="/docs/mcp/" rel="next"><small>Next</small>MCP server</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/quickstart.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

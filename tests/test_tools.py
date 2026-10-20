@@ -115,6 +115,50 @@ class TestSearchUsernameMissingBinary:
 
 
 # ---------------------------------------------------------------------------
+# search_username — structured sherlock results (used by the Apify Actor)
+# ---------------------------------------------------------------------------
+
+
+class TestSearchUsernameStructured:
+    def test_parses_claimed_sites_only(self, monkeypatch):
+        pytest.importorskip("sherlock_project", reason="requires sherlock-project (pip install sherlock-project)")
+        from sherlock_project.result import QueryResult, QueryStatus
+
+        from openosint.tools.search_username import _run_sherlock_structured
+
+        raw_results = {
+            "GitHub": {
+                "status": QueryResult("alice", "GitHub", "https://github.com/alice", QueryStatus.CLAIMED),
+            },
+            "SomeSite": {
+                "status": QueryResult("alice", "SomeSite", "https://somesite.com/alice", QueryStatus.AVAILABLE),
+            },
+        }
+        monkeypatch.setattr(
+            "sherlock_project.sherlock.sherlock", lambda *a, **k: raw_results
+        )
+
+        found = _run_sherlock_structured("alice", site_data={}, timeout_seconds=10)
+
+        assert found == [
+            {"username": "alice", "platform": "GitHub", "url": "https://github.com/alice", "category": None}
+        ]
+
+    def test_wraps_sherlock_exceptions(self, monkeypatch):
+        pytest.importorskip("sherlock_project", reason="requires sherlock-project (pip install sherlock-project)")
+        from openosint.tools.exceptions import ToolExecutionError
+        from openosint.tools.search_username import _run_sherlock_structured
+
+        def _boom(*_a, **_k):
+            raise RuntimeError("network is down")
+
+        monkeypatch.setattr("sherlock_project.sherlock.sherlock", _boom)
+
+        with pytest.raises(ToolExecutionError):
+            _run_sherlock_structured("alice", site_data={}, timeout_seconds=10)
+
+
+# ---------------------------------------------------------------------------
 # search_domain — binary missing
 # ---------------------------------------------------------------------------
 
@@ -315,6 +359,43 @@ class TestSearchIpFormatting:
         result = _format_ip_results(data, "8.8.8.8")
         assert "8.8.8.8" in result
         assert "Google" in result
+
+
+# ---------------------------------------------------------------------------
+# Shared proxy default (search_gdelt_geo's own tests live in test_search_gdelt_geo.py)
+# ---------------------------------------------------------------------------
+
+
+class TestProxyStillAppliesToOtherTools:
+    @pytest.fixture(autouse=True)
+    def _reset_proxy_state(self, monkeypatch):
+        from openosint import proxy
+
+        proxy.set_cli_proxy_url(None)
+        monkeypatch.delenv(proxy._ENV_VAR, raising=False)
+        yield
+        proxy.set_cli_proxy_url(None)
+
+    async def test_other_tool_still_uses_configured_proxy(self, monkeypatch):
+        """search_ip stands in for every other proxied tool — the shared
+        default in openosint/proxy.py must be untouched by the GDELT change."""
+        from openosint import proxy
+        from openosint.tools.search_ip import run_ip_osint
+
+        monkeypatch.setenv(proxy._ENV_VAR, "http://proxyhost:8080")
+        mock_response = AsyncMock()
+        mock_response.status_code = 200
+        mock_response.json = lambda: {"ip": "8.8.8.8"}
+
+        with patch(
+            "openosint.tools.search_ip.requests.get", return_value=mock_response
+        ) as mock_get:
+            await run_ip_osint("8.8.8.8", timeout_seconds=5)
+
+        assert mock_get.call_args.kwargs["proxies"] == {
+            "http": "http://proxyhost:8080",
+            "https": "http://proxyhost:8080",
+        }
 
 
 # ---------------------------------------------------------------------------

@@ -1,62 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Email OSINT: Enumeration, Breach Detection, and What You Can Find</title>
-<meta name="description" content="Email addresses anchor digital identities across hundreds of platforms. This guide covers holehe account enumeration, HaveIBeenPwned breach detection, and dork generation for deeper investigation.">
-<meta name="keywords" content="email OSINT, holehe, HaveIBeenPwned, email enumeration, breach detection, HIBP, email investigation, account discovery">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Email OSINT: enumeration, breaches and dorks</title>
+<meta name="description" content="Investigate an email address with holehe account enumeration, HaveIBeenPwned breach lookups and generated Google dorks, then chain the results.">
 <link rel="canonical" href="https://openosint.tech/blog/email-osint-guide.html">
-<meta property="og:title" content="Email OSINT: Enumeration, Breach Detection, and What You Can Find">
-<meta property="og:description" content="Email addresses anchor digital identities across hundreds of platforms. This guide covers holehe account enumeration, HaveIBeenPwned breach detection, and dork generation for deeper investigation.">
-<meta property="og:url" content="https://openosint.tech/blog/email-osint-guide.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Email OSINT: enumeration, breaches and dorks">
+<meta property="og:description" content="Investigate an email address with holehe account enumeration, HaveIBeenPwned breach lookups and generated Google dorks, then chain the results.">
+<meta property="og:url" content="https://openosint.tech/blog/email-osint-guide.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Email OSINT: Enumeration, Breach Detection, and What You Can Find">
-<meta name="twitter:description" content="Email addresses anchor digital identities across hundreds of platforms. This guide covers holehe account enumeration, HaveIBeenPwned breach detection, and dork generation for deeper investigation.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Email OSINT: enumeration, breaches and dorks">
+<meta name="twitter:description" content="Investigate an email address with holehe account enumeration, HaveIBeenPwned breach lookups and generated Google dorks, then chain the results.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Email OSINT: Enumeration, Breach Detection, and What You Can Find",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Investigate an email address with holehe account enumeration, HaveIBeenPwned breach lookups and generated Google dorks, then chain the results.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/email-osint-guide.html",
-  "description": "Email addresses anchor digital identities across hundreds of platforms. This guide covers holehe account enumeration, HaveIBeenPwned breach detection, and dork generation for deeper investigation."
+  "mainEntityOfPage": "https://openosint.tech/blog/email-osint-guide.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>EMAIL OSINT: ENUMERATION, BREACH DETECTION, AND WHAT YOU CAN FIND</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<div class="indent">
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Email OSINT: Enumeration, Breach Detection, and What You Can Find</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 6 min read</p>
+    <div class="indent">
 <p>Of all the pivot points in OSINT — name, phone number, IP address, username — an email address returns the most consistent results. It's required for account creation on virtually every platform, it appears in breach databases, it's searchable in paste site archives, and the format (local-part@domain) is often guessable from a name and employer domain. An email address is the identity anchor that links everything else together. Start with one and you have a thread that pulls through dozens of data sources.</p>
 </div>
 
-<h2>EMAIL AS AN IDENTITY ANCHOR</h2>
+<h2>Email as an identity anchor</h2>
 <div class="indent">
 <p>The reason email is so effective as an OSINT starting point is structural: it is the one credential that virtually every online service requires and then permanently associates with an account. Phone numbers change. Names change. Usernames change. Email addresses are changed far less frequently — they appear in years-old breach databases, forum registrations, and newsletter signups that the target has long forgotten. A 2013 Adobe breach entry links an email to a real account that existed at that time, even if the account was deleted the following year.</p>
 
@@ -65,7 +93,7 @@
 <p>The investigation starts with what the email links to. Account enumeration, breach exposure, paste site presence, and dork-generated search results each answer a different question about the email's history and the identity behind it.</p>
 </div>
 
-<h2>ACCOUNT ENUMERATION WITH HOLEHE</h2>
+<h2>Account enumeration with holehe</h2>
 <div class="indent">
 <p>holehe probes 300+ services to determine whether an email address has an account. The technique exploits a consistent asymmetry in web authentication flows: login pages often obscure whether an email is registered (to prevent user enumeration attacks), but password-reset flows cannot. A password-reset form must tell you whether the email is recognized in order to function. holehe submits password-reset requests and reads the response.</p>
 
@@ -84,7 +112,7 @@
 <p>Results should be verified manually. Some platforms change their reset flow behavior between holehe updates, producing false positives or false negatives until the tool's site list is updated. Open each returned URL before treating it as confirmed.</p>
 </div>
 
-<h2>BREACH EXPOSURE VIA HIBP</h2>
+<h2>Breach exposure via HIBP</h2>
 <div class="indent">
 <p>HaveIBeenPwned (HIBP) aggregates data from hundreds of confirmed data breaches. The v3 API accepts an email address and returns a JSON array of breach objects, each containing the breach name, domain, breach date, description, and the categories of data that were exposed (passwords, phone numbers, physical addresses, financial data, and more).</p>
 
@@ -100,7 +128,7 @@
 <p>HIBP uses k-anonymity for its Pwned Passwords endpoint: the client hashes the password locally, sends only the first 5 characters of the SHA-1 hash to the API, and receives all hashes that start with those 5 characters. The client checks the full hash locally. The API server never sees the full hash — it cannot determine what password is being checked. This design is worth understanding because it illustrates how privacy-preserving querying can be built into OSINT tools when the design is deliberate.</p>
 </div>
 
-<h2>DORK GENERATION FOR DEEPER INVESTIGATION</h2>
+<h2>Dork generation for deeper investigation</h2>
 <div class="indent">
 <p>Google dorks are search operator combinations that surface content that standard search queries miss. For an email address target, the relevant dork patterns surface paste site dumps, credential lists, forum registrations, and document leaks that contain the target email. OpenOSINT's <code>generate_dorks</code> tool produces a set of ready-to-open URLs for 12 dork patterns.</p>
 
@@ -116,7 +144,7 @@
 <p>The dork URLs are not scraped automatically — they are generated for the analyst to open manually in a browser. This is intentional: automated Google scraping violates ToS and gets blocked quickly. The tool's value is generating the exact query strings without requiring the analyst to remember the operator syntax. It is a time-saver, not a web scraper. The analyst opens each URL, reviews results, and extracts relevant findings manually.</p>
 </div>
 
-<h2>CHAINING IN AN AI-ASSISTED INVESTIGATION</h2>
+<h2>Chaining in an AI-assisted investigation</h2>
 <div class="indent">
 <p>When using <a href="/">OpenOSINT</a>'s REPL with the AI agent enabled, typing "investigate target@example.com" triggers the agentic loop. The model receives the email and the full set of tool definitions, then decides what to run and in what order based on intermediate findings.</p>
 
@@ -139,7 +167,7 @@
 <p>This is the difference between a collection of tools and an investigative framework. The tools do the data retrieval; the agent handles the decision sequencing; the analyst applies judgment to the compiled findings. See the <a href="/blog/osint-ai-agents.html">AI agents for OSINT</a> article for a deeper look at how the agentic loop works, and the <a href="/tools/">tools reference</a> for complete parameter documentation on the full tool set, including search_email, search_breach, and generate_dorks.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/breach-check-open-source.html">Breach Check with Open Source Tools</a> &mdash; HIBP API usage, k-anonymity design, and bulk lookup patterns</li>
@@ -150,19 +178,44 @@
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

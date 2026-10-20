@@ -37,3 +37,16 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE UNIQUE INDEX IF NOT EXISTS users_customer_api_key_idx
     ON users (customer_api_key)
     WHERE customer_api_key IS NOT NULL;
+
+-- Pre-launch demand-validation signups for a future self-serve Cloud tier.
+-- No payment processing, no IP address stored. email is lowercased by the
+-- API before insert; the UNIQUE constraint is the duplicate-signup guard.
+CREATE TABLE IF NOT EXISTS waitlist (
+    id            SERIAL      PRIMARY KEY,
+    email         TEXT        NOT NULL UNIQUE,
+    role          TEXT,
+    use_case      TEXT,
+    plan_interest TEXT,
+    source        TEXT,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

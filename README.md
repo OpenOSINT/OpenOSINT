@@ -3,9 +3,9 @@ mcp-name: io.github.OpenOSINT/openosint
 <div align="center">
   <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
   <h1>OpenOSINT</h1>
-  <p>OSINT agent for security researchers and analysts: 19 investigation tools behind a natural-language interface.</p>
+  <p>An OSINT (Open Source Intelligence) agent for security researchers and analysts: 21 investigation tools behind a natural-language interface, plus an MCP (Model Context Protocol) server so any MCP-compatible AI client can drive them directly.</p>
   <p>Use it as a REPL, CLI, MCP server, or browser Web UI.</p>
-  <p><em>The AI issues hard-stop tool calls; your code executes the real binary — hallucinated findings are structurally impossible.</em></p>
+  <p><em>Tool results come from real executions, and every finding is shown with the tool call that produced it. AI summaries are leads to verify, not proof.</em></p>
 </div>
 
 <div align="center">
@@ -14,49 +14,24 @@ mcp-name: io.github.OpenOSINT/openosint
 [![PyPI](https://img.shields.io/pypi/v/openosint?style=flat-square)](https://pypi.org/project/openosint/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/openosint?style=flat-square&label=PyPI%20downloads)](https://pypi.org/project/openosint/)
 [![License MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![GitHub Stars](https://img.shields.io/github/stars/OpenOSINT/OpenOSINT?style=flat-square)](https://github.com/OpenOSINT/OpenOSINT/stargazers)
 [![MCP](https://img.shields.io/badge/protocol-MCP-blueviolet?style=flat-square)](https://modelcontextprotocol.io/)
 [![MCP Registry](https://img.shields.io/badge/MCP_Registry-published-blueviolet?style=flat-square)](https://registry.modelcontextprotocol.io/servers/io.github.OpenOSINT/openosint)
 [![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)
-[![Sponsored by RapidProxy](https://img.shields.io/badge/sponsored%20by-RapidProxy-F2622B?style=flat-square)](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)
+[![Sponsored by TestMu AI](https://img.shields.io/badge/sponsored%20by-TestMu%20AI-000000?style=flat-square)](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)
 
 </div>
 
-<!-- SPONSORS:START -->
+**Hosted:** [Monitor](https://app.openosint.tech/monitor?utm_source=github&utm_medium=readme&utm_campaign=monitor) · [Diligence](https://app.openosint.tech/diligence?utm_source=github&utm_medium=readme&utm_campaign=diligence)
 
-### Featured Integrations
+**Docs:** https://openosint.tech/docs/
 
-<a href="https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png" alt="IP2Location.io logo" height="40"></a>
+OpenOSINT is an open-source engine for passive checks of public information; the hosted products are built on it, and everything below is free and MIT-licensed.
 
-**[IP2Location.io](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)** — powers `search_ip2location` · [Integration guide](docs/integrations/ip2location.md)
-
-> Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
-
-<a href="https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/rapidproxy-logo.svg" alt="RapidProxy logo" height="40"></a>
-
-**[RapidProxy](https://www.rapidproxy.io/?ref=openosint&utm_source=openosint&utm_medium=readme&utm_campaign=rapidproxy)** · [Integration guide](docs/integrations/rapidproxy.md)
-
-> Reliable Residential Proxies for Data Collection & Automation — 90M+ IPs across 200+ countries. 10% off: RAPID10.
-
-_Open: Breach / Compromised-Credential Data · Email / Identity Lookup — see [SPONSORSHIP.md](SPONSORSHIP.md)._
-
-<!-- SPONSORS:END -->
-
-<div align="center">
-  <a href="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.mp4">
-    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.gif"
-         alt="OpenOSINT running a DNS lookup and returning records in under two seconds"
-         width="800" />
-  </a>
-</div>
+## Self-host (free, MIT)
 
 ```bash
 pip install openosint
 ```
-
-**Paid:** [Complete Kit — $55](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit) (prompts + playbook, bundled) · [Setup Sprint — $350](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint) (done-for-you install) · [Commercial License — from €300/yr](./COMMERCIAL.md) (vendor contract, SLA, indemnification)
-
-## Quick Start
 
 ```bash
 # Interactive AI REPL (default)
@@ -69,16 +44,15 @@ openosint web
 openosint email target@example.com
 ```
 
-### 📬 Agents & OSINT — the newsletter
+<div align="center">
+  <a href="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.mp4">
+    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/demo.gif"
+         alt="OpenOSINT running a DNS lookup and returning records in under two seconds"
+         width="800" />
+  </a>
+</div>
 
-One AI-OSINT workflow you can run + a ruthless roundup of what's new, every week.
-**[Subscribe →](https://agentsosint.substack.com)**
-
-## Run in the cloud (no install)
-
-No Python, no `holehe` / `sherlock` / `sublist3r` / `phoneinfoga` binaries in `PATH`, no API keys — run OpenOSINT Email Recon from your browser, or as an MCP tool in Claude, Cursor, and Windsurf via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server). Try for free.
-
-**[Try OpenOSINT Email Recon on Apify →](https://apify.com/complete_analogy/openosint-email-recon)**
+**[Try the live demo →](https://demo.openosint.tech)** — bring your own Anthropic / OpenRouter / Ollama key, no signup.
 
 ## Usage
 
@@ -88,14 +62,11 @@ Start the REPL and investigate any target — the agent decides which tools to r
 openosint > investigate target@example.com
 
   -> generate_dorks('target@example.com')
-  -> search_email('target@example.com')
-  Found: Spotify, WordPress, Gravatar, Office365
-
   -> search_breach('target@example.com')
   Found in 2 breaches: LinkedIn (2016), Adobe (2013)
 
-  -> search_username('johndoe99')   <- pivoted from email findings
-  Found: GitHub, Reddit, Twitter
+  -> search_github('johndoe99')   <- pivoted from breach findings
+  Found: profile, 14 repos, commit-discovered emails
 
   Report saved -> reports/2026-05-11_14-32-11_report.md
 ```
@@ -105,43 +76,43 @@ openosint > investigate target@example.com
 | Capability | Details |
 |---|---|
 | AI tool chaining | The agent selects and chains tools based on findings; describe the target in plain language |
-| 19 modular tools | Email, username, breach, WHOIS, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, live dork search, URL scraping, SERP footprint |
+| 21 modular tools | Email, username, breach, WHOIS, RDAP, IP, subdomain, dorks, paste, phone, Shodan, VirusTotal, Censys, IP2Location, AbuseIPDB, GitHub, DNS, GDELT news geo, live dork search, URL scraping, SERP footprint |
 | Three AI backends | Anthropic Claude (default), local Ollama, or any OpenAI-compatible endpoint (LiteLLM, vLLM, LM Studio, ...) |
-| Native MCP server | All 19 tools exposed to Claude Code, Claude Desktop, and any MCP-compatible client — no extra config |
+| Native MCP server | Passive tools (20) exposed by default, all 25 with `--allow-active` ([Passive by default](#passive-by-default)); runs with `uvx`, no separate install |
 | Parallel execution | `--parallel` runs complementary tools concurrently via `asyncio.gather()` |
 | Reports | PDF + Markdown auto-saved after every investigation (`reportlab` optional) |
 | Session history | All REPL sessions saved to `~/.openosint/history/`; browse with `openosint history` |
 | Web UI | Browser-based AI chat with streaming output, tool cards, light/dark theme |
 
+![OpenOSINT globe view: an agent investigation triggered from a chat prompt lands as a point on an interactive 3D globe, clicking the point pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
+*Investigation results land live on the globe — click a point to pivot. [Watch the sharper MP4](docs/assets/globe-demo.mp4).*
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/demo/graph-web-demo.gif"
+       alt="Graph web UI demo (synthetic data): the entity graph explorer shows two Organization nodes observed independently by the openosint:github and openosint:whois datasets, linked by a dashed same_as candidate edge scored 0.83; clicking a node opens a side panel listing each statement with its dataset, extractor, run id, and confidence; clicking the dashed edge opens the human review card comparing both entities field by field — matching values green, differing values amber — with the name-match feature explanation that produced the score; the reviewer clicks Accept and the graph updates in place: the pair clusters and the edge becomes a solid same_as check"
+       width="900" />
+  <p><em>Deterministic, synthetic-data demo — every entity shown is fictional; regenerate with <a href="demo/web_demo.py">demo/web_demo.py</a>.<br>
+  The entities are seeded at the statement layer, not produced by today's mappers — see <a href="demo/README.md">demo/README.md</a>.</em></p>
+</div>
 ---
 
 > **Legal Disclaimer**: OpenOSINT is intended for **legal and authorized use only**.
 > Users are solely responsible for ensuring their use complies with all applicable laws and regulations.
 > The authors accept no liability for misuse. See [DISCLAIMER.md](DISCLAIMER.md).
 
-## Custom Integrations
-
-Need OpenOSINT wired into your SOC, fraud, threat-intel, or AI-agent stack?
-I build bespoke OSINT integrations for teams — you bring the data
-sources and compliance requirements, I deliver a working integration.
-
-→ **[Get in touch](mailto:commercial@openosint.tech?subject=OpenOSINT%20Custom%20Integration)**
-
----
-
 ## Tools
 
 | Tool | Powered by | What it investigates |
 |------|-----------|---------------------|
-| `search_email` | holehe | Social accounts linked to an email address |
-| `search_username` | sherlock | Username presence across 300+ platforms |
+| `search_email` | holehe | Social accounts linked to an email address *(noisy, off by default)* |
+| `search_username` | sherlock | Username presence across 400+ platforms *(noisy, off by default)* |
 | `search_breach` | HaveIBeenPwned v3 API | Data breach exposure |
 | `search_whois` | python-whois | Domain registrant and DNS info |
 | `search_ip` | ipinfo.io | Geolocation, ASN, hostname |
-| `search_domain` | sublist3r | Subdomain enumeration |
+| `search_domain` | sublist3r | Subdomain enumeration *(noisy, off by default)* |
 | `generate_dorks` | built-in | 12 targeted Google dork URLs (no network calls) |
 | `search_paste` | psbdmp.ws | Pastebin dump mentions |
-| `search_phone` | phoneinfoga | Carrier, country, line type |
+| `search_phone` | phoneinfoga | Carrier, country, line type *(unverified network behavior, off by default)* |
 | `search_shodan` | Shodan API | Open ports, banners, CVEs |
 | `search_virustotal` | VirusTotal API v3 | Verdict from 70+ antivirus engines |
 | `search_ip2location` | IP2Location.io API | Enhanced IP intel: VPN/Proxy/Tor/datacenter flags *(sponsored)* |
@@ -149,11 +120,74 @@ sources and compliance requirements, I deliver a working integration.
 | `search_abuseipdb` | AbuseIPDB v2 API | IP abuse reputation: confidence score, reports, country, ISP |
 | `search_github` | GitHub REST API | Profile, repos, commit-discovered emails, username/keyword search |
 | `search_dns` | dnspython (built-in) | A/AAAA/MX/NS/TXT/CNAME/SOA records; SPF, DMARC, DKIM analysis |
-| `search_dorks_live` | Bright Data SERP API | Live Google search results for dork queries (title, URL, snippet) |
-| `scrape_url` | Bright Data Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown |
-| `search_footprint` | Bright Data SERP API | Entity-type-aware public search-engine footprint: detects email/username/domain/phone/name and returns structured results + Entity Correlation Graph nodes/edges |
+| `search_rdap` | RDAP (IANA bootstrap, keyless) | Registrar, registration/expiry dates, name servers, status; registrant contacts redacted by policy |
+| `search_gdelt_geo` | GDELT 15-minute GKG feed (keyless) | Recent worldwide news placed on a map: headline, link, place; GeoJSON output |
+| `search_dorks_live` | [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ SERP API | Live Google search results for dork queries (title, URL, snippet) |
+| `scrape_url` | [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme) Web Unlocker | Fetch any URL bypassing Cloudflare/CAPTCHA — returns clean Markdown *(touches the target, off by default)* |
+| `search_footprint` | [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme) SERP API | Entity-type-aware public search-engine footprint: detects email/username/domain/phone/name and returns structured results + Entity Correlation Graph nodes/edges |
 
 Full per-tool documentation, CLI flags, and output formats: [openosint.tech](https://openosint.tech/).
+
+## Passive by default
+
+OpenOSINT starts in **passive mode**: agents and MCP clients are only offered tools that query third-party data sources or compute locally. Tools that touch the target's infrastructure, or that send many requests about the target from your IP, are **off until you opt in**. They are not just refused when called; they are not offered to the model at all, and an MCP client does not see them in `tools/list`.
+
+| Level | Meaning |
+|---|---|
+| passive | Queries third-party data sources or computes locally; sends no request from your machine to the target's own infrastructure. Standard DNS lookups are the one indirect exception: they reach the target's nameservers through your resolver (see `search_dns`). |
+| touches target | Makes requests the target's infrastructure can see (their web server, DNS probes, or a service fetching their URL for you). |
+| noisy | High request volume, or requests to many third-party services about the target; expect rate limits, WAF blocks, and possible alerts. |
+| unverified | Network behavior not yet verified with a traffic capture; treated as non-passive. |
+| inherits | A fan-out tool; it only runs what the current mode allows. |
+
+**Passive is not private.** Every third-party service you query sees what you searched for, and usually your API key or IP. Treat queries to Shodan, HIBP, VirusTotal, Bright Data and similar services as visible to those providers.
+
+Enable active tools explicitly (each is labeled with its noise level):
+
+| Where | How |
+|---|---|
+| CLI / REPL | `openosint --allow-active …` |
+| Any process | `OPENOSINT_ALLOW_ACTIVE=1` |
+| Web UI | Settings → "Enable active tools" (loopback only) |
+| MCP server | `uvx --from openosint openosint-mcp --allow-active` (or `openosint-mcp --allow-active` if installed), or set `OPENOSINT_ALLOW_ACTIVE=1` in the client's `env` block |
+
+A publicly reachable or demo instance can never enable active tools, whatever the settings. If a disabled tool is requested anyway it returns a structured `disabled_in_passive_mode` result that says how to enable it.
+
+**Tool-call cap.** Each user request is limited by `OPENOSINT_MAX_TOOL_CALLS` (default: 15 calls; each new message resets it). `investigate_multi` shares one cap across all targets (`OPENOSINT_MAX_TOOL_CALLS_MULTI`, default 30). When the cap is reached the investigation stops with an explicit message. An MCP client that drives the tools itself is not capped by the server; only `investigate_multi` is.
+
+<!-- NOISE-TABLE:START (generated by `python -m openosint.tool_policy`; do not edit by hand) -->
+| Tool | Level | Default | What it actually sends, and where |
+|---|---|---|---|
+| `generate_dorks` | passive | on | Builds Google search URLs locally; sends nothing. |
+| `graph_export` | passive | on | Reads the local graph database only. |
+| `graph_neighbors` | passive | on | Reads the local graph database only. |
+| `graph_review_candidates` | passive | on | Reads the local graph database only. |
+| `investigate_graph` | inherits | on | Chains tools from a seed; in passive mode it routes only to passive tools. |
+| `investigate_multi` | inherits | on | Runs one agent per target under a shared tool-call cap; passive unless active is enabled. |
+| `scrape_url` | touches target | **off** | Bright Data fetches the URL, so the target's server logs a request (from Bright Data's IP, not yours). |
+| `search_abuseipdb` | passive | on | One request to api.abuseipdb.com. |
+| `search_breach` | passive | on | One request to haveibeenpwned.com. |
+| `search_censys` | passive | on | Censys API; returns data Censys already holds. |
+| `search_dns` | passive | on | Record lookups go through your DNS resolver; the target's nameservers see the resolver, not you. **Active part:** DKIM selector probes (enumeration) run only with active tools enabled. |
+| `search_domain` | noisy | **off** | sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks. |
+| `search_dorks_live` | passive | on | Google results via Bright Data; the target is sent to those two services. |
+| `search_email` | noisy | **off** | holehe probes many sites' sign-up/reset flows with the email from your IP; may notify the account owner or trigger security alerts. |
+| `search_footprint` | passive | on | Up to 3 Google queries via Bright Data; the target is sent to those two services. |
+| `search_gdelt_geo` | passive | on | Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine. |
+| `search_github` | passive | on | A few requests to api.github.com. |
+| `search_ip` | passive | on | One request to ipinfo.io. |
+| `search_ip2location` | passive | on | One request to api.ip2location.io. |
+| `search_paste` | passive | on | One request to psbdmp.ws. |
+| `search_phone` | unverified | **off** | Runs phoneinfoga; what it sends over the network has not been verified with a traffic capture. |
+| `search_rdap` | passive | on | Queries IANA and the registry's RDAP server, not the target. |
+| `search_shodan` | passive | on | Shodan API; reads Shodan's existing index, requests no new scan. |
+| `search_username` | noisy | **off** | sherlock sends requests from your IP to hundreds of sites; expect rate limits and WAF blocks. |
+| `search_virustotal` | passive | on | IP, domain and hash lookups read VirusTotal's existing data. URL submission is a separate active mode, off by default: it makes VirusTotal fetch the URL and makes it visible to the VirusTotal community. |
+| `search_virustotal (URL submission)` | touches target | **off** | VirusTotal fetches the submitted URL, and the URL becomes visible to the VirusTotal community, which can reveal your investigation. |
+| `search_whois` | passive | on | Queries the registry/registrar WHOIS server, not the target. |
+<!-- NOISE-TABLE:END -->
+
+This table says what each tool does according to its code. It is not a guarantee about what a remote service, or a third-party binary such as holehe, sherlock, sublist3r or phoneinfoga, does with a request.
 
 ### search_email
 
@@ -172,7 +206,7 @@ openosint email target@example.com
 
 ### search_username
 
-Searches for a username across 300+ platforms using [sherlock](https://github.com/sherlock-project/sherlock).
+Searches for a username across 400+ platforms using [sherlock](https://github.com/sherlock-project/sherlock).
 
 ```bash
 openosint username johndoe99
@@ -349,6 +383,38 @@ openosint dns example.com
 [DNS] SPF: v=spf1 include:_spf.google.com ~all
 ```
 
+### search_rdap
+
+Looks up a domain's registrar, registration and expiry dates, name servers and status codes over [RDAP](https://about.rdap.org), the machine-readable successor to WHOIS. Keyless: it asks the IANA bootstrap registry which server owns the TLD, then queries that server. Registrant contact details are redacted by registry policy and are never returned.
+
+```text
+[+] Registrar: RESERVED-Internet Assigned Numbers Authority
+[+] Registered: 1995-08-14T04:00:00Z
+[+] Name servers: elliott.ns.cloudflare.com, hera.ns.cloudflare.com
+```
+
+### search_gdelt_geo
+
+Recent, geolocated worldwide news. The old GDELT GEO 2.0 API was retired (it answers HTTP 404), so this tool reads [GDELT](https://www.gdeltproject.org/)'s 15-minute GKG article feed (`data.gdeltproject.org`, keyless, no account) and keeps the last 6 hours of articles in memory. Each article carries its headline, link and the places it mentions; the query is matched against headlines and URLs (quoted phrases and `OR` work; `*` means everything), and results are grouped by place for the globe. Country-level mentions are dropped so dots mark cities and regions, not the middle of a country.
+
+Nothing is downloaded until the tool is first used, so a local install that never opens the globe never fetches a GDELT file. The first search loads only the newest 15-minute file and answers from it; older files load in the background, and the result (and the globe) says how far back it covers, for example `News: last 15 min — older articles still loading`. After that, upstream traffic is one small file per 15 minutes however many searches you run.
+
+```text
+GDELT geolocated news for 'ukraine': 53 location(s), 471 article mention(s). Coverage: the last 6 h.
+
+[+] Kyiv, Kyyiv, Ukraine (50.4333, 30.5167) — 38 article(s)
+```
+
+Select an area on the globe (Shift+drag) to search only inside it. Failures (feed down, oversized or corrupt file) return one `[service_unavailable] search_gdelt_geo` result, and the globe shows a notice instead of an empty layer.
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `OPENOSINT_GDELT_WINDOW_HOURS` | `6` | How far back articles are kept (1–24). A full 6-hour window holds roughly 23,000 articles and adds about 65 MB of memory. |
+| `OPENOSINT_GDELT_MAX_ARTICLES` | `30000` | Hard cap on stored articles; the oldest are dropped first. |
+| `OPENOSINT_GDELT_USE_PROXY` | off | Route GDELT downloads through `OPENOSINT_PROXY_URL` (bypassed by default: the feed is public). |
+
+**Attribution and terms.** News data: [The GDELT Project](https://www.gdeltproject.org/). GDELT's [terms of use](https://gdeltproject.org/about.html) say: "all datasets released by the GDELT Project are available for unlimited and unrestricted use for any academic, commercial, or governmental use of any kind without fee." and "any use or redistribution of the data must include a citation to the GDELT Project and a link to this website (https://www.gdeltproject.org/)." (quoted 2026-10-06). The globe keeps the GDELT credit in its map attribution. Headlines and links come from third-party news sites and are shown as plain text.
+
 ### search_dorks_live
 
 Executes live Google dork queries through the [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call. Requires `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE`.
@@ -387,17 +453,78 @@ openosint footprint johndoe99
 
 ---
 
+## Graph module (optional)
+
+An additive [FollowTheMoney](https://followthemoney.tech/) entity graph —
+statement-level provenance, an append-only store, non-destructive same_as
+deduplication, and a human review queue — sits alongside the tools above
+without changing anything about them. The store, the `/graph` page, the
+`/api/graph/*` routes and the `graph_neighbors` / `graph_review_candidates`
+MCP tools work in a plain `uvx openosint web` install, with no compiler and no
+extra. The `graph` extra (`pip install "openosint[graph]"`, builds PyICU) adds
+the real FollowTheMoney library: `graph_export` and `.ftm` export. The
+`graph-dedup` extra (Python 3.11+) adds same_as scoring. Without the extra,
+ids are produced by a vendored copy that a CI test proves byte-identical to
+FollowTheMoney's, so a `graph.db` is readable either way. Nothing in the web
+UI or the agent writes to this store: it is filled through the Python API
+(see [docs/graph.md](docs/graph.md) for the full guide and a worked example);
+the GRAPH tab in the main UI is a separate, client-side view of the current
+chat.
+
+The same workflow is shown end to end — including the `.ftm` export that
+passes `ftm validate` — in the terminal demo in
+[docs/graph.md](docs/graph.md); the web UI walkthrough is the demo at the top
+of this README.
+
+---
+
+## External exposure report (beta)
+
+`openosint exposure` checks one domain from the outside and gives it an A-F grade. It is passive and point-in-time: organisation-level checks of email authentication, TLS, domain registration and security headers, plus optional lookalike domains. No AI provider or API key is needed.
+
+```bash
+openosint exposure example.com                       # terminal summary and grade
+openosint exposure example.com --json                # structured JSON
+openosint exposure example.com --report out.html --lang it   # self-contained HTML report (it or en)
+openosint exposure example.com --lookalikes          # also look for registered typo/homoglyph/TLD-swap domains
+openosint exposure example.com --resolver 1.1.1.1    # recursive resolver for lookups outside the domain's own nameservers
+openosint exposure example.com --checks email,registration   # passive checks only: never contacts the target
+```
+
+`--checks` takes any of `email`, `registration`, `tls`, `http_headers` (default: all four). A selection is **not graded**: the report has no letter and no score, because a grade from some of the checks would read like a full result. In Python: `run_exposure("example.com", checks=PASSIVE_CHECKS)` (both names import from `openosint.exposure.api`); the report's `not_run` lists what was left out.
+
+| Check | Noise level | What it contacts |
+|---|---|---|
+| Email authentication (SPF, DMARC, DKIM, MX) | passive | DNS only |
+| Domain registration (age, expiry, DNSSEC) | passive | RDAP registry, not the target |
+| Lookalike domains (`--lookalikes`) | passive | DNS only; no lookalike web server is ever contacted |
+| TLS certificate and protocol | touches target | A TLS handshake with the target on port 443 (the domain and `www`) |
+| Security headers | touches target | One HTTPS GET to `https://DOMAIN/` (redirects are followed) |
+
+It does **not** scan ports, log in to anything, or collect personal data. The grade is not a certification and not proof of NIS2 or any other compliance. Lookalikes are found by DNS only and are never part of the grade.
+
+This feature is **beta**: checks, scoring and the report format may change between releases. The HTML report footer shows its `report_version`.
+
+---
+
 ## Interfaces
 
 ### Web UI
 
 ```bash
-pip install "openosint[web]"
-openosint web
+uvx openosint web
+# or: pip install openosint && openosint web
 # Opens http://localhost:8080 automatically
 ```
 
 Browser-based AI chat with streaming tool output, inline result cards, light/dark theme toggle. Supports local inference via Ollama or any OpenAI-compatible endpoint — no Anthropic API key required.
+
+**Which hosts and sites may talk to the server.** On a loopback bind the server only answers requests whose `Host` is `127.0.0.1`, `localhost` or `::1`. Every `/api/*` request from a browser must come from the UI's own origin; cross-site requests are refused (scripts and `curl`, which send no `Origin`, are unaffected).
+
+| Variable | Use it when |
+|---|---|
+| `OPENOSINT_ALLOWED_HOSTS` | You reach the UI by another name (LAN name, Docker hostname, reverse proxy), e.g. `OPENOSINT_ALLOWED_HOSTS=osint.lan,localhost`. Comma-separated; `host` or `host:port`. On a non-loopback bind (`--allow-remote`, Docker) the `Host` check only runs when this is set, so set it there. |
+| `OPENOSINT_ALLOWED_ORIGINS` | A separate front end on another origin calls the API, e.g. `OPENOSINT_ALLOWED_ORIGINS=http://localhost:3000`. Comma-separated. |
 
 <div align="center">
   <a href="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/assets/demo-web-graph.mp4">
@@ -419,6 +546,41 @@ export OPENAI_BASE_URL="http://localhost:4000/v1"
 openosint web
 # Settings -> OpenAI API
 ```
+
+> **Breaking change (v2.28+): key usage now follows bind address, not an env var.**
+> Bound to `127.0.0.1`/`localhost` (the default) — no change: keys in your `.env`
+> work as before. Bound to any other interface (`--host 0.0.0.0`, which already
+> requires `--allow-remote`) — the web UI never uses a key from your environment
+> to serve a request; every caller must supply their own, and breach lookups
+> (`search_breach`) are disabled outright. This applies **regardless of any env
+> var**, including `OPENOSINT_DEMO_MODE`, which can only add restriction, never
+> remove it. If you were exposing the web UI on a LAN with your own keys and no
+> per-caller auth in front of it, that access pattern no longer works.
+>
+> **Running behind a reverse proxy?** A loopback bind (`127.0.0.1`) only means
+> the OS accepted the connection from this machine — it says nothing about
+> who can reach it if something in front (nginx, Caddy, a Docker/K8s sidecar,
+> a tunnel) forwards requests to it from elsewhere. By default, a request that
+> carries proxy-forwarding headers (`X-Forwarded-For`, `X-Forwarded-Proto`,
+> `X-Forwarded-Host`, `Forwarded`, `CF-Connecting-IP`) is treated exactly like
+> a non-loopback bind: your local keys are never used, breach lookups are
+> blocked, and the caller is told why. **If you deliberately serve this
+> through a reverse proxy and want it to behave like a normal local
+> instance for requests relayed by that proxy, set `OPENOSINT_TRUSTED_PROXY=true`.**
+> This is a separate variable from the existing `TRUSTED_PROXY` (which only
+> affects which IP a rate-limit bucket is attributed to — a low-stakes,
+> already-loosely-scoped setting some self-hosters already have on).
+> Reusing that flag here would have silently upgraded an existing
+> rate-limit-only configuration into one that also permits credentialed
+> access, without asking. `OPENOSINT_TRUSTED_PROXY` gets its own explicit
+> opt-in for that reason. Setting it does **not** blindly trust the
+> forwarded headers' content — internally inconsistent values (e.g. two
+> disagreeing `X-Forwarded-Proto` values on one request) are still treated
+> as public regardless. **Setting `OPENOSINT_TRUSTED_PROXY=true` means you
+> are choosing to serve credentialed lookups to whoever your reverse proxy
+> relays to this instance — you are the controller for their queries, the
+> same way any operator of a hosted service is for its users. Put real authentication in
+> front of it if "whoever the proxy relays" is broader than you intend.**
 
 ### Interactive REPL
 
@@ -474,29 +636,70 @@ Full per-tool reference, CLI flags, and configuration options at [openosint.tech
 
 ### MCP Server
 
-Expose all 19 OpenOSINT tools to any MCP-compatible AI client. Once connected, Claude can natively invoke all 19 tools during conversations.
+Expose OpenOSINT to any MCP-compatible AI client with no separate install step. [`uv`](https://docs.astral.sh/uv/getting-started/installation/) must be installed; `uvx` then fetches and runs `openosint` on demand. The server offers the 20 passive tools by default and 25 with `--allow-active` (see [Passive by default](#passive-by-default)).
+
+The command every client runs is the same:
+
+```bash
+uvx --from openosint openosint-mcp   # passive tools only (20 listed)
+```
+
+GUI clients (Claude Desktop, Cursor) often launch with a minimal `PATH` that does not include `uvx`. If the server fails to start, replace `"uvx"` with the absolute path from `which uvx` (macOS/Linux) or `where uvx` (Windows).
 
 **Claude Code:**
 
 ```bash
-claude mcp add openosint python /absolute/path/to/OpenOSINT/openosint/mcp_server.py
+claude mcp add openosint -- uvx --from openosint openosint-mcp
 claude mcp list
 ```
 
-**Claude Desktop** — add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+Add API keys (`-e` flags go before the `--`):
+
+```bash
+claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- uvx --from openosint openosint-mcp
+```
+
+> **Optional, enables active tools:** append `--allow-active` after `openosint-mcp`, or add `-e OPENOSINT_ALLOW_ACTIVE=1`. This exposes the noisy and target-touching tools (25 listed instead of 20); see the [noise table](#passive-by-default) first.
+
+**Claude Desktop** — edit `claude_desktop_config.json`, then restart the app:
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "openosint": {
-      "command": "python",
-      "args": ["/absolute/path/to/OpenOSINT/openosint/mcp_server.py"]
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp"],
+      "env": {
+        "SHODAN_API_KEY": "your-key",
+        "HIBP_API_KEY": "your-key"
+      }
     }
   }
 }
 ```
 
-Prefer zero setup? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) is also available as a hosted MCP tool via the [Apify MCP Server](https://apify.com/apify/actors-mcp-server) — no server to run, no config file to edit. Try for free.
+> **Optional, enables active tools:** add `"--allow-active"` to `args`, or add `"OPENOSINT_ALLOW_ACTIVE": "1"` to `env`. This exposes the noisy and target-touching tools (25 listed instead of 20); see the [noise table](#passive-by-default) first.
+
+**Cursor** — add the same block to `~/.cursor/mcp.json` (global) or `.cursor/mcp.json` (per project); the optional active-tools change above applies here too:
+
+```json
+{
+  "mcpServers": {
+    "openosint": {
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp"],
+      "env": { "SHODAN_API_KEY": "your-key" }
+    }
+  }
+}
+```
+
+API keys go in the client's `env` block. MCP hosts launch the server with a cwd unrelated to your project, so a `.env` file is not picked up reliably; to use one, set `"OPENOSINT_ENV_FILE": "/absolute/path/to/.env"` in the same `env` block.
+
+By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.36.1`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
 
 **Agentic use via Claude Code:**
 
@@ -510,9 +713,53 @@ $ claude
 
 ## Installation
 
+### Quickstart — web UI in one command
+
+Install [uv](https://docs.astral.sh/uv/) once. It runs OpenOSINT in its own isolated environment, so there is no Python setup:
+
 ```bash
-# From PyPI (recommended)
+# macOS / Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+```powershell
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Then start OpenOSINT (open a new terminal first if `uvx` is not found):
+
+```bash
+uvx openosint web
+```
+
+You should see:
+
+```text
+[*] OpenOSINT x.y.z web server
+[*] App  → http://127.0.0.1:8080/
+[*] Data → /home/you/.openosint
+```
+
+Your browser opens automatically; if it doesn't, open <http://127.0.0.1:8080/>. No `.env` file and no API keys are needed to start — keyless tools work immediately, and AI chat needs a provider key (`ANTHROPIC_API_KEY`) or a local Ollama.
+
+| Want to… | Do this |
+|---|---|
+| Use another port | `uvx openosint web --port 8081` (if 8080 is busy, OpenOSINT exits and tells you this) |
+| Keep the browser closed | `uvx openosint web --no-browser` |
+| Find your data | Graph database and session history live in `~/.openosint/` (`%USERPROFILE%\.openosint` on Windows). Move it with `OPENOSINT_HOME=/path`; `OPENOSINT_GRAPH_DB` still overrides just `graph.db`. |
+| Find reports | CLI and REPL reports are written to `./reports/` in the directory you ran `openosint` from. The web UI writes none. |
+| Use the entity graph store | Works with plain `uvx openosint web`, no compiler needed: the `/graph` page, `/api/graph/*`, and the `graph_neighbors` / `graph_review_candidates` MCP tools. `graph_export` (.ftm) needs the `graph` extra, which builds [PyICU](https://pypi.org/project/PyICU/) and so needs libicu and a C++ compiler first (Ubuntu: `sudo apt install libicu-dev pkg-config g++`; macOS: `brew install icu4c pkg-config` and `export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig"`), then `uvx --from "openosint[graph]" openosint web`; or use [Docker](#docker), which includes it. The store starts empty: it is filled through the Python API, not by the UI. |
+
+### Alternatives
+
+```bash
+# pip (Python 3.10+)
 pip install openosint
+openosint web
+
+# Updating
+pip install --upgrade openosint
 
 # From source
 git clone https://github.com/OpenOSINT/OpenOSINT.git
@@ -525,48 +772,86 @@ pip install -e .
 | Binary | Purpose | Install |
 |--------|---------|---------|
 | `holehe` | Email account enumeration | `pip install holehe` |
-| `sherlock` | Username enumeration (300+ platforms) | `pip install sherlock-project` |
+| `sherlock` | Username enumeration (400+ platforms) | `pip install sherlock-project` |
 | `sublist3r` | Subdomain enumeration | `pip install sublist3r` |
 | `phoneinfoga` | Phone number intelligence | [Download binary](https://github.com/sundowndev/phoneinfoga/releases) |
 
 If a binary is absent, the corresponding tool returns a descriptive error. All other tools remain operational.
 
-Don't want to install these locally? The [OpenOSINT Email Recon Actor](https://apify.com/complete_analogy/openosint-email-recon) runs email recon in Apify's cloud — zero dependencies, zero local setup.
-
 **Optional Python packages:**
 
 | Package | Purpose | Install |
 |---------|---------|---------|
-| `ollama` | Local LLM backend (no API key) | `pip install ollama` *(also requires [Ollama runtime](https://ollama.com))* |
+| `ollama` | Local LLM backend (no API key) | `pip install "openosint[ollama]"` *(also requires [Ollama runtime](https://ollama.com))* |
 | `openai` | OpenAI-compatible backend | `pip install "openosint[openai]"` |
-| `shodan` | Shodan API client | `pip install shodan` |
-| `reportlab` | PDF report export | `pip install reportlab` |
-| `censys` | Censys API client | `pip install censys` |
+| `shodan` | Shodan API client | `pip install "openosint[shodan]"` |
+| `reportlab` | PDF report export | `pip install "openosint[pdf]"` |
+| `censys` | Censys API client | `pip install "openosint[censys]"` |
 
 ## Configuration
 
-Store keys in a `.env` file at the project root (copy `.env.example`). `python-dotenv` loads it automatically at startup.
+**Easiest:** open the web UI. On a local install, Settings saves your keys on this
+computer by default ("Save on this computer"), as does the first-run panel; "Use only
+for this browser session" is a secondary option that keeps a key in the tab only. On the
+public demo, keys stay in the browser. Keys are written to `config.env` in the data directory
+(`~/.openosint/config.env`, or `$OPENOSINT_HOME/config.env`), never inside the
+installed package, with user-only permissions (`0600`) where the OS supports it.
+Values are never logged or sent back to the browser; the UI only shows which keys
+are configured and where each value came from.
+
+Precedence, highest first:
+
+1. real environment variables (a saved value cannot override one; the UI says so)
+2. `config.env` in the data directory
+3. a legacy `.env` (the locations below)
+
+An existing `.env` keeps working. If the file at the package root (a source
+checkout or Docker image) is the one that would be loaded, its known settings
+are copied into `config.env` once, with a notice on stderr that names keys but
+never values; the old file is left in place and now has lower priority.
+
+For a file you manage yourself, copy `.env.example` to `.env` and fill in your keys. `.env` is read from the
+**directory you run `openosint` from** (searched upward, like `git` finds
+`.git`) — it does not need to be at any particular "project root", and a
+regular `pip install` works the same way as running from a source checkout.
+Set `OPENOSINT_ENV_FILE=/path/to/.env` to point at an explicit file instead
+(useful for the MCP server, which is launched by its host with an arbitrary
+working directory). A real environment variable always takes priority over
+a value in `.env`.
+
+`Required` below means required for that specific tool to run, not for `openosint`
+itself — the app starts and every key-less tool works with zero configuration.
 
 | Variable | Tool | Required | Purpose |
 |----------|------|----------|---------|
-| `ANTHROPIC_API_KEY` | AI agent | Yes (or Ollama / OpenAI) | Anthropic API key |
+| `ANTHROPIC_API_KEY` | AI agent (REPL/Web UI) | Yes, unless using Ollama or an OpenAI-compatible endpoint | Anthropic API key |
+| `ANTHROPIC_MODEL` | AI agent | Optional | Model name to request (default: `claude-sonnet-5`). Replaces the deprecated `OPENOSINT_MODEL`. |
 | `OPENAI_BASE_URL` | AI agent | Optional | Base URL of an OpenAI-compatible endpoint (e.g. `http://localhost:4000/v1`) |
 | `OPENAI_API_KEY` | AI agent | Optional | API key for the endpoint (local servers may ignore it) |
 | `OPENAI_MODEL` | AI agent | Optional | Model name to request (default: `gpt-4o-mini`) |
 | `MINIMAX_API_KEY` | MiniMax CLI/REPL | When selected | API key for the selected MiniMax region |
 | `MINIMAX_MODEL` | MiniMax CLI/REPL | Optional | Model ID (default: `MiniMax-M3.1-Flash`; also recommends `MiniMax-M3`) |
 | `MINIMAX_REGION` | MiniMax CLI/REPL | Optional | Endpoint region: `global` (default) or `cn` |
-| `HIBP_API_KEY` | `search_breach` | Optional | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
-| `IPINFO_TOKEN` | `search_ip` | Optional | ipinfo.io higher rate limits |
-| `SHODAN_API_KEY` | `search_shodan` | Optional | Shodan API — [get one](https://account.shodan.io) |
-| `VIRUSTOTAL_API_KEY` | `search_virustotal` | Optional | VirusTotal API v3 — [get one](https://www.virustotal.com/gui/my-apikey) |
-| `IP2LOCATION_API_KEY` | `search_ip2location` | Optional | IP2Location.io — [get one](https://www.ip2location.io/pricing) *(sponsored)* |
-| `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Optional | Censys — [get one](https://censys.io/account) |
-| `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Optional | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
-| `GITHUB_TOKEN` | `search_github` | Optional | GitHub API — raises rate limit 60 → 5000 req/h — [get one](https://github.com/settings/tokens) |
-| `BRIGHTDATA_API_KEY` | `search_dorks_live`, `scrape_url`, `search_footprint` | Optional | Bright Data — [get one](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ (free tier: 5,000 req/month) |
-| `BRIGHTDATA_SERP_ZONE` | `search_dorks_live`, `search_footprint` | Optional | Your Bright Data SERP zone name (e.g. `serp_api1`) |
-| `BRIGHTDATA_UNLOCKER_ZONE` | `scrape_url` | Optional | Your Bright Data Web Unlocker zone name (e.g. `web_unlocker1`) |
+| `OPENOSINT_GDELT_WINDOW_HOURS` | `search_gdelt_geo` | Optional | Hours of news kept in memory (default `6`, max `24`). See [search_gdelt_geo](#search_gdelt_geo). |
+| `OPENOSINT_GDELT_MAX_ARTICLES` | `search_gdelt_geo` | Optional | Hard cap on stored articles (default `30000`; oldest dropped first) |
+| `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
+| `OPENOSINT_SETUP_TOKEN` | Web UI | Optional | Lets the browser save keys when it is not on loopback (Docker). Send as `X-Setup-Token`; the UI has a field for it. Unset = saving from a non-loopback browser is off. Failed attempts are throttled. |
+| `HIBP_API_KEY` | `search_breach` | Required for this tool | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
+| `IPINFO_TOKEN` | `search_ip` | Optional | Works without it; raises ipinfo.io rate limits |
+| `SHODAN_API_KEY` | `search_shodan` | Required for this tool | Shodan API — [get one](https://account.shodan.io) |
+| `VIRUSTOTAL_API_KEY` | `search_virustotal` | Required for this tool | VirusTotal API v3 — [get one](https://www.virustotal.com/gui/my-apikey) |
+| `IP2LOCATION_API_KEY` | `search_ip2location` | Required for this tool | IP2Location.io — [get one](https://www.ip2location.io/pricing) *(sponsored)* |
+| `CENSYS_API_ID` + `CENSYS_SECRET` | `search_censys` | Required for this tool | Censys — [get one](https://censys.io/account) |
+| `ABUSEIPDB_API_KEY` | `search_abuseipdb` | Required for this tool | AbuseIPDB v2 — [get one](https://www.abuseipdb.com/account/api) |
+| `GITHUB_TOKEN` | `search_github` | Optional | Works without it (60 req/h); raises the limit to 5000 req/h — [get one](https://github.com/settings/tokens) |
+| `BRIGHTDATA_API_KEY` | `search_dorks_live`, `scrape_url`, `search_footprint` | Required for these tools | Bright Data — [get one](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ (free tier: 5,000 req/month) |
+| `BRIGHTDATA_SERP_ZONE` | `search_dorks_live`, `search_footprint` | Required for these tools | Your Bright Data SERP zone name (e.g. `serp_api1`) |
+| `BRIGHTDATA_UNLOCKER_ZONE` | `scrape_url` | Required for this tool | Your Bright Data Web Unlocker zone name (e.g. `web_unlocker1`) |
+
+On a fresh install with no keys at all, these still work: `generate_dorks`,
+`search_dns`, `search_whois`, `search_domain`, `search_email`, `search_username`,
+`search_paste`, `search_phone`, `search_ip` (rate-limited), `search_github`
+(rate-limited), and `search_gdelt_geo`.
 
 ## CLI Reference
 
@@ -583,8 +868,17 @@ Store keys in a `.env` file at the project root (copy `.env.example`). `python-d
 | `openosint abuseipdb IP [-t N]` | AbuseIPDB reputation check |
 | `openosint github QUERY [-t N]` | GitHub profile/repo/email discovery |
 | `openosint dns DOMAIN [-t N]` | DNS records + email security analysis |
+| `openosint search-dorks-live TARGET [--max-dorks N] [-t N]` | Live Google dork results via [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ |
+| `openosint scrape URL [-t N]` | Fetch a URL via [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme) Web Unlocker |
+| `openosint footprint TARGET [--max-queries N] [-t N]` | SERP footprint via [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme) |
 | `openosint multi TARGETS` | Parallel multi-target investigation (max 10) |
+| `openosint exposure DOMAIN [--lookalikes] [--report FILE.html] [--lang it\|en] [--resolver IP]` | External exposure report graded A-F (beta) |
+| `openosint playbook RECIPE TARGET` | Run a deterministic investigation playbook (no AI) |
 | `openosint history [--all] [open N] [clear]` | View/manage REPL session history |
+| `openosint proxy-test` | Verify the configured upstream proxy |
+| `openosint sponsors` | List current sponsors and featured integrations |
+| `openosint shell` | Explicit alias for the default REPL |
+| `--allow-active` | Enable active tools (noisy or touch the target). Off by default; same as `OPENOSINT_ALLOW_ACTIVE=1` |
 | `-v, --verbose` | Enable debug logging to stderr |
 | `-t, --timeout N` | Override subprocess timeout (seconds) |
 | `--api-key KEY` | Anthropic API key (overrides env var) |
@@ -611,16 +905,19 @@ docker compose up --build
 docker compose run --rm openosint email target@example.com --json
 ```
 
-Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.env` file or export them before running `docker compose`. Reports are persisted to `./reports/` via a volume mount.
+`.env` is optional: with no keys the web UI still starts at <http://localhost:8080>. To provide keys today, list them under `environment:` in `docker-compose.yml` (or in a `.env` next to it), or put a `.env` in the data volume (`/data/.env`). Reports are persisted to `./reports/`; the graph database and session history live in the `openosint-data` volume (`/data` in the container, via `OPENOSINT_HOME`). The image includes the graph view.
 
-**DigitalOcean App Platform:** see [`.do/app.yaml`](.do/app.yaml) for App Platform configuration.
+**Saving keys from the browser in Docker.** The browser reaches the container over the Docker network, not loopback, so the UI cannot save keys by default and says so (it shows the reason instead of failing silently). Either set the keys in your compose environment or `.env`, or set a token and enter it in the UI's *Save keys to server* panel: `OPENOSINT_SETUP_TOKEN=choose-a-long-random-string docker compose up`. Saved keys go to `/data/config.env` in the `openosint-data` volume and survive restarts. Wrong tokens are throttled.
+
+The port is published on `127.0.0.1` only, and the `Host` check is on (`OPENOSINT_ALLOWED_HOSTS` defaults to `localhost,127.0.0.1` in the compose file; extend it if you reach the UI by another name). To reach it from other machines on purpose, run `OPENOSINT_BIND=0.0.0.0 docker compose up`: the instance then runs in restricted mode (it never spends keys held on the server). **Security note:** the UI's setup endpoint accepts and stores API keys, so only do this on a network and behind a firewall or reverse proxy you trust.
+
+> **Warning: `OPENOSINT_PUBLISHED_BIND`.** `docker-compose.yml` sets this to the same value as `OPENOSINT_BIND` to tell the server which address the port is published on; an exact loopback value (`127.0.0.1`, `localhost`, `::1`) lifts the restriction that a container's `0.0.0.0` bind otherwise gets. Never set it to a loopback value yourself, or edit the compose port mapping away from it, when the port is published on any other interface.
 
 ## Integrations
 
 | Service | URL | Tool | Tier | Auth |
 |---------|-----|------|------|------|
 | IP2Location.io | https://www.ip2location.io | `search_ip2location` | Featured (sponsored) | API key — free tier |
-| RapidProxy | https://www.rapidproxy.io/?ref=openosint | — | Featured (sponsored) | — |
 | AbuseIPDB | https://www.abuseipdb.com | `search_abuseipdb` | Community | API key — free tier |
 | Censys | https://censys.io | `search_censys` | Community | API key — free tier |
 | GitHub | https://github.com | `search_github` | Community | Token optional |
@@ -637,69 +934,62 @@ Set `ANTHROPIC_API_KEY` (and optionally `HIBP_API_KEY`, `IPINFO_TOKEN`) in a `.e
 | DNS (system resolver) | — | `search_dns` | Community | None |
 | Google Search | https://www.google.com | `generate_dorks` | Community | None |
 
-## Get the Method
+## Limitations
 
-OpenOSINT is the tool. The **AI OSINT Complete Kit** ($55) is the method: the Prompt Pack and the Operator's Playbook, bundled.
+- **Authorized use only.** OpenOSINT queries public and semi-public sources.
+  It does not bypass authentication, exploit systems, or access anything you
+  aren't already entitled to see. You are responsible for complying with the
+  law and the terms of service of every source you query. See
+  [DISCLAIMER.md](DISCLAIMER.md).
+- **No aggregation guarantees.** Each tool reports what its upstream source
+  currently returns. A negative result (no breach found, no accounts found)
+  means the source didn't report a match — not that no exposure exists.
+- **Most tools depend on third-party services you don't control.** Nine of
+  the 21 tools hard-require an API key and are subject to that provider's
+  uptime, rate limits, and pricing (Shodan, VirusTotal, Censys, AbuseIPDB,
+  IP2Location, HaveIBeenPwned, and the three [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹–backed tools). Free
+  tiers are small; heavy use requires a paid plan with the provider, not with
+  OpenOSINT.
+- **Local binaries are unsandboxed subprocesses.** `holehe`, `sherlock`,
+  `sublist3r`, and `phoneinfoga` run as external processes on your machine.
+  Keep them updated yourself; OpenOSINT does not patch or vet them.
+- **The entity graph module (`openosint[graph]`) is additive, not
+  authoritative.** `same_as` links are scored candidates for human review,
+  not verified identity matches — see [docs/graph.md](docs/graph.md).
+- **AI output is a lead, not proof.** The agent can only call the tools above
+  (and, by default, only the passive ones). Tool results come from real
+  executions and are shown with the tool call that produced them, but the
+  model can still misread, misattribute or over-weight a result, and its tool
+  selection can be wrong or incomplete for a given target. Check the raw tool
+  output before acting on a conclusion.
 
-**→ [Get the Complete Kit ($55)](https://tommasodev.gumroad.com/l/ai-osint-complete-kit?utm_source=github&utm_medium=readme&utm_campaign=complete_kit)**
+## Support & commercial
 
-### AI OSINT Prompt Pack
+OpenOSINT is free and MIT-licensed. These are optional ways to support it or buy a hosted or contracted version.
 
-OpenOSINT gives you the tooling. The **AI OSINT Prompt Pack** gives you the method: 30+ tested prompts across 8 target types, with one repeatable collect → pivot → verify → document flow for running OpenOSINT investigations.
+- **Hosted:** [OpenOSINT Monitor](https://app.openosint.tech/monitor?utm_source=github&utm_medium=readme&utm_campaign=monitor), free for one domain · [OpenOSINT Diligence](https://app.openosint.tech/diligence?utm_source=github&utm_medium=readme&utm_campaign=diligence).
+- **Sponsor:** [Open Collective](https://opencollective.com/openosint_oss) · tiers and media kit in [SPONSORSHIP.md](SPONSORSHIP.md) · [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry). Current sponsors are listed below.
+- **Commercial license & support:** vendor contract, warranty, indemnification, SLA or priority support for procurement, from €300/year. The software itself needs no purchase. See [COMMERCIAL.md](./COMMERCIAL.md) or [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Commercial%20Plan%20Inquiry).
 
-- Email, username, domain, IP, phone, company due-diligence, image & reporting prompts
-- One repeatable investigation flow + an ethics & legal primer
-- Instant download · pairs directly with OpenOSINT
+<!-- SPONSORS:START -->
 
-**→ [Get the Prompt Pack ($29)](https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=github&utm_medium=readme&utm_campaign=prompt_pack)**
+### Featured Integrations
 
-### AI OSINT Operator's Playbook
+<a href="https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location" rel="noopener sponsored"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png" alt="IP2Location.io logo" height="40"></a>
 
-Step-by-step workflows for running investigations with ChatGPT, Claude, and OpenOSINT.
+**[IP2Location.io](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)** — powers `search_ip2location` · [Integration guide](docs/integrations/ip2location.md)
 
-**→ [Get the Playbook ($39)](https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=github&utm_medium=readme&utm_campaign=operator_playbook)**
+> Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection
 
-_Buying directly funds OpenOSINT's development._
+<a href="https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab" rel="noopener sponsored"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg"><img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg" alt="TestMu AI logo" width="353"></picture></a>
 
-## Sponsor this project
+**[TestMu AI](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)**
 
-OpenOSINT is used by OSINT practitioners, security researchers, and developers actively evaluating intelligence APIs. Every time a user configures an integration, the docs route them to that provider's sign-up page — high-intent exposure at the moment of adoption.
+> TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.
 
-**Featured Integration** ($2,000/year or $220/month): recommended/default provider for one tool category, exclusive. Logo + badge across README, docs, CLI banner, and Web UI. One vendor per category.
+_Open: Breach / Compromised-Credential Data · Email / Identity Lookup · Residential Proxies — see [SPONSORSHIP.md](SPONSORSHIP.md)._
 
-Current sponsors and open categories are listed in the sponsor block at the top of this README. Full media kit, pricing, and the referral funnel: [SPONSORSHIP.md](SPONSORSHIP.md).
-
-[Open Collective](https://opencollective.com/openosint_oss) · [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry) · [SPONSORSHIP.md](SPONSORSHIP.md)
-
-## SERVICES
-
-The framework is free and MIT-licensed. This is an optional paid setup service offered by the maintainer.
-
-**OSINT-MCP Setup Sprint** — done-for-you installation and configuration of an autonomous OSINT-MCP pipeline on your environment. Fully async, no calls required.
-
-**Includes:**
-- Pre-configured OpenOSINT setup tailored to your stack (Claude Code, Claude Desktop, or any MCP client)
-- API keys wired in (Shodan, VirusTotal, IP2Location, HaveIBeenPwned, and others as needed)
-- One investigation workflow built around your use case
-- Written step-by-step setup guide + screen-recorded walkthrough
-
-**Delivery:** 3–5 days, fully async.
-
-**For:** SOC analysts · threat-intel teams · fraud/AML · pentesters · OSINT investigators
-
-### Need it set up for you?
-
-Get OpenOSINT wired into your stack in 3–5 days — done-for-you, fully async, no calls.
-
-**[Book the Setup Sprint → $350 (founding price, first 5 teams)](https://tommasodev.gumroad.com/l/osint-mcp-setup-sprint?utm_source=github&utm_medium=readme&utm_campaign=setup_sprint)**
-
-→ Or email [commercial@openosint.tech](mailto:commercial@openosint.tech) · [LinkedIn](https://www.linkedin.com/company/openosintoss)
-
-*For authorized use only. See [DISCLAIMER.md](DISCLAIMER.md).*
-
-## Commercial License & Support
-
-OpenOSINT is free and MIT-licensed for everyone — personal projects, commercial products, SaaS, and closed-source are all covered with no purchase required. Organizations that additionally need a vendor contract, written warranty, indemnification, SLA, or priority support for procurement and compliance can purchase a commercial plan. Three tiers available from €300/year — see [COMMERCIAL.md](./COMMERCIAL.md) for full details and pricing. Contact: [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Commercial%20Plan%20Inquiry).
+<!-- SPONSORS:END -->
 
 ## Contributing
 
@@ -709,7 +999,7 @@ Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
 
 ```bash
 export OPENOSINT_DEMO_KEY=sk-ant-...   # your Anthropic key — never committed
-openosint --web &                      # start the web server on :8080
+openosint web &                        # start the web server on :8080
 make demo                              # record -> encode -> write docs/assets/demo-web-graph.*
 git add docs/assets/demo-web-graph.*
 ```
@@ -740,7 +1030,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.25.0 — July 2026*
+*OpenOSINT v2.36.1 — October 2026*
 
 ## Star History
 

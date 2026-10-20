@@ -1,0 +1,8 @@
+[*] Checking username johndoe99 on:
+
+[1;92m[[0m[1;77m+[0m[1;92m][0m[1;92m GitHub:[0m[1;77m https://github.com/johndoe99[0m
+[1;92m[[0m[1;77m+[0m[1;92m][0m[1;92m Reddit:[0m[1;77m https://www.reddit.com/user/johndoe99[0m
+[1;92m[[1;93m*[1;92m] Search completed with [0m2 [1;92mresults[0m
+
+Go deeper than a username. Explore public profiles and export your findings.
+Try OSINTSearch: ]8;;https://osintsearch.org/go/sherlock\\https://osintsearch.org]8;;\\

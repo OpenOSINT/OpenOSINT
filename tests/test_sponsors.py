@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import textwrap
@@ -343,8 +344,8 @@ def test_renderer_omits_integration_doc_link_when_absent(tmp_path):
 
 def test_real_sponsors_json_is_valid():
     """Ensure the committed sponsors.json always passes validation."""
-    real_path = Path(__file__).parent.parent / "sponsors.json"
-    assert real_path.exists(), "sponsors.json not found at repo root"
+    real_path = Path(__file__).parent.parent / "openosint" / "sponsors.json"
+    assert real_path.exists(), "openosint/sponsors.json not found"
     sponsors = load_sponsors(real_path)
     assert isinstance(sponsors, list)
     for s in sponsors:
@@ -352,3 +353,57 @@ def test_real_sponsors_json_is_valid():
         for field in REQUIRED_FIELDS:
             assert field in s
             assert s[field].strip()
+
+
+# ---------------------------------------------------------------------------
+# /api/sponsors: packaged data, and the missing-file fallback
+# ---------------------------------------------------------------------------
+
+
+def _sponsors_client():
+    from starlette.testclient import TestClient
+
+    import openosint.web_server as ws
+
+    return TestClient(ws.create_app(host="127.0.0.1"), base_url="http://127.0.0.1")
+
+
+def test_api_sponsors_degrades_to_empty_list_when_file_is_not_packaged(monkeypatch, tmp_path):
+    monkeypatch.setattr("openosint.sponsors._SPONSORS_FILE", tmp_path / "missing.json")
+    resp = _sponsors_client().get("/api/sponsors")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok", "sponsors": []}
+
+
+def test_api_sponsors_still_fails_loudly_on_a_corrupt_file(monkeypatch, tmp_path):
+    bad = tmp_path / "sponsors.json"
+    bad.write_text("{not json", encoding="utf-8")
+    monkeypatch.setattr("openosint.sponsors._SPONSORS_FILE", bad)
+    assert _sponsors_client().get("/api/sponsors").status_code == 500
+
+
+def test_api_sponsors_serves_the_packaged_data():
+    resp = _sponsors_client().get("/api/sponsors")
+    assert resp.status_code == 200
+    assert len(resp.json()["sponsors"]) == len(load_sponsors())
+    assert resp.json()["sponsors"], "packaged sponsors.json is empty"
+
+
+def test_one_sponsors_file_for_package_and_renderer():
+    """The renderer (README/docs) and the packaged runtime read the same file."""
+    import importlib.util
+
+    import openosint.sponsors as runtime
+
+    spec = importlib.util.spec_from_file_location(
+        "render_sponsors", Path(__file__).parent.parent / "scripts" / "render_sponsors.py"
+    )
+    renderer = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(renderer)
+    assert renderer._SPONSORS_FILE.resolve() == runtime._SPONSORS_FILE.resolve()
+    assert not (Path(__file__).parent.parent / "sponsors.json").exists(), "stray root copy"
+
+
+def test_sponsors_json_is_declared_as_package_data():
+    text = (Path(__file__).parent.parent / "pyproject.toml").read_text(encoding="utf-8")
+    assert re.search(r'^openosint = \[.*"sponsors\.json".*\]', text, re.MULTILINE)

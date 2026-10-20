@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT entity graph: chat graph and optional graph store</title>
+<meta name="description" content="Two graph features: the chat&#39;s in-browser graph tab, and an optional FollowTheMoney store with provenance, a review queue and MCP tools. What each does.">
+<link rel="canonical" href="https://openosint.tech/docs/entity-graph/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT entity graph: chat graph and optional graph store">
+<meta property="og:description" content="Two graph features: the chat&#39;s in-browser graph tab, and an optional FollowTheMoney store with provenance, a review queue and MCP tools. What each does.">
+<meta property="og:url" content="https://openosint.tech/docs/entity-graph/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT entity graph: chat graph and optional graph store">
+<meta name="twitter:description" content="Two graph features: the chat&#39;s in-browser graph tab, and an optional FollowTheMoney store with provenance, a review queue and MCP tools. What each does.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Entity graph",
+      "item": "https://openosint.tech/docs/entity-graph/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/" aria-current="page">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/" aria-current="page">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Entity graph</li>
+        </ol>
+      </nav>
+      <h1>Entity graph</h1>
+      <p>OpenOSINT has two separate graph features. Do not confuse them.</p>
+<h2 id="the-graph-tab-in-the-web-ui">The Graph tab in the web UI</h2>
+<p>The Graph view in the <a href="/docs/web-ui/">web UI</a> draws the entities (domains, profiles, emails) found during the current chat. It is built in your browser from the tool results and is not saved anywhere.</p>
+<h2 id="the-optional-graph-store">The optional graph store</h2>
+<p>A second, additive module keeps a durable graph on your disk, modelled with <a href="https://followthemoney.tech/">FollowTheMoney</a>:</p>
+<ul>
+<li>statement-level provenance for every fact;</li>
+<li>an append-only store;</li>
+<li>non-destructive same-entity suggestions and a human review queue. Nothing is merged automatically.</li>
+</ul>
+<p>It works in a plain <code>uvx openosint web</code> install, with no compiler and no extra:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Surface</th>
+<th>What it gives you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/graph</code> page and <code>/api/graph/*</code> routes</td>
+<td>Browse the store in the local web UI</td>
+</tr>
+<tr>
+<td><code>graph_neighbors</code> MCP tool</td>
+<td>Entities linked to a given entity</td>
+</tr>
+<tr>
+<td><code>graph_review_candidates</code> MCP tool</td>
+<td>Same-entity suggestions waiting for a decision</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things need an extra. <code>graph_export</code> and <code>.ftm</code> export need <code>pip install "openosint[graph]"</code>, which builds PyICU. Same-entity scoring needs <code>openosint[graph-dedup]</code> on Python 3.11 or newer.</p>
+<p>The database is <code>graph.db</code> in the data directory (<code>~/.openosint/</code>), or the path in <code>OPENOSINT_GRAPH_DB</code>. It starts empty. Neither the web UI nor the agent writes to it; you fill it through the Python API. The <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/docs/graph.md">graph guide on GitHub</a> has the full API and a worked example.</p>
+<h2 id="personal-data">Personal data</h2>
+<p>The store holds real data on your disk, such as names, emails and probable links between identities. You are its controller: decide what goes in, how long it stays and who can read it. <code>GraphStore.erase()</code> removes every statement about an entity, with its provenance and links. The store is local; OpenOSINT never sends it anywhere.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/exposure/" rel="prev"><small>Previous</small>Exposure report</a><a class="next" href="/docs/troubleshooting/" rel="next"><small>Next</small>Troubleshooting</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/entity-graph.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

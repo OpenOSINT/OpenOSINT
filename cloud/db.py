@@ -47,6 +47,19 @@ class Customer:
 
 
 @dataclass(frozen=True)
+class WaitlistSignup:
+    id: int
+    email: str
+    role: str | None
+    use_case: str | None
+    plan_interest: str | None
+    source: str | None
+    created_at: datetime = dataclasses.field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+
+
+@dataclass(frozen=True)
 class User:
     """An OAuth login identity (GitHub / Google). Web-dashboard login only —
     X-API-Key / MCP bearer auth never reads this table."""
@@ -67,6 +80,9 @@ _MEMORY_CUSTOMERS: dict[str, Customer] = {}   # api_key → Customer
 _MEMORY_USERS: dict[int, User] = {}                        # id → User
 _MEMORY_USERS_BY_IDENTITY: dict[tuple[str, str], int] = {}  # (provider, provider_user_id) → id
 _next_user_id = 1
+
+_MEMORY_WAITLIST: dict[str, WaitlistSignup] = {}  # lowercased email → WaitlistSignup
+_next_waitlist_id = 1
 
 
 def _is_memory_mode() -> bool:
@@ -259,3 +275,102 @@ async def link_existing_customer_key(user_id: int, api_key: str) -> str:
     except asyncpg.UniqueViolationError:
         return "conflict"
     return "ok"
+
+
+# ── waitlist (pre-launch demand signups) ──────────────────────────────────────
+
+async def add_waitlist_signup(
+    email: str,
+    role: str | None,
+    use_case: str | None,
+    plan_interest: str | None,
+    source: str | None,
+) -> None:
+    """Insert a waitlist signup. Silently no-ops on a duplicate email — the
+    caller always returns the same success response either way, so it
+    doesn't need or use this function's return value."""
+    if _is_memory_mode():
+        global _next_waitlist_id
+        if email in _MEMORY_WAITLIST:
+            return
+        _MEMORY_WAITLIST[email] = WaitlistSignup(
+            id=_next_waitlist_id,
+            email=email,
+            role=role,
+            use_case=use_case,
+            plan_interest=plan_interest,
+            source=source,
+        )
+        _next_waitlist_id += 1
+        return
+
+    await _pool.execute(
+        """
+        INSERT INTO waitlist (email, role, use_case, plan_interest, source)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (email) DO NOTHING
+        """,
+        email,
+        role,
+        use_case,
+        plan_interest,
+        source,
+    )
+
+
+async def get_waitlist_stats() -> dict[str, Any]:
+    """Aggregate counts for GET /v1/waitlist/stats. Never returns individual
+    emails — export those via direct SQL (see CLOUD.md)."""
+    if _is_memory_mode():
+        signups = list(_MEMORY_WAITLIST.values())
+        return {
+            "total": len(signups),
+            "by_role": _count_by(signups, lambda s: s.role),
+            "by_plan_interest": _count_by(signups, lambda s: s.plan_interest),
+            "by_source": _count_by(signups, lambda s: s.source),
+        }
+
+    total = await _pool.fetchval("SELECT count(*) FROM waitlist")
+    return {
+        "total": total,
+        "by_role": await _grouped_role_counts(),
+        "by_plan_interest": await _grouped_plan_interest_counts(),
+        "by_source": await _grouped_source_counts(),
+    }
+
+
+def _count_by(signups: list[WaitlistSignup], key: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for signup in signups:
+        value = key(signup)
+        if value is None:
+            continue
+        counts[value] = counts.get(value, 0) + 1
+    return counts
+
+
+# Three static queries rather than one query built with an interpolated
+# column name — no dynamic SQL in this module, even though the (internal-
+# only) callers above would only ever pass one of these three literals.
+async def _grouped_role_counts() -> dict[str, int]:
+    rows = await _pool.fetch(
+        "SELECT role AS key, count(*) AS n FROM waitlist "
+        "WHERE role IS NOT NULL GROUP BY role"
+    )
+    return {row["key"]: row["n"] for row in rows}
+
+
+async def _grouped_plan_interest_counts() -> dict[str, int]:
+    rows = await _pool.fetch(
+        "SELECT plan_interest AS key, count(*) AS n FROM waitlist "
+        "WHERE plan_interest IS NOT NULL GROUP BY plan_interest"
+    )
+    return {row["key"]: row["n"] for row in rows}
+
+
+async def _grouped_source_counts() -> dict[str, int]:
+    rows = await _pool.fetch(
+        "SELECT source AS key, count(*) AS n FROM waitlist "
+        "WHERE source IS NOT NULL GROUP BY source"
+    )
+    return {row["key"]: row["n"] for row in rows}

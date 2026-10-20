@@ -91,7 +91,7 @@ def _extract_breach(raw: str, seed: Entity) -> tuple[list[Entity], list[Relation
         return entities, relationships
 
     # Lines like: [+] BreachName (2020-01-01) — leaked: Emails, Passwords
-    breach_re = re.compile(r"^\[+\]\s+(\S+)\s+\(")
+    breach_re = re.compile(r"^\[\+\]\s+(\S+)\s+\(")
     for line in raw.splitlines():
         m = breach_re.match(line)
         if m:

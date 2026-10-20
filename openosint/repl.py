@@ -39,6 +39,7 @@ from openosint.agent import (
     OpenAICompatibleAgent,
     OpenOSINTAgent,
 )
+from openosint.tool_policy import active_enabled, max_tool_calls
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,7 @@ _TOOL_INFO_ROWS = [
     ("search_abuseipdb", "AbuseIPDB API", "IP abuse confidence score"),
     ("search_github", "GitHub API", "Profile, repos, commit-email discovery"),
     ("search_dns", "dnspython", "DNS records & email security audit"),
+    ("search_rdap", "RDAP (IANA bootstrap)", "Registrar, dates, name servers (keyless)"),
 ]
 
 # ---------------------------------------------------------------------------
@@ -126,6 +128,16 @@ def _print_banner(provider: str, model: str) -> None:
             padding=(0, 2),
         )
     )
+    if active_enabled():
+        console.print(
+            "  [yellow]Active tools ON[/] [dim]— noisy tools may rate-limit or alert; "
+            f"max {max_tool_calls()} tool calls per request[/]"
+        )
+    else:
+        console.print(
+            "  [dim]Passive mode (default): only tools that query third-party data sources. "
+            f"Max {max_tool_calls()} tool calls per request. Restart with --allow-active for noisy tools.[/]"
+        )
     console.print(
         "  Type a target or question. [dim]'help'[/] for commands. [dim]'exit'[/] to quit.\n"
     )
@@ -263,19 +275,12 @@ def _print_config(
 # ---------------------------------------------------------------------------
 
 
-_REPORT_FOOTER = (
-    "\n\n---\n"
-    "*Free 5-prompt OSINT starter set: "
-    "https://openosint.tech/free-prompts?utm_source=cli&utm_medium=report-footer&utm_campaign=free_prompts*\n"
-)
-
-
 def _save_report(content: str) -> Path:
     reports_dir = Path("reports")
     reports_dir.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     path = reports_dir / f"{timestamp}_report.md"
-    path.write_text(content + _REPORT_FOOTER, encoding="utf-8")
+    path.write_text(content, encoding="utf-8")
     return path
 
 
@@ -293,7 +298,7 @@ class OpenOSINTRepl:
         provider: str = "anthropic",
         ollama_model: str = "llama3.2",
         ollama_host: str = "http://localhost:11434",
-        openai_base_url: str = "http://localhost:8080/v1",
+        openai_base_url: str = "http://localhost:4000/v1",
         openai_model: str = "gpt-4o-mini",
         openai_api_key: str | None = None,
         minimax_model: str = MINIMAX_MODELS[0],
@@ -336,7 +341,7 @@ class OpenOSINTRepl:
             self._display_model = minimax_model
         else:
             self._agent = OpenOSINTAgent(api_key=self._api_key)
-            self._display_model = "claude-sonnet-4-20250514"
+            self._display_model = self._agent.model
 
         self._last_response: str = ""
         self._session_start: datetime = datetime.now()

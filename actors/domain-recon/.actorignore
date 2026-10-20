@@ -1,0 +1,7 @@
+storage/
+local-wheels/
+__pycache__/
+*.pyc
+.venv/
+Dockerfile.local
+tests/

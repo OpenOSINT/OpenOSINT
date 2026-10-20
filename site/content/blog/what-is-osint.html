@@ -1,0 +1,86 @@
+---
+title: What Is OSINT? A Technical Guide for Developers and Security Researchers
+seo_title: What is OSINT? A technical guide for developers
+description: OSINT is collecting public information for intelligence. Covers the information tiers, passive versus active collection, tooling and the legal limits.
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<div class="indent">
+<p>OSINT — Open Source Intelligence — is the practice of collecting, correlating, and analyzing publicly available information to produce actionable intelligence about a target. The term "open source" has nothing to do with software licensing: it means the sources are open to the public, no hacking required. Understanding what that boundary actually means — technically and legally — is the foundation of any responsible security research workflow.</p>
+</div>
+
+<h2>The information tiers</h2>
+<div class="indent">
+<p>Practitioners typically think of publicly available data in three tiers, and only the first tier constitutes true OSINT.</p>
+
+<p><strong>Tier 1: Truly public.</strong> This is everything indexed by search engines, accessible via public APIs without authentication, or published in registries that anyone can query. DNS records, WHOIS and RDAP registration data, TLS certificate logs (Certificate Transparency), BGP routing tables, job postings, archived web pages, social media public profiles, domain registration history, and ASN data all live here. A government subpoena is not required to access any of it. A web browser is sufficient. This is the tier OSINT operates on.</p>
+
+<p><strong>Tier 2: Semi-public.</strong> Breach databases, paste site archives, dark web forums, and private data brokers. Some of this is technically accessible but legally murky — accessing known stolen credential dumps may constitute receipt of stolen property in some jurisdictions. Tools like HaveIBeenPwned abstract this by querying their curated aggregate without exposing raw credential data. Treat this tier carefully: query through APIs that strip the raw data, never download and store breach dumps.</p>
+
+<p><strong>Tier 3: Closed.</strong> Anything requiring authentication, purchase, or legal authority to access. Corporate internal systems, sealed court records, private API endpoints, law enforcement databases. This is not OSINT. Accessing closed-tier data without authorization is illegal regardless of your intent.</p>
+
+<p>OSINT in practice means Tier 1 data. An investigation that stays within Tier 1 is entirely defensible. One that drifts into Tier 2 or 3 requires explicit legal authorization.</p>
+</div>
+
+<h2>Passive vs. active collection</h2>
+<div class="indent">
+<p>Within Tier 1, there is a second important distinction: passive versus active collection. This distinction affects both legal exposure and detection risk.</p>
+
+<p><strong>Passive collection</strong> means you are observing without contacting the target's own infrastructure. A DNS lookup for a domain hits public nameservers, not the target's servers. A WHOIS query hits a registrar's database. A Certificate Transparency log query hits crt.sh servers. Querying HaveIBeenPwned about an email hits HIBP's servers. The target gets no request from you; their logs show nothing. This is the safest mode of OSINT and covers the majority of useful data collection.</p>
+
+<p><strong>Active collection</strong> means sending requests directly to the target's systems. An HTTP crawl of a target's website. A port scan of their IP range. Subdomain brute-forcing that generates DNS queries resolved by the target's authoritative nameserver. These are technically OSINT-adjacent (the ports and HTTP responses are "public"), but they touch target infrastructure. Without written authorization, active probing can constitute unauthorized access under the Computer Fraud and Abuse Act and equivalent statutes in other jurisdictions.</p>
+
+<p>The rule: if your traffic appears in the target's logs, you're doing active collection. Get explicit written authorization before proceeding. Sublist3r's subdomain enumeration, for example, queries third-party sources by default (search engines, VirusTotal, DNSdumpster) rather than the target, but it scrapes them from your IP, which is noisy, and it can switch to active DNS brute-forcing. Know which mode you're operating in.</p>
+</div>
+
+<h2>The OSINT surface area</h2>
+<div class="indent">
+<p>An investigation triangulates across data layers. Each layer provides a different signal class, and the value comes from correlation — a name appears in WHOIS, the same name appears on a social profile, the same profile links to a GitHub repository, and that repository contains an email address. No single layer contains the full picture.</p>
+
+<p>The main layers:</p>
+<ul>
+<li><strong>DNS and WHOIS/RDAP</strong> — domain registration data, nameserver configuration, historical records via passive DNS services. IP-to-domain and domain-to-IP mappings.</li>
+<li><strong>Certificate Transparency</strong> — every TLS certificate issued for a domain is logged. crt.sh indexes all of them, making subdomain discovery trivially accurate without any active probing.</li>
+<li><strong>BGP/ASN data</strong> — who owns an IP range, which organization the IP routes to, what network prefixes are announced. Team Cymru and Shodan both index this.</li>
+<li><strong>Social platform profiles</strong> — public profile data, follower graphs, post history, tagged locations, linked accounts.</li>
+<li><strong>Breach aggregates</strong> — email addresses and usernames that appeared in known data breaches, queryable through HIBP and similar services.</li>
+<li><strong>Paste sites</strong> — Pastebin, Ghostbin, and similar services are routinely used to dump stolen data. Full-text search across archives can surface emails, credentials, and internal documents.</li>
+<li><strong>Geolocation databases</strong> — IP-to-physical-location mapping at city or ISP level, plus proxy/VPN/datacenter detection. Services like IP2Location.io provide enriched geolocation with threat scoring.</li>
+</ul>
+
+<p>A well-structured investigation hits each relevant layer systematically, not opportunistically. Ad hoc tool use produces gaps; a framework approach produces coverage.</p>
+</div>
+
+<h2>The tool landscape</h2>
+<div class="indent">
+<p>The OSINT tool ecosystem is fragmented by design — each tool was built for a specific problem. holehe for email account enumeration. sherlock for username enumeration across 300+ platforms. sublist3r for passive subdomain discovery. python-whois for domain registration data. ipinfo.io and ip2location for IP intelligence. HaveIBeenPwned for breach exposure. Shodan for banner-level host intelligence. VirusTotal for reputation scoring of IPs, domains, and file hashes.</p>
+
+<p>Each tool has its own CLI syntax, output format, and API key requirement. Running a coherent investigation means switching between five or six tools, reformatting outputs mentally, and tracking which findings prompted which follow-up queries. This is the analyst bottleneck: not data availability, but tool fragmentation and context management.</p>
+
+<p><a href="/">OpenOSINT</a> addresses this by wrapping 14 specialized tools under a single AI-driven interface. The analyst provides a target; the AI decides which tools to call, executes them, receives their real output, and decides what to run next. The output is a compiled report. The tools still do the actual data retrieval — nothing is fabricated. See the full <a href="/tools/">tools reference</a> for the complete list of available tools and their parameters.</p>
+</div>
+
+<h2>Where AI fits in OSINT workflows</h2>
+<div class="indent">
+<p>Traditional OSINT is analyst-paced: tool runs, analyst reads, analyst decides next step. The analyst is the decision engine, and their time is the bottleneck. AI-assisted OSINT restructures this: the analyst defines the question, and the AI operates the tools, reads outputs, and decides what to run next. The analyst reviews the compiled result rather than managing the execution sequence.</p>
+
+<p>The critical constraint is that AI must not fabricate tool results. A model that generates plausible-looking WHOIS data instead of actually calling a WHOIS API is useless for security research — worse than useless, because the analyst will act on false data. The correct architecture is: AI issues tool call → Python executes real tool → real output returned to AI → AI interprets and decides next step. The AI must never be in a position to guess what a tool would have returned.</p>
+
+<p>This is why Anthropic's tool use API is structurally well-suited to OSINT: when the model issues a <code>tool_use</code> block, generation stops and the runtime executes the actual tool. The model cannot continue generating until real output is received. Read more about how this works in the <a href="/blog/osint-ai-agents.html">AI agents for OSINT</a> article.</p>
+
+<p>OSINT investigations are only authorized when conducted on targets for which you have explicit permission, or targets that are yourself. Always verify authorization before running any investigation. Jurisdictional rules vary — what is legal in one country may not be in another.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/osint-ai-agents.html">How AI Agents Are Changing OSINT</a> &mdash; agentic loops, tool chaining, and hallucination prevention</li>
+<li><a href="/tools/">OpenOSINT Tools Reference</a> &mdash; the full tool set with parameters and usage examples</li>
+<li><a href="/blog/email-osint-guide.html">Email OSINT Guide</a> &mdash; enumeration, breach detection, and dork generation for email targets</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

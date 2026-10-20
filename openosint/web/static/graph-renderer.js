@@ -248,9 +248,16 @@ export function clearGraph() {
   _capFired  = false;
 }
 
-/** Call after the graph panel becomes visible to fix blank-canvas on hidden panels. */
+/** Call after the graph panel becomes visible to fix blank-canvas on hidden
+ * panels. addToGraph()'s layout/fit typically runs while #graph-container is
+ * still display:none (the investigation happens on the Chat view) — fit()
+ * against a zero-size viewport degenerates, pinning nodes near the origin.
+ * resize() alone doesn't recompute that; re-fit here so entering GRAPH
+ * always shows a properly framed graph, not a clump in the corner. */
 export function resizeGraph() {
-  if (_cy) _cy.resize();
+  if (!_cy) return;
+  _cy.resize();
+  if (_cy.nodes().length > 0) _cy.fit(undefined, 24);
 }
 
 /** Returns a base64 PNG data URI, or null on failure. */

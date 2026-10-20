@@ -1,62 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>What Is OSINT? A Technical Guide for Developers and Security Researchers</title>
-<meta name="description" content="OSINT is the structured collection of publicly available information for intelligence purposes. This guide covers information tiers, passive vs active collection, tooling, and legal limits.">
-<meta name="keywords" content="OSINT, open source intelligence, passive reconnaissance, OSINT tools, security research, information gathering">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What is OSINT? A technical guide for developers</title>
+<meta name="description" content="OSINT is collecting public information for intelligence. Covers the information tiers, passive versus active collection, tooling and the legal limits.">
 <link rel="canonical" href="https://openosint.tech/blog/what-is-osint.html">
-<meta property="og:title" content="What Is OSINT? A Technical Guide for Developers and Security Researchers">
-<meta property="og:description" content="OSINT is the structured collection of publicly available information for intelligence purposes. This guide covers information tiers, passive vs active collection, tooling, and legal limits.">
-<meta property="og:url" content="https://openosint.tech/blog/what-is-osint.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What is OSINT? A technical guide for developers">
+<meta property="og:description" content="OSINT is collecting public information for intelligence. Covers the information tiers, passive versus active collection, tooling and the legal limits.">
+<meta property="og:url" content="https://openosint.tech/blog/what-is-osint.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="What Is OSINT? A Technical Guide for Developers and Security Researchers">
-<meta name="twitter:description" content="OSINT is the structured collection of publicly available information for intelligence purposes. This guide covers information tiers, passive vs active collection, tooling, and legal limits.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="What is OSINT? A technical guide for developers">
+<meta name="twitter:description" content="OSINT is collecting public information for intelligence. Covers the information tiers, passive versus active collection, tooling and the legal limits.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "What Is OSINT? A Technical Guide for Developers and Security Researchers",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "OSINT is collecting public information for intelligence. Covers the information tiers, passive versus active collection, tooling and the legal limits.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/what-is-osint.html",
-  "description": "OSINT is the structured collection of publicly available information for intelligence purposes. This guide covers information tiers, passive vs active collection, tooling, and legal limits."
+  "mainEntityOfPage": "https://openosint.tech/blog/what-is-osint.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>WHAT IS OSINT? A TECHNICAL GUIDE FOR DEVELOPERS AND SECURITY RESEARCHERS</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<div class="indent">
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>What Is OSINT? A Technical Guide for Developers and Security Researchers</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 6 min read</p>
+    <div class="indent">
 <p>OSINT — Open Source Intelligence — is the practice of collecting, correlating, and analyzing publicly available information to produce actionable intelligence about a target. The term "open source" has nothing to do with software licensing: it means the sources are open to the public, no hacking required. Understanding what that boundary actually means — technically and legally — is the foundation of any responsible security research workflow.</p>
 </div>
 
-<h2>THE INFORMATION TIERS</h2>
+<h2>The information tiers</h2>
 <div class="indent">
 <p>Practitioners typically think of publicly available data in three tiers, and only the first tier constitutes true OSINT.</p>
 
@@ -69,7 +97,7 @@
 <p>OSINT in practice means Tier 1 data. An investigation that stays within Tier 1 is entirely defensible. One that drifts into Tier 2 or 3 requires explicit legal authorization.</p>
 </div>
 
-<h2>PASSIVE VS. ACTIVE COLLECTION</h2>
+<h2>Passive vs. active collection</h2>
 <div class="indent">
 <p>Within Tier 1, there is a second important distinction: passive versus active collection. This distinction affects both legal exposure and detection risk.</p>
 
@@ -77,10 +105,10 @@
 
 <p><strong>Active collection</strong> means sending requests directly to the target's systems. An HTTP crawl of a target's website. A port scan of their IP range. Subdomain brute-forcing that generates DNS queries resolved by the target's authoritative nameserver. These are technically OSINT-adjacent (the ports and HTTP responses are "public"), but they touch target infrastructure. Without written authorization, active probing can constitute unauthorized access under the Computer Fraud and Abuse Act and equivalent statutes in other jurisdictions.</p>
 
-<p>The rule: if your traffic appears in the target's logs, you're doing active collection. Get explicit written authorization before proceeding. Sublist3r's subdomain enumeration, for example, uses passive sources by default (search engines, VirusTotal, DNSdumpster) but can switch to active DNS brute-forcing. Know which mode you're operating in.</p>
+<p>The rule: if your traffic appears in the target's logs, you're doing active collection. Get explicit written authorization before proceeding. Sublist3r's subdomain enumeration, for example, queries third-party sources by default (search engines, VirusTotal, DNSdumpster) rather than the target, but it scrapes them from your IP, which is noisy, and it can switch to active DNS brute-forcing. Know which mode you're operating in.</p>
 </div>
 
-<h2>THE OSINT SURFACE AREA</h2>
+<h2>The OSINT surface area</h2>
 <div class="indent">
 <p>An investigation triangulates across data layers. Each layer provides a different signal class, and the value comes from correlation — a name appears in WHOIS, the same name appears on a social profile, the same profile links to a GitHub repository, and that repository contains an email address. No single layer contains the full picture.</p>
 
@@ -98,7 +126,7 @@
 <p>A well-structured investigation hits each relevant layer systematically, not opportunistically. Ad hoc tool use produces gaps; a framework approach produces coverage.</p>
 </div>
 
-<h2>THE TOOL LANDSCAPE</h2>
+<h2>The tool landscape</h2>
 <div class="indent">
 <p>The OSINT tool ecosystem is fragmented by design — each tool was built for a specific problem. holehe for email account enumeration. sherlock for username enumeration across 300+ platforms. sublist3r for passive subdomain discovery. python-whois for domain registration data. ipinfo.io and ip2location for IP intelligence. HaveIBeenPwned for breach exposure. Shodan for banner-level host intelligence. VirusTotal for reputation scoring of IPs, domains, and file hashes.</p>
 
@@ -107,7 +135,7 @@
 <p><a href="/">OpenOSINT</a> addresses this by wrapping 14 specialized tools under a single AI-driven interface. The analyst provides a target; the AI decides which tools to call, executes them, receives their real output, and decides what to run next. The output is a compiled report. The tools still do the actual data retrieval — nothing is fabricated. See the full <a href="/tools/">tools reference</a> for the complete list of available tools and their parameters.</p>
 </div>
 
-<h2>WHERE AI FITS IN OSINT WORKFLOWS</h2>
+<h2>Where AI fits in OSINT workflows</h2>
 <div class="indent">
 <p>Traditional OSINT is analyst-paced: tool runs, analyst reads, analyst decides next step. The analyst is the decision engine, and their time is the bottleneck. AI-assisted OSINT restructures this: the analyst defines the question, and the AI operates the tools, reads outputs, and decides what to run next. The analyst reviews the compiled result rather than managing the execution sequence.</p>
 
@@ -118,7 +146,7 @@
 <p>OSINT investigations are only authorized when conducted on targets for which you have explicit permission, or targets that are yourself. Always verify authorization before running any investigation. Jurisdictional rules vary — what is legal in one country may not be in another.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/osint-ai-agents.html">How AI Agents Are Changing OSINT</a> &mdash; agentic loops, tool chaining, and hallucination prevention</li>
@@ -129,19 +157,44 @@
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

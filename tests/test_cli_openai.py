@@ -65,7 +65,7 @@ class TestBuildParserOpenaiArgs:
         from openosint.cli import _build_parser
 
         args = _build_parser().parse_args([])
-        assert args.openai_base_url == "http://localhost:8080/v1"
+        assert args.openai_base_url == "http://localhost:4000/v1"
 
     def test_openai_model_default_is_gpt4o_mini(self, monkeypatch):
         monkeypatch.delenv("OPENAI_MODEL", raising=False)

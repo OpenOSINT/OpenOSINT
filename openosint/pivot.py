@@ -30,6 +30,7 @@ from openosint.correlation import (
 )
 from openosint.extractors import EXTRACTOR_REGISTRY
 from openosint.regexes import detect_entity_kind
+from openosint.tool_policy import current_budget, is_tool_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +106,7 @@ def _is_key_available(tool_name: str) -> bool:
 def _get_routable_tools(entity: Entity) -> list[str]:
     """Return tools applicable to *entity* whose required keys are present."""
     candidates = _TOOL_ROUTES.get(entity.type, [])
-    return [t for t in candidates if _is_key_available(t)]
+    return [t for t in candidates if is_tool_enabled(t) and _is_key_available(t)]
 
 
 # ---------------------------------------------------------------------------
@@ -231,6 +232,12 @@ async def investigate_graph(
         # Slice the batch to never exceed the remaining call budget
         remaining = max_tool_calls - call_count
         batch = tools[:remaining]
+        # Calls also spend the request's shared budget (see openosint.tool_policy).
+        budget = current_budget()
+        if budget is not None:
+            batch = [t for t in batch if budget.try_consume()]
+            if not batch:
+                break
         call_count += len(batch)
 
         logger.debug(

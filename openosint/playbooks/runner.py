@@ -12,8 +12,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Awaitable, Callable
 
+from openosint.brightdata import BRIGHTDATA_LINK_CLI
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.search_breach import run_breach_osint
+from openosint.tool_policy import TOOL_POLICY, is_tool_enabled
 from openosint.tools.search_dns import run_dns_osint
 from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_email import run_email_osint
@@ -64,7 +66,7 @@ TOOL_REQUIREMENTS: dict[str, _Req] = {
     "search_footprint": (
         ["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"],
         [],
-        "Sign up at brightdata.com to obtain your API key and SERP zone.",
+        f"Sign up at Bright Data to obtain your API key and SERP zone: {BRIGHTDATA_LINK_CLI}",
     ),
     "search_email": ([], ["holehe"], None),
     "search_breach": (["HIBP_API_KEY"], [], None),
@@ -83,6 +85,7 @@ TOOL_REQUIREMENTS: dict[str, _Req] = {
 
 class StepState(Enum):
     NOT_CONFIGURED = "not_configured"
+    DISABLED = "disabled_in_passive_mode"
     INVALID_INPUT = "invalid_input"
     EMPTY = "empty"
     ERROR = "error"
@@ -142,6 +145,8 @@ def _missing_requirements(tool: str) -> tuple[list[str], str | None]:
 
 async def _run_step(tool: str, target: str) -> tuple[StepState, str]:
     """Run a single tool step.  Never raises."""
+    if not is_tool_enabled(tool):
+        return StepState.DISABLED, ""
     missing, _note = _missing_requirements(tool)
     if missing:
         return StepState.NOT_CONFIGURED, ""
@@ -818,6 +823,11 @@ def _build_report(
             lines.append(f"> ℹ️ Skipped — set {missing_str} to enable this section.")
             if note:
                 lines.append(f"> {note}")
+        elif state == StepState.DISABLED:
+            lines.append(
+                f"> ℹ️ Skipped — {tool_name} is off in passive mode ({TOOL_POLICY[tool_name].noise.value}). "
+                "Re-run with --allow-active to include it."
+            )
         elif state == StepState.INVALID_INPUT:
             lines.append("> ℹ️ Not applicable for this target type.")
         elif state == StepState.EMPTY:
@@ -852,7 +862,6 @@ async def run_playbook(
     be created or the report file cannot be written — the caller is responsible
     for handling filesystem-level errors.
     """
-    from openosint.playbooks.loader import Recipe  # local import to avoid circular
 
     reports_path = reports_dir or Path("reports")
     try:

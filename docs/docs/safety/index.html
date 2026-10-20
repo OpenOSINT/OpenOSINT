@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT safety: passive mode, tool-call cap, noise labels</title>
+<meta name="description" content="OpenOSINT is passive by default. How active tools are enabled, the per-request tool-call cap of 15, what each noise label means, and responsible use.">
+<link rel="canonical" href="https://openosint.tech/docs/safety/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT safety: passive mode, tool-call cap, noise labels">
+<meta property="og:description" content="OpenOSINT is passive by default. How active tools are enabled, the per-request tool-call cap of 15, what each noise label means, and responsible use.">
+<meta property="og:url" content="https://openosint.tech/docs/safety/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT safety: passive mode, tool-call cap, noise labels">
+<meta name="twitter:description" content="OpenOSINT is passive by default. How active tools are enabled, the per-request tool-call cap of 15, what each noise label means, and responsible use.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Safety",
+      "item": "https://openosint.tech/docs/safety/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/" aria-current="page">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/" aria-current="page">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Safety</li>
+        </ol>
+      </nav>
+      <h1>Safety and responsible use</h1>
+      <p>OpenOSINT is built so that a default install does not touch your target and cannot run away with requests.</p>
+<h2 id="passive-by-default">Passive by default</h2>
+<p>In passive mode agents and MCP clients are only offered tools that query third-party data sources or compute locally. Tools that touch the target's infrastructure, or send many requests about it from your IP, are not just refused: they are not offered to the model at all, and an MCP client does not see them in <code>tools/list</code>. If a disabled tool is requested anyway, it returns a structured <code>disabled_in_passive_mode</code> result that says how to enable it.</p>
+<p>Enable active tools only when you mean to:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLI and REPL</td>
+<td><code>openosint --allow-active ...</code></td>
+</tr>
+<tr>
+<td>Any process</td>
+<td><code>OPENOSINT_ALLOW_ACTIVE=1</code></td>
+</tr>
+<tr>
+<td>Web UI</td>
+<td>Settings, "Enable active tools" (local installs only)</td>
+</tr>
+<tr>
+<td>MCP server</td>
+<td><code>openosint-mcp --allow-active</code>, or <code>OPENOSINT_ALLOW_ACTIVE=1</code> in the client's <code>env</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>A publicly reachable or demo web instance can never enable active tools, whatever its settings.</p>
+<h2 id="tool-call-cap">Tool-call cap</h2>
+<p>Each user request may spend at most <code>OPENOSINT_MAX_TOOL_CALLS</code> tool calls (default 15); every new message starts a fresh budget. <code>investigate_multi</code> shares one cap across all its targets (<code>OPENOSINT_MAX_TOOL_CALLS_MULTI</code>, default 30). When the cap is reached the investigation stops with an explicit message and keeps the results so far.</p>
+<h2 id="noise-labels">Noise labels</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Level</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>passive</td>
+<td>Queries third-party data sources or computes locally. Standard DNS lookups are the one indirect exception: they reach the target's nameservers through your resolver.</td>
+</tr>
+<tr>
+<td>touches target</td>
+<td>Makes requests the target's own infrastructure can see.</td>
+</tr>
+<tr>
+<td>noisy</td>
+<td>High request volume, or requests to many services about the target. Expect rate limits, blocks and possible alerts.</td>
+</tr>
+<tr>
+<td>unverified</td>
+<td>Network behaviour not yet confirmed with a traffic capture. Treated as non-passive.</td>
+</tr>
+<tr>
+<td>inherits</td>
+<td>A fan-out tool that only runs what the current mode allows.</td>
+</tr>
+</tbody>
+</table></div>
+<p>What each tool actually sends, generated from the code:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Level</th>
+<th>Default</th>
+<th>What it actually sends, and where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>generate_dorks</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Builds Google search URLs locally; sends nothing.</td>
+</tr>
+<tr>
+<td><code>graph_export</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Reads the local graph database only.</td>
+</tr>
+<tr>
+<td><code>graph_neighbors</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Reads the local graph database only.</td>
+</tr>
+<tr>
+<td><code>graph_review_candidates</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Reads the local graph database only.</td>
+</tr>
+<tr>
+<td><code>investigate_graph</code></td>
+<td>inherits</td>
+<td>on</td>
+<td>Chains tools from a seed; in passive mode it routes only to passive tools.</td>
+</tr>
+<tr>
+<td><code>investigate_multi</code></td>
+<td>inherits</td>
+<td>on</td>
+<td>Runs one agent per target under a shared tool-call cap; passive unless active is enabled.</td>
+</tr>
+<tr>
+<td><code>scrape_url</code></td>
+<td>touches target</td>
+<td><strong>off</strong></td>
+<td>Bright Data fetches the URL, so the target's server logs a request (from Bright Data's IP, not yours).</td>
+</tr>
+<tr>
+<td><code>search_abuseipdb</code></td>
+<td>passive</td>
+<td>on</td>
+<td>One request to api.abuseipdb.com.</td>
+</tr>
+<tr>
+<td><code>search_breach</code></td>
+<td>passive</td>
+<td>on</td>
+<td>One request to haveibeenpwned.com.</td>
+</tr>
+<tr>
+<td><code>search_censys</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Censys API; returns data Censys already holds.</td>
+</tr>
+<tr>
+<td><code>search_dns</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Record lookups go through your DNS resolver; the target's nameservers see the resolver, not you. <strong>Active part:</strong> DKIM selector probes (enumeration) run only with active tools enabled.</td>
+</tr>
+<tr>
+<td><code>search_domain</code></td>
+<td>noisy</td>
+<td><strong>off</strong></td>
+<td>sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks.</td>
+</tr>
+<tr>
+<td><code>search_dorks_live</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Google results via Bright Data; the target is sent to those two services.</td>
+</tr>
+<tr>
+<td><code>search_email</code></td>
+<td>noisy</td>
+<td><strong>off</strong></td>
+<td>holehe probes many sites' sign-up/reset flows with the email from your IP; may notify the account owner or trigger security alerts.</td>
+</tr>
+<tr>
+<td><code>search_footprint</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Up to 3 Google queries via Bright Data; the target is sent to those two services.</td>
+</tr>
+<tr>
+<td><code>search_gdelt_geo</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine.</td>
+</tr>
+<tr>
+<td><code>search_github</code></td>
+<td>passive</td>
+<td>on</td>
+<td>A few requests to api.github.com.</td>
+</tr>
+<tr>
+<td><code>search_ip</code></td>
+<td>passive</td>
+<td>on</td>
+<td>One request to ipinfo.io.</td>
+</tr>
+<tr>
+<td><code>search_ip2location</code></td>
+<td>passive</td>
+<td>on</td>
+<td>One request to api.ip2location.io.</td>
+</tr>
+<tr>
+<td><code>search_paste</code></td>
+<td>passive</td>
+<td>on</td>
+<td>One request to psbdmp.ws.</td>
+</tr>
+<tr>
+<td><code>search_phone</code></td>
+<td>unverified</td>
+<td><strong>off</strong></td>
+<td>Runs phoneinfoga; what it sends over the network has not been verified with a traffic capture.</td>
+</tr>
+<tr>
+<td><code>search_rdap</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Queries IANA and the registry's RDAP server, not the target.</td>
+</tr>
+<tr>
+<td><code>search_shodan</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Shodan API; reads Shodan's existing index, requests no new scan.</td>
+</tr>
+<tr>
+<td><code>search_username</code></td>
+<td>noisy</td>
+<td><strong>off</strong></td>
+<td>sherlock sends requests from your IP to hundreds of sites; expect rate limits and WAF blocks.</td>
+</tr>
+<tr>
+<td><code>search_virustotal</code></td>
+<td>passive</td>
+<td>on</td>
+<td>IP, domain and hash lookups read VirusTotal's existing data. URL submission is a separate active mode, off by default: it makes VirusTotal fetch the URL and makes it visible to the VirusTotal community.</td>
+</tr>
+<tr>
+<td><code>search_virustotal (URL submission)</code></td>
+<td>touches target</td>
+<td><strong>off</strong></td>
+<td>VirusTotal fetches the submitted URL, and the URL becomes visible to the VirusTotal community, which can reveal your investigation.</td>
+</tr>
+<tr>
+<td><code>search_whois</code></td>
+<td>passive</td>
+<td>on</td>
+<td>Queries the registry/registrar WHOIS server, not the target.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="responsible-use">Responsible use</h2>
+<ul>
+<li><strong>Passive is not private.</strong> Every service you query sees your search, and usually your API key or IP address. Treat lookups on Shodan, Have I Been Pwned, VirusTotal, Bright Data and similar services as visible to those providers.</li>
+<li><strong>Authorization.</strong> Investigate only targets you are permitted to. Local laws on personal data differ; the legal and operational responsibility is yours. Read the <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/DISCLAIMER.md">disclaimer</a>.</li>
+<li><strong>Verify the output.</strong> Tool results are real; the AI's reading of them is not proof. Check a finding at its source before you act on it.</li>
+<li><strong>Stored personal data.</strong> The optional <a href="/docs/entity-graph/">entity graph</a> keeps data on your disk. You are its controller.</li>
+</ul>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/configuration/" rel="prev"><small>Previous</small>Configuration</a><a class="next" href="/docs/exposure/" rel="next"><small>Next</small>Exposure report</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/safety.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

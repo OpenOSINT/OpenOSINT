@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT web UI: chat, globe and graph on your machine</title>
+<meta name="description" content="Run openosint web to get a local browser app with AI chat, a worldwide news globe and a graph view. Default port 8080, loopback only, no account needed.">
+<link rel="canonical" href="https://openosint.tech/docs/web-ui/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT web UI: chat, globe and graph on your machine">
+<meta property="og:description" content="Run openosint web to get a local browser app with AI chat, a worldwide news globe and a graph view. Default port 8080, loopback only, no account needed.">
+<meta property="og:url" content="https://openosint.tech/docs/web-ui/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT web UI: chat, globe and graph on your machine">
+<meta name="twitter:description" content="Run openosint web to get a local browser app with AI chat, a worldwide news globe and a graph view. Default port 8080, loopback only, no account needed.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Web UI",
+      "item": "https://openosint.tech/docs/web-ui/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/" aria-current="page">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/" aria-current="page">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Web UI</li>
+        </ol>
+      </nav>
+      <h1>Web UI</h1>
+      <p>The web UI is a local browser app. It starts without any API key; keyless tools work at once and the chat needs a provider.</p>
+<h2 id="start-it">Start it</h2>
+<pre><code class="language-bash">openosint web
+</code></pre>
+<p>Or without installing: <code>uvx openosint web</code>. The server prints its address and opens your browser. By default it listens on <code>http://127.0.0.1:8080/</code>.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--port N</code></td>
+<td>Use another port. If 8080 is busy, OpenOSINT exits and suggests the next one.</td>
+</tr>
+<tr>
+<td><code>--no-browser</code></td>
+<td>Do not open a browser tab.</td>
+</tr>
+<tr>
+<td><code>--host HOST</code></td>
+<td>Bind to another address (default <code>127.0.0.1</code>).</td>
+</tr>
+<tr>
+<td><code>--allow-remote</code></td>
+<td>Required for any non-loopback host. It exposes the server to your network.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="the-three-views">The three views</h2>
+<ul>
+<li><strong>Chat.</strong> Ask in plain language. Tool output streams in as result cards, each tied to the tool call that produced it.</li>
+<li><strong>Globe.</strong> Recent worldwide news, placed on a map by the <code>search_gdelt_geo</code> tool. Hold Shift and drag to search only inside an area. Nothing is downloaded until you first use it.</li>
+<li><strong>Graph.</strong> A view of the entities found in the current chat. It is built in your browser and is separate from the stored <a href="/docs/entity-graph/">entity graph</a>.</li>
+</ul>
+<h2 id="choose-an-ai-provider">Choose an AI provider</h2>
+<p>Open Settings and pick one:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>What you need</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Anthropic</td>
+<td><code>ANTHROPIC_API_KEY</code></td>
+</tr>
+<tr>
+<td>Ollama (local)</td>
+<td>A running <a href="https://ollama.com">Ollama</a> and <code>pip install "openosint[ollama]"</code></td>
+</tr>
+<tr>
+<td>OpenAI-compatible</td>
+<td><code>OPENAI_BASE_URL</code>, plus <code>OPENAI_API_KEY</code> if the server wants one</td>
+</tr>
+</tbody>
+</table></div>
+<p>Settings can also save tool keys on this computer. They go to <code>config.env</code> in the data directory (<code>~/.openosint/</code>, or <code>$OPENOSINT_HOME</code>), never into the installed package. Values are not logged or sent back to the browser. See <a href="/docs/configuration/">Configuration</a>.</p>
+<p>Active tools are off by default. On a local install, Settings has an "Enable active tools" switch; a public or demo instance can never enable them. See <a href="/docs/safety/">Safety</a>.</p>
+<h2 id="reaching-it-by-another-name">Reaching it by another name</h2>
+<p>On a loopback bind the server only answers requests whose <code>Host</code> is <code>127.0.0.1</code>, <code>localhost</code> or <code>::1</code>, and browser requests to <code>/api/*</code> must come from the UI's own origin. If you use another host name, such as a LAN name or reverse proxy, set <code>OPENOSINT_ALLOWED_HOSTS=osint.lan,localhost</code>. A separate front end on another origin needs <code>OPENOSINT_ALLOWED_ORIGINS</code>.</p>
+<h2 id="docker">Docker</h2>
+<pre><code class="language-bash">docker compose up --build
+</code></pre>
+<p>The container publishes <code>127.0.0.1:8080</code> only. A browser reaches the container over the Docker network, so it cannot save keys by default. Set the keys in your compose environment or <code>.env</code>, or set <code>OPENOSINT_SETUP_TOKEN</code> to a long random string and enter it in the UI's key panel.</p>
+<h2 id="files-it-writes">Files it writes</h2>
+<p>The graph database and session history live in the data directory. The web UI writes no reports; CLI and REPL reports go to <code>./reports/</code>.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/mcp/" rel="prev"><small>Previous</small>MCP server</a><a class="next" href="/docs/configuration/" rel="next"><small>Next</small>Configuration</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/web-ui.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

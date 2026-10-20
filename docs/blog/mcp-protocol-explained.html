@@ -1,62 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Model Context Protocol Explained: MCP for OSINT</title>
-<meta name="description" content="Model Context Protocol (MCP) is an open standard connecting AI assistants to external tools via JSON-RPC over stdio. Learn how it works and how OpenOSINT uses it to expose 14 OSINT tools.">
-<meta name="keywords" content="Model Context Protocol, MCP, MCP server, AI tool integration, Claude MCP, stdio transport, JSON-RPC">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Context Protocol (MCP) explained for OSINT</title>
+<meta name="description" content="How MCP connects AI assistants to tools over JSON-RPC on stdio, what a tool schema looks like, and how OpenOSINT exposes its tools as an MCP server.">
 <link rel="canonical" href="https://openosint.tech/blog/mcp-protocol-explained.html">
-<meta property="og:title" content="Model Context Protocol Explained: MCP for OSINT">
-<meta property="og:description" content="Model Context Protocol (MCP) is an open standard connecting AI assistants to external tools via JSON-RPC over stdio. Learn how it works and how OpenOSINT uses it to expose 14 OSINT tools.">
-<meta property="og:url" content="https://openosint.tech/blog/mcp-protocol-explained.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Model Context Protocol (MCP) explained for OSINT">
+<meta property="og:description" content="How MCP connects AI assistants to tools over JSON-RPC on stdio, what a tool schema looks like, and how OpenOSINT exposes its tools as an MCP server.">
+<meta property="og:url" content="https://openosint.tech/blog/mcp-protocol-explained.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Model Context Protocol Explained: MCP for OSINT">
-<meta name="twitter:description" content="Model Context Protocol (MCP) is an open standard connecting AI assistants to external tools via JSON-RPC over stdio. Learn how it works and how OpenOSINT uses it to expose 14 OSINT tools.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Model Context Protocol (MCP) explained for OSINT">
+<meta name="twitter:description" content="How MCP connects AI assistants to tools over JSON-RPC on stdio, what a tool schema looks like, and how OpenOSINT exposes its tools as an MCP server.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Model Context Protocol Explained: MCP for OSINT",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "How MCP connects AI assistants to tools over JSON-RPC on stdio, what a tool schema looks like, and how OpenOSINT exposes its tools as an MCP server.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/mcp-protocol-explained.html",
-  "description": "Model Context Protocol (MCP) is an open standard connecting AI assistants to external tools via JSON-RPC over stdio. Learn how it works and how OpenOSINT uses it to expose 14 OSINT tools."
+  "mainEntityOfPage": "https://openosint.tech/blog/mcp-protocol-explained.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>MODEL CONTEXT PROTOCOL EXPLAINED: MCP FOR OSINT</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<div class="indent">
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Model Context Protocol Explained: MCP for OSINT</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 6 min read</p>
+    <div class="indent">
 <p>Model Context Protocol (MCP) is an open standard that defines how AI assistants communicate with external tools and data sources. It was designed to solve a specific fragmentation problem: every AI platform previously had its own proprietary integration format, forcing developers to implement the same tool multiple times for different AI clients. MCP standardizes the contract so a single server implementation works with any compliant client.</p>
 </div>
 
-<h2>THE PROBLEM BEFORE MCP</h2>
+<h2>The problem before MCP</h2>
 <div class="indent">
 <p>Before MCP, AI tool integration was entirely platform-specific. OpenAI had plugins — a custom format that described tools via OpenAPI specs and required hosting an HTTPS endpoint with specific headers. Anthropic had its own tool use specification, defined inline in each API request. Google had its own function calling format. If you wanted the same WHOIS lookup tool available in ChatGPT, Claude Desktop, and Claude Code, you wrote three separate integration layers.</p>
 
@@ -65,7 +93,7 @@
 <p>MCP changes the economics: build the server once, and it works with every MCP-compliant client. Claude Desktop, Claude Code, and any other host that implements the MCP client protocol can call the same server with no changes on the server side. This is a meaningful shift for infrastructure-level tools like OSINT frameworks that benefit from being available everywhere an analyst might be working.</p>
 </div>
 
-<h2>THE ARCHITECTURE</h2>
+<h2>The architecture</h2>
 <div class="indent">
 <p>MCP involves three actors in every interaction:</p>
 
@@ -80,7 +108,7 @@
 <p>The session lifecycle follows a handshake: the client sends an <code>initialize</code> request with its protocol version and capabilities, the server responds with its own version and capabilities, and the client sends an <code>initialized</code> notification to confirm. After that, the session is active and tool calls can proceed.</p>
 </div>
 
-<h2>TOOL SCHEMAS</h2>
+<h2>Tool schemas</h2>
 <div class="indent">
 <p>Tools are the primary unit of functionality in an MCP server. Each tool is described by three fields: a machine-readable name, a natural-language description, and a JSON Schema for its input parameters.</p>
 
@@ -110,7 +138,7 @@
 <p>Bad descriptions lead to the model calling <code>search_ip</code> when it should call <code>search_abuseipdb</code>, or vice versa. Every word in the description is model-facing documentation, not human-facing documentation. Write it accordingly.</p>
 </div>
 
-<h2>MCP VS. DIRECT FUNCTION CALLING</h2>
+<h2>MCP vs. direct function calling</h2>
 <div class="indent">
 <p>When you use Anthropic's API directly — as OpenOSINT does in its standalone REPL — you define tools inline in each API request. The tool definitions are part of the request payload. This works well for a controlled application where the set of tools is fixed and you control the full stack.</p>
 
@@ -121,7 +149,7 @@
 <p>The <a href="/blog/osint-with-mcp.html">OSINT with MCP</a> article covers the practical setup steps for connecting OpenOSINT to Claude Desktop.</p>
 </div>
 
-<h2>OPENOSINT AS AN MCP SERVER</h2>
+<h2>OpenOSINT as an MCP server</h2>
 <div class="indent">
 <p><code>openosint/mcp_server.py</code> instantiates <code>mcp.Server</code> and registers two handlers: one for <code>tools/list</code> (returns the full list of tool definitions) and one for <code>tools/call</code> (executes the named tool with the provided arguments).</p>
 
@@ -159,7 +187,7 @@ Response (server → client):
 <p>To use OpenOSINT as an MCP server in Claude Desktop, add it to the <code>mcpServers</code> block in Claude Desktop's configuration file with the command <code>python -m openosint.mcp_server</code>. Claude Desktop will launch the subprocess, negotiate the session, and expose all 14 OSINT tools to the Claude model running in the desktop client. See the <a href="/tools/">tools reference</a> for the complete tool list and parameter documentation, and the <a href="/blog/osint-ai-agents.html">AI agents article</a> for how the agentic loop works when tools are invoked.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/osint-with-mcp.html">OSINT with MCP</a> &mdash; practical setup guide for connecting OpenOSINT to Claude Desktop</li>
@@ -170,19 +198,44 @@ Response (server → client):
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

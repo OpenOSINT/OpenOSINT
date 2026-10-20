@@ -1,0 +1,170 @@
+name: Install check
+
+# Proves the documented one-command install works on a clean machine with no
+# .env, no API keys and no manual steps. `uvx openosint web` installs from PyPI
+# for users; here the same command runs against the wheel built from this commit.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests and lint (py${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      # I001 (import order) is excluded: a baseline of ordering debt remains, and
+      # reordering mcp_server.py / web_server.py imports is unsafe around load_env().
+      - run: ruff check openosint tests --extend-ignore I001
+      # Only files added for the install path are format-gated; the rest of the
+      # tree predates `ruff format` (18 files would be rewritten).
+      - run: >-
+          ruff format --check
+          openosint/paths.py tests/test_paths.py tests/test_web_startup.py
+          tests/test_mcp_version.py scripts/ci/smoke_install.py scripts/ci/check_dist_clean.py
+      # Graph tests self-skip here (importorskip: no followthemoney without the extra).
+      - run: pytest tests -q
+      # Fails on broken links, missing metadata or a stale docs/ build; rebuild with: python scripts/build_site.py
+      - run: python scripts/check_site.py
+
+  build:
+    name: Build wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv build
+      - name: No bytecode in wheel or sdist
+        run: python scripts/ci/check_dist_clean.py dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+
+  quickstart:
+    name: uvx openosint web (${{ matrix.os }})
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+      - name: Clean install, start web UI and MCP server
+        shell: bash
+        run: python scripts/ci/smoke_install.py dist/*.whl
+
+  graph:
+    name: uvx with graph extra (ubuntu)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheel
+          path: dist
+      # PyICU (via followthemoney) is source-only and needs libicu plus a compiler.
+      - run: sudo apt-get update && sudo apt-get install -y libicu-dev pkg-config g++
+      - run: python scripts/ci/smoke_install.py dist/*.whl --extra graph
+      - name: Graph libraries import
+        run: >-
+          uvx --from "openosint[graph] @ file://$PWD/$(ls dist/*.whl)"
+          python -c "import followthemoney; print('followthemoney', followthemoney.__version__)"
+
+  graph-parity:
+    name: Vendored FtM ids match followthemoney
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # PyICU (via followthemoney) is source-only and needs libicu plus a compiler.
+      - run: sudo apt-get update && sudo apt-get install -y libicu-dev pkg-config g++
+      # graph-dedup too: the whole graph test suite runs here, including nomenklatura-backed tests.
+      - run: pip install -e ".[dev,graph,graph-dedup]"
+      # REQUIRE_FTM=1: a missing followthemoney fails this job instead of skipping the
+      # parity test, which is the whole point of the job.
+      - run: pytest tests/test_ftm_compat_parity.py -q
+        env:
+          REQUIRE_FTM: "1"
+      - run: pytest tests -q -k "graph or ftm"
+
+  lock:
+    name: uv.lock is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # The Heroku demo deploys with `uv sync --locked`: a stale lock breaks it.
+      - run: uv lock --check
+
+  docker:
+    name: docker compose up (fresh checkout, no .env)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm there is no .env
+        run: test ! -e .env
+      - name: Wait for /api/health
+        run: |
+          cat > "$RUNNER_TEMP/wait.sh" <<'SH'
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8080/api/health && exit 0
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+          SH
+      - name: Default compose is unrestricted with the Host check on
+        run: |
+          docker compose up --build -d
+          bash "$RUNNER_TEMP/wait.sh"
+          curl -fsS http://localhost:8080/ | grep -q OpenOSINT
+          python3 scripts/ci/check_guard.py http://localhost:8080 --restricted false --fresh
+          if docker compose logs | grep -q "Loaded .env"; then
+            echo "unexpected 'Loaded .env' line on a fresh install"; docker compose logs; exit 1
+          fi
+          docker compose exec -T openosint python -c "import followthemoney, icu"
+          # The browser reaches the container over the Docker bridge, not loopback: the UI
+          # must say so (and how to fix it) instead of failing silently.
+          python3 scripts/ci/check_guard.py http://localhost:8080 --expect-setup-blocked
+          docker compose down -v
+      - name: Setup token saves a key that survives a restart
+        run: |
+          OPENOSINT_SETUP_TOKEN=ci-setup-token docker compose up -d
+          bash "$RUNNER_TEMP/wait.sh"
+          python3 scripts/ci/check_guard.py http://localhost:8080 --save-with-token ci-setup-token
+          docker compose restart
+          bash "$RUNNER_TEMP/wait.sh"
+          python3 scripts/ci/check_guard.py http://localhost:8080 --expect-configured SHODAN_API_KEY
+          docker compose down -v
+      - name: OPENOSINT_BIND=0.0.0.0 stays restricted
+        run: |
+          OPENOSINT_BIND=0.0.0.0 docker compose up -d
+          bash "$RUNNER_TEMP/wait.sh"
+          python3 scripts/ci/check_guard.py http://localhost:8080 --restricted true
+      - if: always()
+        run: docker compose down -v

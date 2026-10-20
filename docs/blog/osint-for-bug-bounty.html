@@ -1,64 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OSINT for Bug Bounty Hunters: Recon Before the First Request</title>
-<meta name="description" content="Effective bug bounty recon happens before you send a single request. This guide covers passive OSINT techniques — subdomain enumeration, WHOIS, certificate transparency, and ASN mapping — using OpenOSINT and CLI tools.">
-<meta name="keywords" content="bug bounty OSINT, recon bug bounty, passive recon, subdomain enumeration bug bounty, attack surface mapping, OSINT security research, bug bounty tools">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSINT for bug bounty recon before the first request</title>
+<meta name="description" content="Passive recon for bug bounty targets: subdomain inventory, WHOIS and ASN mapping, certificate transparency and GitHub dorking, all before active testing.">
 <link rel="canonical" href="https://openosint.tech/blog/osint-for-bug-bounty.html">
-<meta property="og:title" content="OSINT for Bug Bounty Hunters: Recon Before the First Request">
-<meta property="og:description" content="Passive OSINT techniques for bug bounty recon: subdomain enumeration, WHOIS, certificate transparency, and ASN mapping before sending a single request.">
-<meta property="og:url" content="https://openosint.tech/blog/osint-for-bug-bounty.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OSINT for bug bounty recon before the first request">
+<meta property="og:description" content="Passive recon for bug bounty targets: subdomain inventory, WHOIS and ASN mapping, certificate transparency and GitHub dorking, all before active testing.">
+<meta property="og:url" content="https://openosint.tech/blog/osint-for-bug-bounty.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OSINT for Bug Bounty Hunters: Recon Before the First Request">
-<meta name="twitter:description" content="Passive OSINT for bug bounty: subdomain enumeration, certificate transparency, ASN mapping, and GitHub dorking before touching the target.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="OSINT for bug bounty recon before the first request">
+<meta name="twitter:description" content="Passive recon for bug bounty targets: subdomain inventory, WHOIS and ASN mapping, certificate transparency and GitHub dorking, all before active testing.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "OSINT for Bug Bounty Hunters: Recon Before the First Request",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Passive recon for bug bounty targets: subdomain inventory, WHOIS and ASN mapping, certificate transparency and GitHub dorking, all before active testing.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/osint-for-bug-bounty.html",
-  "description": "Effective bug bounty recon happens before you send a single request. This guide covers passive OSINT techniques — subdomain enumeration, WHOIS, certificate transparency, and ASN mapping — using OpenOSINT and CLI tools."
+  "mainEntityOfPage": "https://openosint.tech/blog/osint-for-bug-bounty.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>OSINT FOR BUG BOUNTY HUNTERS</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>RECON BEFORE THE FIRST REQUEST</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>OSINT for Bug Bounty Hunters: Recon Before the First Request</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 5 min read</p>
+    <h2>Recon before the first request</h2>
 <div class="indent">
 <p>Bug bounty hunters who skip passive recon spend time attacking scope they don't understand and miss targets that aren't linked from the main domain. The most valuable findings in a program often live on forgotten subdomains running outdated software, development servers that slipped into production, or third-party integrations with weaker security than the primary application. None of these are discoverable by browsing the main site. All of them are discoverable through passive OSINT before you send a single active probe.</p>
 <p>Passive means: no requests to target infrastructure. Everything in this guide touches only public data sources &mdash; DNS aggregators, certificate transparency logs, WHOIS registries, and search engine indexes. This matters for two reasons. First, some programs have rules against active scanning during recon. Second, active scanning generates noise. A well-executed passive recon phase builds the full target map silently, letting you choose exactly where to apply active techniques.</p>
 </div>
 
-<h2>BUILDING THE SUBDOMAIN INVENTORY</h2>
+<h2>Building the subdomain inventory</h2>
 <div class="indent">
 <p>Start with certificate transparency. Every TLS certificate issued for target.com and its subdomains appears in public CT logs. Query crt.sh:</p>
 <pre>curl -s "https://crt.sh/?q=%25.target.com&output=json" \
@@ -72,7 +100,7 @@
 <p>For each confirmed subdomain, record the A record IP. Group subdomains by IP range using ASN lookup. Subdomains on the same /24 as the main application are likely internally managed. Subdomains on entirely different ASNs often indicate third-party SaaS integrations or acquired infrastructure &mdash; frequently managed by a different team with different security posture.</p>
 </div>
 
-<h2>WHOIS AND INFRASTRUCTURE MAPPING</h2>
+<h2>WHOIS and infrastructure mapping</h2>
 <div class="indent">
 <p>WHOIS tells you who owns the target and when it was registered. For bug bounty, the more useful information is nameservers and registrar. Nameservers reveal the DNS provider: Route53, Cloudflare, custom nameservers. Custom nameservers often indicate self-managed DNS infrastructure; DNS provider nameservers indicate the program uses a managed service.</p>
 <pre>openosint whois target.com</pre>
@@ -80,7 +108,7 @@
 <p>For corporate targets with large IP portfolios, Shodan queries against the ASN reveal everything the organization has publicly exposed on non-standard ports. <code>org:"Target Corp"</code> or <code>asn:AS12345</code> returns the full port/service inventory. Admin panels, development servers, and monitoring interfaces exposed on unusual ports are common findings here.</p>
 </div>
 
-<h2>GITHUB DORKING FOR EXPOSED SECRETS</h2>
+<h2>GitHub dorking for exposed secrets</h2>
 <div class="indent">
 <p>Before touching any target system, search GitHub for leaked credentials. This is entirely passive and frequently produces critical findings:</p>
 <pre># Search for secrets in public repos referencing the target domain
@@ -96,7 +124,7 @@
 <p>Any credential found through GitHub dorking should be tested for validity before reporting. An expired token is still a valid low/informational finding with historical exposure context. A live token is a critical.</p>
 </div>
 
-<h2>ASSEMBLING THE RECON REPORT BEFORE ACTIVE WORK</h2>
+<h2>Assembling the recon report before active work</h2>
 <div class="indent">
 <p>After passive recon, you should have: a confirmed subdomain list with IPs and ASN annotations, WHOIS data for the primary domain and any interesting registrant patterns, a GitHub finding log, and a set of Google dork URLs to review manually.</p>
 <p>Use OpenOSINT to run the IP reputation pass on each unique IP in the inventory:</p>
@@ -105,7 +133,7 @@
 <p>This full passive recon pass takes 15&ndash;30 minutes on a typical program and produces a prioritized target list before a single probe is sent to the program's infrastructure. The subdomains with different ASNs, decommissioned CT-log entries still resolving, and GitHub credential hits are your first active investigation priorities. See the <a href="/blog/subdomain-enumeration.html">subdomain enumeration guide</a> for deeper coverage of the enumeration phase, and the <a href="/blog/osint-api-automation.html">OSINT API automation guide</a> for programmatic Shodan and Censys integration.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/subdomain-enumeration.html">Subdomain enumeration</a> &mdash; passive CT logs, DNS aggregation, and tool comparison</li>
@@ -116,19 +144,44 @@
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

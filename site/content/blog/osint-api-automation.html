@@ -1,0 +1,112 @@
+---
+title: 'Automating OSINT with APIs: Shodan, VirusTotal, Censys and More'
+seo_title: Automating OSINT with Shodan, VirusTotal and Censys
+description: 'Compare Shodan, VirusTotal, Censys and AbuseIPDB APIs: authentication, rate limits, Python patterns, and combining them into one investigation pipeline.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>Choosing the right API for the question</h2>
+<div class="indent">
+<p>Each major OSINT API answers a different question. Shodan answers: what services are running on this IP or across this organization's infrastructure? VirusTotal answers: is this URL, file hash, or IP flagged by any of 70+ security vendors? Censys answers: what does this IP's TLS certificate say, and what subdomains has this organization ever issued certificates for? AbuseIPDB answers: has this IP been reported for malicious activity, and how recently? These are distinct questions with distinct data models. Understanding which source answers which question prevents redundant queries and ensures you're using the right tool for each investigation phase.</p>
+<p>All four expose REST APIs with API key authentication. Free tiers are sufficient for investigative use; paid tiers are needed for bulk automation. Rate limits vary significantly &mdash; understanding them before building automation prevents failed runs and temporary key suspensions.</p>
+</div>
+
+<h2>Shodan: Infrastructure search</h2>
+<div class="indent">
+<p>Shodan's API is available via both REST and the official Python library. Install: <code>pip install shodan</code>. The Python library wraps the REST endpoints cleanly:</p>
+<pre>import shodan
+
+api = shodan.Shodan('YOUR_API_KEY')
+
+# Host lookup: ports, banners, TLS data
+host = api.host('8.8.8.8')
+print(f"Org: {host['org']}")
+for item in host['data']:
+    print(f"Port {item['port']}: {item.get('product', 'unknown')}")
+
+# Search: find open admin panels in an org
+results = api.search('http.title:"Admin" org:"TargetCorp"')
+for match in results['matches']:
+    print(f"{match['ip_str']}:{match['port']}")</pre>
+<p>Rate limits: free API keys get 1 query/second and 100 results per search. Monitor credit usage via <code>api.info()</code>. For ASN-wide queries, <code>asn:AS12345</code> is more reliable than <code>org:</code> which matches on free-text org name fields. OpenOSINT's <code>search_shodan</code> tool wraps both host lookup and keyword search with timeout enforcement and error handling.</p>
+</div>
+
+<h2>VirusTotal: Multi-vendor threat intelligence</h2>
+<div class="indent">
+<p>VirusTotal's v3 API uses Bearer token authentication. The key endpoints for OSINT are: <code>/api/v3/urls/{id}</code> for URL analysis, <code>/api/v3/ip_addresses/{ip}</code> for IP reputation, and <code>/api/v3/domains/{domain}</code> for domain analysis. Each returns a <code>data.attributes</code> object with <code>last_analysis_stats</code> (counts of malicious/suspicious/clean/undetected verdicts) and <code>last_analysis_results</code> (per-vendor verdicts).</p>
+<pre>import requests, base64
+
+API_KEY = 'YOUR_VT_KEY'
+headers = {'x-apikey': API_KEY}
+
+# URL analysis (URL must be base64url-encoded without padding)
+url = 'https://suspicious-site.example.com'
+url_id = base64.urlsafe_b64encode(url.encode()).decode().rstrip('=')
+r = requests.get(
+    f'https://www.virustotal.com/api/v3/urls/{url_id}',
+    headers=headers
+)
+stats = r.json()['data']['attributes']['last_analysis_stats']
+print(f"Malicious: {stats['malicious']} / {sum(stats.values())}")</pre>
+<p>Rate limits: free tier is 4 requests/minute, 500/day. For IP lookups, the <code>last_analysis_date</code> field tells you when VirusTotal last scanned the IP &mdash; important context since stale data can produce false negatives on recently-compromised infrastructure. OpenOSINT's <code>search_virustotal</code> handles URL submission, result polling, and timeout for analyses that haven't been cached yet.</p>
+</div>
+
+<h2>Censys and AbuseIPDB</h2>
+<div class="indent">
+<p>Censys uses HTTP Basic Auth with an API ID and secret. The primary OSINT use case is certificate search: every subdomain that ever received a TLS certificate is indexed. Query the certificates index:</p>
+<pre>from censys.search import CensysHosts
+
+h = CensysHosts()
+# Find all IPs presenting target.com in their certificate
+for page in h.search("services.tls.certificates.leaf_data.names: target.com"):
+    for host in page:
+        print(host['ip'])</pre>
+<p>This catches hosts that never appear in DNS aggregation because they're not linked from any public page &mdash; exactly the forgotten infrastructure worth investigating. For OpenOSINT users, <code>search_censys</code> wraps this with CENSYS_API_ID and CENSYS_API_SECRET from your environment.</p>
+<p>AbuseIPDB's v2 API returns a structured abuse confidence score (0&ndash;100), total report count, last reported date, and the reporter's categorized abuse types (brute-force, DDoS, port scan, etc.):</p>
+<pre>import requests
+
+r = requests.get(
+    'https://api.abuseipdb.com/api/v2/check',
+    headers={'Key': 'YOUR_KEY', 'Accept': 'application/json'},
+    params={'ipAddress': '192.168.1.1', 'maxAgeInDays': 90}
+)
+data = r.json()['data']
+print(f"Score: {data['abuseConfidenceScore']}% | Reports: {data['totalReports']}")</pre>
+<p>AbuseIPDB is most useful for threat context: an IP with 400 abuse reports in 90 days is high-risk infrastructure regardless of what geolocation or ASN data says. OpenOSINT's <code>search_abuseipdb</code> exposes this directly; see the <a href="/blog/ip-intelligence-guide.html">IP intelligence guide</a> for combining AbuseIPDB with IP2Location for full context. For bulk IP reputation checking across a target's entire infrastructure, see the <a href="/blog/parallel-osint.html">parallel OSINT guide</a>.</p>
+</div>
+
+<h2>Building a unified investigation pipeline</h2>
+<div class="indent">
+<p>The pattern for multi-source API automation: collect all target identifiers first, then dispatch queries in parallel, then correlate results. Python's <code>asyncio</code> with <code>aiohttp</code> handles concurrent API calls efficiently without threading complexity:</p>
+<pre>import asyncio
+import aiohttp
+
+async def query_abuseipdb(session, ip, key):
+    async with session.get(
+        'https://api.abuseipdb.com/api/v2/check',
+        headers={'Key': key, 'Accept': 'application/json'},
+        params={'ipAddress': ip, 'maxAgeInDays': 90}
+    ) as r:
+        return ip, await r.json()
+
+async def bulk_ip_check(ips: list[str], key: str) -> dict:
+    async with aiohttp.ClientSession() as session:
+        tasks = [query_abuseipdb(session, ip, key) for ip in ips]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+    return {ip: data for ip, data in results if not isinstance(data, Exception)}</pre>
+<p>OpenOSINT wraps this pattern in its multi-target runner. The <code>openosint multi targets.txt</code> command handles rate limiting, retries, and structured JSON output automatically. For custom pipelines that need direct API access, the pattern above is the starting point. The <a href="/tools/">tools reference</a> documents which API keys each OpenOSINT tool requires and what structured data each returns.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/ip-intelligence-guide.html">IP intelligence guide</a> &mdash; combining geolocation, ASN, and abuse data for full context</li>
+<li><a href="/blog/parallel-osint.html">Parallel OSINT</a> &mdash; scaling API queries across multiple targets with asyncio</li>
+<li><a href="/tools/">OpenOSINT tools reference</a> &mdash; the full tool set with required API keys and output schemas</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

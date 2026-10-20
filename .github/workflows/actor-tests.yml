@@ -1,0 +1,65 @@
+name: Actor tests
+
+# Each Apify Actor under actors/ is its own project with its own `src` package and
+# requirements.txt, so its tests can only run from the Actor's own directory (a
+# repo-root pytest would collide on `src`). Actors are discovered, not listed:
+# any actors/<name>/ with a tests/ folder joins the matrix automatically.
+# openosint is installed from this checkout, not PyPI, so Actor tests exercise the
+# code in the PR.
+
+on:
+  pull_request:
+    paths:
+      - "openosint/**"
+      - "actors/**"
+      - "pyproject.toml"
+      - ".github/workflows/actor-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "openosint/**"
+      - "actors/**"
+      - "pyproject.toml"
+      - ".github/workflows/actor-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    name: Discover Actors
+    runs-on: ubuntu-latest
+    outputs:
+      actors: ${{ steps.find.outputs.actors }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: find
+        run: |
+          actors=$(find actors -mindepth 2 -maxdepth 2 -type d -name tests \
+            | cut -d/ -f2 | sort | jq -R . | jq -sc .)
+          echo "actors=$actors" >> "$GITHUB_OUTPUT"
+          echo "Discovered: $actors"
+
+  test:
+    name: ${{ matrix.actor }}
+    needs: discover
+    if: needs.discover.outputs.actors != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        actor: ${{ fromJson(needs.discover.outputs.actors) }}
+    defaults:
+      run:
+        working-directory: actors/${{ matrix.actor }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13" # matches the apify/actor-python:3.13 base image
+      - run: pip install -r requirements.txt
+      # requirements.txt pins openosint from PyPI; replace it with this checkout.
+      - run: pip install -e ../..
+      - run: pip install pytest pytest-asyncio
+      - run: python -m pytest tests -q

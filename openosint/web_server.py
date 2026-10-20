@@ -16,19 +16,24 @@ Routes:
 from __future__ import annotations
 
 import asyncio
+import errno
+import hashlib
+import ipaddress
 import json
+import logging
 import os
 import re
 import secrets
-import shutil
+import socket
+import sys
 import time
+from collections import OrderedDict
 from collections import deque as _deque
 from pathlib import Path
-from typing import AsyncIterator
+from typing import Any, AsyncIterator, Callable
 from urllib.parse import urlparse as _urlparse
 
 import requests as _requests
-from dotenv import load_dotenv
 
 try:
     import httpx as _httpx
@@ -36,16 +41,31 @@ except ImportError:
     _httpx = None  # type: ignore
 
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from dotenv import load_dotenv
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
+from openosint.agent import default_anthropic_model
 from openosint.brightdata import BRIGHTDATA_LINK_WEB
+from openosint.env import load_env_or_exit
 from openosint.tools.generate_dorks import run_dork_osint
+from openosint.tool_policy import (
+    ENV_ALLOW_ACTIVE,
+    TOOL_POLICY,
+    ToolBudget,
+    describe,
+    disabled_result,
+    env_allows_active,
+    filter_definitions,
+    is_tool_enabled,
+    label,
+    max_tool_calls,
+    forced_passive,
+    is_forced_passive,
+)
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
 from openosint.tools.search_breach import run_breach_osint
@@ -55,35 +75,220 @@ from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
 from openosint.tools.search_footprint import run_footprint_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
 from openosint.tools.search_phone import run_phone_osint
+from openosint.tools.search_rdap import run_rdap_osint
 from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
 from openosint.tools.search_whois import run_whois_osint
 from openosint import __version__ as _VERSION
+from openosint.config_store import config_path, read_config, validate_pair, write_config
+from openosint.env import mark_saved, value_source
+from openosint.paths import home_dir
 from openosint.regexes import EMAIL_FIND_RE
+from openosint.request_guard import RequestGuardMiddleware
+from openosint.settings_catalog import SAVEABLE_NAMES, SETTING_NAMES, public_catalog
+from openosint.utils import find_binary
 _ROOT = Path(__file__).parent.parent
 
 # Web assets: prefer the package-relative path (pip install) with project-root fallback (dev/editable)
 _PACKAGE_WEB = Path(__file__).parent / "web"
 _WEB_DIR = _PACKAGE_WEB if _PACKAGE_WEB.exists() else _ROOT / "web"
 
-load_dotenv()
+load_env_or_exit()
 
 # ---------------------------------------------------------------------------
 # Demo mode / proxy / CORS config
 # ---------------------------------------------------------------------------
 
 # When True: no DB writes, no analytics.  api_keys are never logged regardless.
-DEMO_MODE: bool = os.getenv("OPENOSINT_DEMO_MODE", "").lower() in ("1", "true", "yes")
+#
+# DEMO_MODE is a network-exposure invariant, not an opt-in flag: whether a
+# locally-held provider key (an operator's, or a self-hoster's own) may be
+# used to serve a request depends on whether this process is reachable from
+# anywhere but the machine it's running on — not on whether anyone remembered
+# to set an env var. A self-hosted install bound to loopback with keys in its
+# own .env is normal operation and gets no restriction, env var or not. A
+# process bound to any other interface — including one we can't identify as
+# loopback — never uses a locally-held key to serve a request; callers supply
+# their own, or the tool is unavailable. See .claude/LEGAL_CONTEXT.md §8 and
+# legal/INCIDENT-NOTES.md for why this replaced an env-var-only gate.
+_SAFE_BIND_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    """True only for an exact, known loopback address.
+
+    None (bind address undeterminable — e.g. `create_app()` invoked directly
+    as a uvicorn --factory target, bypassing serve_async()/run_server()) or
+    anything else, including "0.0.0.0" or a real interface IP, is NOT
+    loopback. Ambiguity fails closed to "not loopback" — see module note above.
+    """
+    return host is not None and host.strip() in _SAFE_BIND_HOSTS
+
+
+def _env_forces_demo_mode() -> bool:
+    """OPENOSINT_DEMO_MODE can only ADD restriction, never remove it.
+
+    A non-loopback bind is always restricted regardless of this var — that
+    safety no longer depends on anyone setting it. A recognized true-ish
+    value forces restriction even on loopback (e.g. to rehearse demo
+    behavior locally). Anything else — unset, malformed, or an explicit
+    false-ish value — adds no restriction of its own.
+    """
+    return os.getenv("OPENOSINT_DEMO_MODE", "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _restriction_lifted_by_declaration(host: str | None) -> bool:
+    """True when a non-loopback bind is declared to be published on loopback only.
+
+    Inside a container the process must bind 0.0.0.0, but `docker compose` can
+    publish the port on 127.0.0.1 alone. OPENOSINT_PUBLISHED_BIND is that
+    declaration, set only by docker-compose.yml (derived from OPENOSINT_BIND),
+    never in the Dockerfile. Exact match after trimming; anything else, empty
+    or unset included, keeps the restriction. An undetermined bind (None)
+    never qualifies. It is only ever consulted for a non-loopback bind.
+    """
+    if host is None or _is_loopback_host(host):
+        return False
+    return os.environ.get("OPENOSINT_PUBLISHED_BIND", "").strip() in _SAFE_BIND_HOSTS
+
+
+def _compute_demo_mode(host: str | None) -> bool:
+    """The network-exposure invariant described above, as a pure function of
+    the bind address (plus the declaration above and the tighten-only env override)."""
+    exposed = not _is_loopback_host(host) and not _restriction_lifted_by_declaration(host)
+    return exposed or _env_forces_demo_mode()
+
+
+def _compute_demo_reason(host: str | None) -> str:
+    """Why DEMO_MODE is on: the bind address if that is what restricts, else the env override."""
+    if not _is_loopback_host(host) and not _restriction_lifted_by_declaration(host):
+        return "this instance is not bound to loopback"
+    if _env_forces_demo_mode():
+        return "demo mode is forced by OPENOSINT_DEMO_MODE"
+    return ""
+
+
+# Set for real by create_app(host=...) before routes are built; None here
+# means "undetermined" until then, which _compute_demo_mode treats as
+# not-loopback (restricted) — see _is_loopback_host.
+DEMO_MODE: bool = _compute_demo_mode(None)
+DEMO_REASON: str = _compute_demo_reason(None)
 
 # Trust CF-Connecting-IP / X-Forwarded-For for rate limiting only when
 # explicitly enabled — prevents IP spoofing in local dev.
 TRUSTED_PROXY: bool = os.getenv("TRUSTED_PROXY", "").lower() in ("1", "true", "yes")
+
+# Deliberately NOT the same flag as TRUSTED_PROXY above. TRUSTED_PROXY only
+# changes which IP string gets attributed to a request for rate-limit
+# bucketing — a wrong value there means someone's rate limit resets a bit
+# early or late. This flag gates whether a locally-held provider key may be
+# used at all, the same invariant DEMO_MODE enforces for bind address. Those
+# are different stakes: an operator who set TRUSTED_PROXY=true purely to get
+# correct rate-limit IPs never consented to that also unlocking credentialed
+# access for anyone the proxy relays, so it gets its own explicit opt-in.
+# See the README's deployment-guidance section.
+OPENOSINT_TRUSTED_PROXY: bool = os.getenv("OPENOSINT_TRUSTED_PROXY", "").strip().lower() in (
+    "1", "true", "yes", "on",
+)
+
+# Headers whose mere presence means "a proxy sits in front of this
+# connection" — GHSA-cqr4-hcfp-m6m4's exact concern, extended from
+# /api/setup (_is_loopback_request above) to every credentialed-tool and
+# chat gate. Content is never trusted for identity (see
+# _get_client_ip's TRUSTED_PROXY-gated use for that); only presence is used
+# here, to decide whether a loopback bind can still be assumed private.
+_FORWARDING_HEADER_NAMES: tuple[str, ...] = (
+    "x-forwarded-for", "x-forwarded-proto", "x-forwarded-host", "forwarded", "cf-connecting-ip",
+)
+
+_FORWARDED_PARAM_RE = re.compile(r'(proto|host)="?([^;,"\s]+)"?', re.IGNORECASE)
+
+
+def _request_carries_forwarding_signals(request: "Request") -> bool:
+    """True if this request looks like it was relayed by a reverse proxy.
+
+    A loopback bind means the OS only accepted this TCP connection from the
+    same machine — but an on-host or sidecar proxy relaying a public request
+    looks identical at that layer. Any of these headers is the signal that
+    distinguishes "actually private" from "looks private because nothing
+    terminates in front of it but a proxy that does." X-Forwarded-Host is
+    the "proxy-set host that differs from the bind" case specifically — a
+    proxy typically rewrites the raw Host header to its own upstream target
+    and preserves the original request's host in this header instead, so
+    the raw Host header itself is not a reliable signal (a test harness or
+    a client's own choice of hostname varies it for reasons having nothing
+    to do with proxying) and is deliberately not checked here.
+    """
+    headers = request.headers
+    return any(headers.get(name) for name in _FORWARDING_HEADER_NAMES)
+
+
+def _forwarding_headers_look_inconsistent(request: "Request") -> bool:
+    """True if a forwarding header disagrees with itself — more than one
+    distinct scheme/host value where a single trusted hop would add exactly
+    one. This is checked regardless of OPENOSINT_TRUSTED_PROXY: declaring
+    trust in a proxy is not the same as trusting headers that contradict
+    each other, and a forwarding header may only ever add restriction,
+    never remove it.
+    """
+    for header_name in ("x-forwarded-proto", "x-forwarded-host"):
+        values = {v.strip().lower() for v in request.headers.get(header_name, "").split(",") if v.strip()}
+        if len(values) > 1:
+            return True
+    forwarded = request.headers.get("forwarded", "")
+    if forwarded:
+        by_param: dict[str, set[str]] = {}
+        for param, value in _FORWARDED_PARAM_RE.findall(forwarded):
+            by_param.setdefault(param.lower(), set()).add(value.lower())
+        if any(len(values) > 1 for values in by_param.values()):
+            return True
+    return False
+
+
+_proxy_warning_emitted = False
+
+
+def _request_restriction(request: "Request") -> tuple[bool, str]:
+    """Whether THIS request must be treated as demo-restricted, and why.
+
+    DEMO_MODE (bind address, computed once at startup) is the static floor —
+    never loosened here. On top of it: a loopback bind can still be reached
+    through an on-host reverse proxy, so a request carrying forwarding
+    signals is treated as public unless OPENOSINT_TRUSTED_PROXY is declared,
+    and internally inconsistent forwarding headers are treated as public
+    even then. The reason is returned so the caller sees why, rather than a
+    silent, unexplained restriction.
+    """
+    if DEMO_MODE:
+        return True, DEMO_REASON or "demo mode"
+    if _forwarding_headers_look_inconsistent(request):
+        return True, "forwarding headers on this request are internally inconsistent"
+    if _request_carries_forwarding_signals(request):
+        global _proxy_warning_emitted
+        if not OPENOSINT_TRUSTED_PROXY:
+            if not _proxy_warning_emitted:
+                _proxy_warning_emitted = True
+                logging.getLogger(__name__).warning(
+                    "Bound to loopback but received a request carrying proxy-forwarding "
+                    "headers, with no OPENOSINT_TRUSTED_PROXY declared. If this instance is "
+                    "served through a reverse proxy, it is reachable by others even though "
+                    "it looks private from here — see the README's deployment-guidance "
+                    "section before setting OPENOSINT_TRUSTED_PROXY=true."
+                )
+            return True, (
+                "this request arrived carrying proxy-forwarding headers, but no trusted-proxy "
+                "configuration is declared (set OPENOSINT_TRUSTED_PROXY=true only if this "
+                "instance is deliberately served through a reverse proxy — see the README)"
+            )
+    return False, ""
+
 
 _RAW_ORIGINS: str = os.getenv(
     "DEMO_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000"
@@ -99,10 +304,86 @@ _MAX_IP_BUCKETS: int = int(os.getenv("RATE_LIMIT_MAX_IPS", "10000"))
 _RL_WINDOW_SECS: float = float(os.getenv("RATE_LIMIT_WINDOW", "60"))
 _RL_MAX_REQS: int = int(os.getenv("RATE_LIMIT_MAX", "30"))
 
-# Tools that need no API key and are therefore cheaply spammable
+# Tools that need no API key and are therefore cheaply spammable. The binary-backed
+# ones (holehe/sherlock/sublist3r) are the most expensive: each call fans out to
+# dozens of third-party sites or a subprocess.
 _KEYLESS_TOOLS: frozenset[str] = frozenset(
-    {"search_whois", "search_dns", "generate_dorks", "search_ip", "search_paste"}
+    {
+        "search_whois",
+        "search_dns",
+        "generate_dorks",
+        "search_ip",
+        "search_paste",
+        "search_rdap",
+        "search_gdelt_geo",
+        "search_github",
+        "search_email",
+        "search_username",
+        "search_domain",
+    }
 )
+
+# ---------------------------------------------------------------------------
+# Globe basemap tile proxy — GET /api/tiles/{z}/{x}/{y}.
+#
+# The browser never talks to EOX (or any CDN) directly: this app fetches the
+# tile server-side and streams it back, same "zero third-party requests"
+# invariant as the vendored Alpine/Tailwind/Cytoscape/MapLibre assets. Tiles
+# are a fixed, historical (2020) imagery composite — they never change — so
+# an in-process cache with no TTL is correct, just size-bounded.
+# ponytail: single-process LRU dict; move to a real cache if this ever runs
+# behind multiple worker processes.
+_EOX_TILE_URL = "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"
+_TILE_CACHE_MAX = 2000
+_TILE_CACHE_CONTROL = "public, max-age=31536000, immutable"
+# 4^z tiles per zoom level — hard cost ceiling, matches maxzoom on the
+# client's raster source (see globe-renderer.js _style()). z7 is plenty for
+# situational awareness; the client over-zooms z7 tiles past that.
+_TILE_MAX_ZOOM = 7
+_TILE_RATE_STORE: dict[str, "_deque[float]"] = {}
+_TILE_RL_MAX_REQS: int = int(os.getenv("RATE_LIMIT_MAX_TILES", "300"))
+_tile_cache: "OrderedDict[tuple[int, int, int], bytes]" = OrderedDict()
+# 1x1 transparent GIF — served on any upstream failure so MapLibre shows a
+# blank tile instead of a broken-image icon, and never retries in a loop.
+_BLANK_TILE = bytes.fromhex(
+    "47494638396101000100800000000000ffffff21f90401000000002c00000000010001000002024401003b"
+)
+
+
+_TILE_FETCH_ATTEMPTS = 2  # one retry: EOX drops the odd connection under a burst of ~20 tiles
+_TILE_RETRY_DELAY_SECONDS = 0.3
+
+
+def _fetch_tile(url: str):
+    """GET an upstream tile, retrying once on a connection error or HTTP 5xx.
+
+    Returns the response, or raises the last exception if every attempt raised.
+    """
+    for attempt in range(_TILE_FETCH_ATTEMPTS):
+        last = attempt == _TILE_FETCH_ATTEMPTS - 1
+        try:
+            resp = _requests.get(url, timeout=10)
+        except Exception:
+            if last:
+                raise
+        else:
+            if resp.status_code < 500 or last:
+                return resp
+        time.sleep(_TILE_RETRY_DELAY_SECONDS)
+
+
+def _tile_cache_get(key: tuple[int, int, int]) -> bytes | None:
+    value = _tile_cache.get(key)
+    if value is not None:
+        _tile_cache.move_to_end(key)
+    return value
+
+
+def _tile_cache_set(key: tuple[int, int, int], value: bytes) -> None:
+    _tile_cache[key] = value
+    _tile_cache.move_to_end(key)
+    if len(_tile_cache) > _TILE_CACHE_MAX:
+        _tile_cache.popitem(last=False)
 
 
 _LOOPBACK_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "::1"})
@@ -142,6 +423,22 @@ def _setup_request_is_authorized(request: "Request") -> bool:
     return secrets.compare_digest(supplied, expected)
 
 
+_SETUP_FORBIDDEN_MESSAGE = (
+    "Saving keys from the browser is only allowed from localhost, or with the setup token "
+    "(set OPENOSINT_SETUP_TOKEN on the server and enter it here). In Docker the browser "
+    "does not reach the server over loopback: set the keys in your compose environment or "
+    ".env file, or set OPENOSINT_SETUP_TOKEN."
+)
+_SETUP_RL_MAX = 10
+_SETUP_RL_WINDOW_SECS = 60.0
+_SETUP_ATTEMPTS: dict[str, "_deque[float]"] = {}
+
+
+def _check_setup_attempt_limit(ip: str) -> bool:
+    """Throttle non-loopback /api/setup callers so the token cannot be brute-forced."""
+    return _sliding_window_allow(_SETUP_ATTEMPTS, ip, _SETUP_RL_MAX, _SETUP_RL_WINDOW_SECS, _MAX_IP_BUCKETS)
+
+
 def _get_client_ip(request: "Request") -> str:
     """Return the real client IP, honouring proxy headers only when TRUSTED_PROXY is set."""
     if TRUSTED_PROXY:
@@ -154,35 +451,54 @@ def _get_client_ip(request: "Request") -> str:
     return request.client.host if request.client else "unknown"
 
 
-def _check_rate_limit(ip: str) -> bool:
-    """Sliding-window rate limiter. Returns True when the request is allowed."""
+def _sliding_window_allow(
+    store: dict[str, "_deque[float]"], ip: str, max_reqs: int, window_secs: float, max_ip_buckets: int
+) -> bool:
+    """Sliding-window rate limiter over an arbitrary per-caller bucket store.
+    Returns True when the request is allowed."""
     now = time.monotonic()
 
     # Slide the window and evict empty bucket
-    if ip in _RATE_STORE:
-        q = _RATE_STORE[ip]
-        while q and now - q[0] > _RL_WINDOW_SECS:
+    if ip in store:
+        q = store[ip]
+        while q and now - q[0] > window_secs:
             q.popleft()
         if not q:
-            del _RATE_STORE[ip]
+            del store[ip]
 
     # Enforce total bucket cap before inserting a new IP
-    if ip not in _RATE_STORE and len(_RATE_STORE) >= _MAX_IP_BUCKETS:
+    if ip not in store and len(store) >= max_ip_buckets:
         # Prefer evicting an already-expired bucket; fall back to oldest-inserted
         evicted = False
-        for k, q in list(_RATE_STORE.items()):
-            if not q or now - q[0] > _RL_WINDOW_SECS:
-                del _RATE_STORE[k]
+        for k, q in list(store.items()):
+            if not q or now - q[0] > window_secs:
+                del store[k]
                 evicted = True
                 break
         if not evicted:
-            del _RATE_STORE[next(iter(_RATE_STORE))]
+            del store[next(iter(store))]
 
-    q = _RATE_STORE.setdefault(ip, _deque())
-    if len(q) >= _RL_MAX_REQS:
+    q = store.setdefault(ip, _deque())
+    if len(q) >= max_reqs:
         return False
     q.append(now)
     return True
+
+
+def _check_rate_limit(ip: str) -> bool:
+    """Sliding-window rate limiter for keyless OSINT tools."""
+    return _sliding_window_allow(_RATE_STORE, ip, _RL_MAX_REQS, _RL_WINDOW_SECS, _MAX_IP_BUCKETS)
+
+
+def _check_tile_rate_limit(ip: str) -> bool:
+    """Sliding-window rate limiter for the globe tile proxy.
+
+    A SEPARATE bucket from _check_rate_limit's _RATE_STORE — panning the
+    globe burns through many tile requests per session, and must never be
+    able to 429 an unrelated keyless tool call (e.g. search_ip) sharing the
+    same client IP, or vice versa.
+    """
+    return _sliding_window_allow(_TILE_RATE_STORE, ip, _TILE_RL_MAX_REQS, _RL_WINDOW_SECS, _MAX_IP_BUCKETS)
 
 
 # ---------------------------------------------------------------------------
@@ -201,7 +517,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["holehe"],
         "requires_env": [],
-        "binary_hints": {"holehe": "pip install holehe"},
+        "binary_hints": {"holehe": "uv tool install holehe (or: pip install holehe)"},
     },
     {
         "name": "search_username",
@@ -213,7 +529,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sherlock"],
         "requires_env": [],
-        "binary_hints": {"sherlock": "pip install sherlock-project"},
+        "binary_hints": {"sherlock": "uv tool install sherlock-project (or: pip install sherlock-project)"},
     },
     {
         "name": "search_breach",
@@ -260,7 +576,7 @@ _TOOL_CATALOG: list[dict] = [
         "tool_type": "B",
         "requires_binary": ["sublist3r"],
         "requires_env": [],
-        "binary_hints": {"sublist3r": "pip install sublist3r"},
+        "binary_hints": {"sublist3r": "uv tool install sublist3r (or: pip install sublist3r)"},
     },
     {
         "name": "search_ip2location",
@@ -296,6 +612,28 @@ _TOOL_CATALOG: list[dict] = [
         "requires_binary": [],
         "requires_env": ["ABUSEIPDB_API_KEY"],
         "env_hints": {"ABUSEIPDB_API_KEY": "abuseipdb.com/account/api"},
+    },
+    {
+        "name": "search_rdap",
+        "description": "Structured domain registration data (registrar, dates, name servers) via RDAP.",
+        "input_label": "Domain",
+        "input_placeholder": "example.com",
+        "category": "Network",
+        "icon": "🗂️",
+        "tool_type": "A",
+        "requires_binary": [],
+        "requires_env": [],
+    },
+    {
+        "name": "search_gdelt_geo",
+        "description": "Search recent geolocated worldwide news from GDELT's 15-minute article feed.",
+        "input_label": "Keywords",
+        "input_placeholder": "ukraine war",
+        "category": "Network",
+        "icon": "🌍",
+        "tool_type": "A",
+        "requires_binary": [],
+        "requires_env": [],
     },
     # ---- Recon ----
     {
@@ -457,6 +795,10 @@ _RUNNERS: dict[str, object] = {
         v, timeout_seconds=t, api_key=(keys or {}).get("IP2LOCATION_API_KEY")
     ),
     "search_dns": lambda v, t, keys=None: run_dns_osint(v, timeout_seconds=t),
+    "search_rdap": lambda v, t, keys=None: run_rdap_osint(v, timeout_seconds=t),
+    "search_gdelt_geo": lambda v, t, keys=None, bbox=None: run_gdelt_geo_osint(
+        v, timeout_seconds=t, bbox=tuple(bbox) if bbox else None
+    ),
     "search_abuseipdb": lambda v, t, keys=None: run_abuseipdb_osint(
         v, timeout_seconds=t, api_key=(keys or {}).get("ABUSEIPDB_API_KEY")
     ),
@@ -486,6 +828,17 @@ _RUNNERS: dict[str, object] = {
     ),
 }
 
+# Tools that run keyless (requires_env is empty — the catalog correctly says
+# no key is required) but whose implementation still does
+# `api_key or os.environ.get(ENV_VAR)` internally as an optional rate-limit
+# boost. In demo mode this can't be gated by requires_env alone, or an
+# operator key set on the server (now or in the future) would silently reach
+# an anonymous caller's request. See run_tool()/stream_tool() demo-mode checks.
+_OPTIONAL_OPERATOR_KEY_ENV: dict[str, str] = {
+    "search_ip": "IPINFO_TOKEN",
+    "search_github": "GITHUB_TOKEN",
+}
+
 # Claude tool schemas (one string "input" param per tool)
 _CLAUDE_TOOLS: list[dict] = [
     {
@@ -509,9 +862,9 @@ _CLAUDE_TOOLS: list[dict] = [
 def _check_available(meta: dict) -> tuple[bool, str | None]:
     """Return (is_available, reason_if_not) for a tool."""
     for binary in meta.get("requires_binary", []):
-        if not shutil.which(binary):
+        if not find_binary(binary):
             hint = meta.get("binary_hints", {}).get(binary, f"install {binary}")
-            return False, f"{binary} not in PATH — {hint}"
+            return False, f"{binary} is not installed — {hint}"
     for key in meta.get("requires_env", []):
         if not os.environ.get(key, "").strip():
             hint = meta.get("env_hints", {}).get(key, "")
@@ -520,31 +873,13 @@ def _check_available(meta: dict) -> tuple[bool, str | None]:
     return True, None
 
 
-_KNOWN_ENV_KEYS = [
-    "ANTHROPIC_API_KEY",
-    "HIBP_API_KEY",
-    "IPINFO_TOKEN",
-    "IP2LOCATION_API_KEY",
-    "CENSYS_API_ID",
-    "CENSYS_SECRET",
-    "SHODAN_API_KEY",
-    "VIRUSTOTAL_API_KEY",
-    "ABUSEIPDB_API_KEY",
-    "GITHUB_TOKEN",
-    "BRIGHTDATA_API_KEY",
-    "BRIGHTDATA_SERP_ZONE",
-    "BRIGHTDATA_UNLOCKER_ZONE",
-]
+_KNOWN_ENV_KEYS = sorted(SETTING_NAMES)
 
-# Keys /api/setup is allowed to write. Anything else in the request body is
-# dropped — GHSA-cqr4-hcfp-m6m4 let a caller set arbitrary env vars (e.g.
-# OPENAI_BASE_URL) this way, redirecting outbound chat traffic and its auth
-# header to attacker infra.
-_SETUP_ALLOWED_KEYS: frozenset[str] = frozenset(_KNOWN_ENV_KEYS) | {
-    "OPENAI_BASE_URL",
-    "OPENAI_MODEL",
-    "OPENAI_API_KEY",
-}
+# Keys /api/setup is allowed to write (the catalog's settings plus the OpenAI-
+# compatible trio). Anything else in the request body is dropped —
+# GHSA-cqr4-hcfp-m6m4 let a caller set arbitrary env vars (e.g. OPENAI_BASE_URL)
+# this way, redirecting outbound chat traffic and its auth header to attacker infra.
+_SETUP_ALLOWED_KEYS: frozenset[str] = SAVEABLE_NAMES
 
 # Keys whose value must be a well-formed http(s) URL — prevents javascript:/
 # file:/gopher: schemes or bare hostnames sneaking into a *_BASE_URL var that
@@ -558,9 +893,147 @@ def _is_valid_base_url(value: str) -> bool:
 
 
 def _is_setup_complete() -> bool:
-    if (_ROOT / ".env").exists():
+    if config_path().exists() or (_ROOT / ".env").exists():
         return True
     return any(os.environ.get(k, "").strip() for k in _KNOWN_ENV_KEYS)
+
+
+# ---------------------------------------------------------------------------
+# Client-supplied AI backend guards (GHSA-q6cw-g86h-m2cq)
+#
+# GHSA-cqr4-hcfp-m6m4 made /api/setup loopback-only, but /api/chat and
+# /api/openai/test still accept openai_base_url + openai_api_key in the
+# request body. If a caller supplies a base_url they control and leaves
+# api_key blank, the old code filled api_key from os.environ — shipping the
+# *server's* credential to the *attacker's* host. The fix is structural: a
+# request-supplied destination and an environment-sourced credential must
+# never be used together (see chat() / openai_test() below, which apply
+# this to both endpoints identically). Everything here is gated behind
+# OPENOSINT_ALLOW_CLIENT_BACKEND (off by default) — with it unset, a
+# request-supplied base_url/host is rejected outright and the coupling
+# never has a chance to happen.
+# ---------------------------------------------------------------------------
+
+
+def _byo_backend_enabled() -> bool:
+    """OPENOSINT_ALLOW_CLIENT_BACKEND — off by default. Gates every request-
+    supplied chat backend destination (openai_base_url, ollama_host)."""
+    return os.environ.get("OPENOSINT_ALLOW_CLIENT_BACKEND", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+
+def _parse_csv_env(name: str) -> list[str]:
+    return [v.strip() for v in os.environ.get(name, "").split(",") if v.strip()]
+
+
+# Every rejection reachable from a client-supplied backend attempt — the
+# flag being off, a malformed URL, a disallowed destination IP class, an
+# unresolvable host, an OPENOSINT_ALLOWED_BASE_URLS mismatch, or a rejected
+# browser origin — must produce this exact status + body. If any of these
+# carried a distinct message, a prober could tell "the flag is off" apart
+# from "the flag is on but this particular request was rejected", which is
+# itself a leak of server configuration state (an oracle inside the oracle
+# fix). The cost is a less specific error for legitimate self-hosters
+# debugging their own setup — check server logs, not the HTTP response, to
+# see which of these actually fired.
+def _reject_client_backend() -> None:
+    raise HTTPException(403, "client-supplied backend rejected")
+
+
+async def _validate_outbound_base_url(url: str) -> str:
+    """Validate a client-supplied backend base URL before it is used for an
+    outbound request. Only ever called for request-supplied URLs — env-
+    configured defaults (OPENAI_BASE_URL, the localhost:4000/11434 fallbacks)
+    skip this entirely so they keep working unconditionally.
+
+    Policy:
+      * scheme must be http/https; no userinfo (user:pass@) in the URL.
+      * OPENOSINT_ALLOWED_BASE_URLS, if set, is a strict per-host allowlist
+        that overrides the IP checks below — an operator who has pinned
+        trusted hosts has already accepted the DNS-rebinding risk knowingly.
+      * Otherwise: link-local (169.254.0.0/16, fe80::/10 — cloud metadata,
+        no legitimate use), multicast, IANA-reserved, and unspecified
+        addresses are always rejected.
+      * Loopback and RFC1918 are otherwise permitted — this function is only
+        reached once OPENOSINT_ALLOW_CLIENT_BACKEND is set, and LAN Ollama /
+        local llama.cpp users enabling that flag are exactly who needs them.
+
+    Every failure path raises via _reject_client_backend() — see its
+    docstring for why the message must not vary by reason.
+
+    NOTE (TOCTOU): this resolves the hostname now, but the outbound HTTP
+    client resolves it again when it actually connects — a DNS-rebinding
+    attacker can swap the answer between the two lookups. Set
+    OPENOSINT_ALLOWED_BASE_URLS to close this window; it pins a hostname,
+    not a point-in-time IP.
+    """
+    parsed = _urlparse(url.strip())
+    if parsed.scheme not in ("http", "https"):
+        _reject_client_backend()
+    if not parsed.hostname:
+        _reject_client_backend()
+    if parsed.username or parsed.password:
+        _reject_client_backend()
+
+    allowlist = _parse_csv_env("OPENOSINT_ALLOWED_BASE_URLS")
+    if allowlist:
+        host = parsed.hostname.lower()
+        host_port = f"{host}:{parsed.port}" if parsed.port else host
+        allowed = {a.lower() for a in allowlist}
+        if host not in allowed and host_port not in allowed:
+            _reject_client_backend()
+        return url
+
+    try:
+        infos = await asyncio.to_thread(socket.getaddrinfo, parsed.hostname, None)
+    except socket.gaierror:
+        _reject_client_backend()
+
+    for _family, _type, _proto, _canon, sockaddr in infos:
+        ip = ipaddress.ip_address(sockaddr[0])
+        if ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+            _reject_client_backend()
+
+    return url
+
+
+def _check_browser_origin(request: "Request") -> None:
+    """CSRF / DNS-rebinding guard for client-supplied-backend requests.
+
+    Only called when OPENOSINT_ALLOW_CLIENT_BACKEND is set — see callers.
+    This is NOT an authentication boundary: it only blocks a browser from
+    being tricked into calling this endpoint cross-origin. A direct network
+    attacker (no browser involved) is stopped by the credential/destination
+    decoupling in _validate_outbound_base_url(), not by this check.
+
+    curl, SDKs, and scripts send neither Sec-Fetch-Site nor Origin and are
+    waved through deliberately — they are not a CSRF vector, and turning
+    this into a general request allowlist would only break legitimate API
+    consumers without adding real protection.
+
+    Failures go through _reject_client_backend() too — this check only ever
+    runs when the flag is on, so a distinct message here would itself
+    confirm the flag is on to a cross-origin prober that never even sent a
+    valid base_url.
+    """
+    sec_fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if sec_fetch_site:
+        if sec_fetch_site not in ("same-origin", "none"):
+            _reject_client_backend()
+        return
+
+    origin = request.headers.get("origin", "").strip()
+    if origin:
+        request_origin = f"{request.url.scheme}://{request.headers.get('host', '')}"
+        allowed = {request_origin, *_parse_csv_env("OPENOSINT_ALLOWED_ORIGINS")}
+        if origin not in allowed:
+            _reject_client_backend()
+        return
+
+    # Neither header present: not a browser request (curl/SDK/script) — allow.
 
 
 def _get_ai_backend() -> tuple[str, str | None, bool | None]:
@@ -598,12 +1071,14 @@ async def _probe_openai_endpoint(base_url: str, api_key: str) -> dict:
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     try:
         if _httpx is not None:
-            async with _httpx.AsyncClient(timeout=2.5) as client:
+            async with _httpx.AsyncClient(timeout=2.5, follow_redirects=False) as client:
                 r = await client.get(f"{base}/models", headers=headers)
                 status = r.status_code
         else:
             raw = await asyncio.to_thread(
-                lambda: _requests.get(f"{base}/models", headers=headers, timeout=2.5)
+                lambda: _requests.get(
+                    f"{base}/models", headers=headers, timeout=2.5, allow_redirects=False
+                )
             )
             status = raw.status_code
     except Exception:
@@ -619,6 +1094,8 @@ class RunRequest(BaseModel):
     input: str
     timeout: int = 120
     api_keys: dict[str, str] | None = None  # per-request BYOK; never logged
+    # search_gdelt_geo only: (min_lon, min_lat, max_lon, max_lat). Other tools ignore it.
+    bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
 
 
 class ChatRequest(BaseModel):
@@ -638,6 +1115,32 @@ class OpenAITestRequest(BaseModel):
 
     openai_base_url: str = ""
     openai_api_key: str = ""
+
+
+class GraphDecideRequest(BaseModel):
+    """Body for POST /api/graph/review/decide — a human verdict on one same_as pair."""
+
+    entity_id: str
+    canonical_id: str
+    decision: str  # "accept" | "reject"
+    reviewer_id: str | None = None
+
+
+# The graph routes read only the local SQLite graph store. This is the single
+# response every graph route returns when the optional `graph` extra
+# (followthemoney) isn't installed, so the rest of the web UI keeps working.
+def _graph_unavailable() -> JSONResponse:
+    return JSONResponse(
+        {
+            "status": "error",
+            "graph_available": False,
+            "message": (
+                "Graph features require the 'graph' extra. Install it with: "
+                "pip install 'openosint[graph]'"
+            ),
+        },
+        status_code=503,
+    )
 
 
 def _select_chat_backend(req: "ChatRequest") -> str:
@@ -668,9 +1171,21 @@ def _select_chat_backend(req: "ChatRequest") -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _run_tool(tool_name: str, tool_input: str, timeout: int = 120) -> str:
+def _offered_tools() -> list[dict]:
+    """Tool schemas the current mode offers to a model, each with its noise label."""
+    return filter_definitions(_CLAUDE_TOOLS)
+
+
+async def _run_tool(
+    tool_name: str, tool_input: str, timeout: int = 120, budget: ToolBudget | None = None
+) -> str:
+    # Refused and unknown requests count too, so a model can't loop on them forever.
+    if budget is not None and not budget.try_consume():
+        return budget.message()
     if tool_name not in _RUNNERS:
         return f"Unknown tool: {tool_name}"
+    if not is_tool_enabled(tool_name):
+        return disabled_result(tool_name)
     if not str(tool_input).strip():
         return (
             f"Tool call error: 'input' is required for {tool_name} but was not provided. "
@@ -700,21 +1215,17 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
 
     client = _anthropic.AsyncAnthropic(api_key=api_key)
     msgs = list(messages)
-    _MAX_TOOL_ROUNDS = 5
-    _tool_rounds = 0
+    budget = ToolBudget()  # one per user request; bounds the loop below
 
     system_prompt = (
         "You are OpenOSINT, an AI-powered OSINT investigation assistant. "
         "When the user asks you to investigate a target, use the available tools to gather intelligence. "
         "Summarize findings clearly and highlight anything suspicious or notable. "
-        "Always clarify what tools you used and what each result means."
+        "Always clarify what tools you used and what each result means. "
+        "Use only the tools you are given; if a tool result says it is disabled, do not retry it."
     )
 
     while True:
-        _tool_rounds += 1
-        if _tool_rounds > _MAX_TOOL_ROUNDS:
-            yield {"type": "error", "message": "Tool call limit reached (5 rounds)."}
-            return
         full_content: list[dict] = []
         pending_tool_results: list[dict] = []
         current_block: dict | None = None
@@ -723,10 +1234,10 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
 
         try:
             async with client.messages.stream(
-                model="claude-sonnet-4-5",
+                model=default_anthropic_model(),
                 max_tokens=4096,
                 system=system_prompt,
-                tools=_CLAUDE_TOOLS,
+                tools=_offered_tools(),
                 messages=msgs,
             ) as stream:
                 async for event in stream:
@@ -784,7 +1295,7 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
                             }
 
                             t0 = time.monotonic()
-                            result = await _run_tool(tool_name, str(tool_input))
+                            result = await _run_tool(tool_name, str(tool_input), budget=budget)
                             elapsed = round(time.monotonic() - t0, 2)
 
                             yield {
@@ -793,11 +1304,14 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
                                 "output": result,
                                 "elapsed": elapsed,
                             }
+                            # Provider gets the stripped text; every subsequent
+                            # round resends the whole message list.
+                            model_text, _ = split_geojson_fence(result)
                             pending_tool_results.append(
                                 {
                                     "type": "tool_result",
                                     "tool_use_id": current_block["id"],
-                                    "content": result,
+                                    "content": model_text,
                                 }
                             )
 
@@ -809,6 +1323,10 @@ async def _stream_claude(messages: list[dict]) -> AsyncIterator[dict]:
 
         except Exception as exc:
             yield {"type": "error", "message": str(exc)}
+            return
+
+        if budget.denied:
+            yield {"type": "error", "message": budget.message()}
             return
 
         if stop_reason != "tool_use" or not pending_tool_results:
@@ -829,19 +1347,20 @@ async def _stream_ollama(
     host = ollama_host.rstrip("/")
     msgs = list(messages)
 
-    ollama_tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": t["input_schema"],
-            },
-        }
-        for t in _CLAUDE_TOOLS
-    ]
+    budget = ToolBudget()
 
     while True:
+        ollama_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            }
+            for t in _offered_tools()
+        ]
         try:
             payload = {
                 "model": ollama_model,
@@ -850,7 +1369,7 @@ async def _stream_ollama(
                 "stream": False,
             }
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=120) as client:
+                async with _httpx.AsyncClient(timeout=120, follow_redirects=False) as client:
                     r = await client.post(f"{host}/api/chat", json=payload)
                 if r.status_code != 200:
                     yield {
@@ -863,7 +1382,9 @@ async def _stream_ollama(
                 # fallback: run blocking requests in a thread
                 _payload = payload  # capture for lambda
                 raw = await asyncio.to_thread(
-                    lambda: _requests.post(f"{host}/api/chat", json=_payload, timeout=120)
+                    lambda: _requests.post(
+                        f"{host}/api/chat", json=_payload, timeout=120, allow_redirects=False
+                    )
                 )
                 if raw.status_code != 200:
                     yield {
@@ -905,11 +1426,16 @@ async def _stream_ollama(
             yield {"type": "tool_start", "tool": tool_name, "input": str(tool_input)}
 
             t0 = time.monotonic()
-            result = await _run_tool(tool_name, str(tool_input))
+            result = await _run_tool(tool_name, str(tool_input), budget=budget)
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
-            tool_results_for_next.append({"role": "tool", "content": result})
+            model_text, _ = split_geojson_fence(result)
+            tool_results_for_next.append({"role": "tool", "content": model_text})
+
+        if budget.denied:
+            yield {"type": "error", "message": budget.message()}
+            return
 
         msgs = (
             msgs
@@ -934,19 +1460,20 @@ async def _stream_openai(
         headers["Authorization"] = f"Bearer {api_key}"
     msgs = list(messages)
 
-    openai_tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": t["name"],
-                "description": t["description"],
-                "parameters": t["input_schema"],
-            },
-        }
-        for t in _CLAUDE_TOOLS
-    ]
+    budget = ToolBudget()
 
     while True:
+        openai_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t["name"],
+                    "description": t["description"],
+                    "parameters": t["input_schema"],
+                },
+            }
+            for t in _offered_tools()
+        ]
         payload = {
             "model": model,
             "messages": msgs,
@@ -956,7 +1483,7 @@ async def _stream_openai(
         }
         try:
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=180) as client:
+                async with _httpx.AsyncClient(timeout=180, follow_redirects=False) as client:
                     r = await client.post(url, json=payload, headers=headers)
                 if r.status_code != 200:
                     yield {
@@ -968,7 +1495,9 @@ async def _stream_openai(
             else:
                 _payload = payload  # capture for lambda
                 raw = await asyncio.to_thread(
-                    lambda: _requests.post(url, json=_payload, headers=headers, timeout=180)
+                    lambda: _requests.post(
+                        url, json=_payload, headers=headers, timeout=180, allow_redirects=False
+                    )
                 )
                 if raw.status_code != 200:
                     yield {
@@ -1017,17 +1546,22 @@ async def _stream_openai(
             yield {"type": "tool_start", "tool": tool_name, "input": str(tool_input)}
 
             t0 = time.monotonic()
-            result = await _run_tool(tool_name, str(tool_input))
+            result = await _run_tool(tool_name, str(tool_input), budget=budget)
             elapsed = round(time.monotonic() - t0, 2)
 
             yield {"type": "tool_result", "tool": tool_name, "output": result, "elapsed": elapsed}
+            model_text, _ = split_geojson_fence(result)
             tool_results_for_next.append(
                 {
                     "role": "tool",
                     "tool_call_id": tc.get("id", ""),
-                    "content": result,
+                    "content": model_text,
                 }
             )
+
+        if budget.denied:
+            yield {"type": "error", "message": budget.message()}
+            return
 
         msgs = (
             msgs
@@ -1175,7 +1709,33 @@ async def _demo_chat_stream(message: str) -> AsyncIterator[dict]:
 # ---------------------------------------------------------------------------
 
 
-def create_app() -> FastAPI:
+class PassiveModeMiddleware:
+    """Pure ASGI. Marks every request that must be demo-restricted as forced-passive, so
+    no setting, env var or header can enable active tools for a public instance. Only
+    restricts; nothing here can turn active tools on."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        restricted, _ = _request_restriction(Request(scope))
+        with forced_passive(restricted):
+            await self.app(scope, receive, send)
+
+
+def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
+    """Build the FastAPI app. `host` is the address this process will be
+    bound to, if known — it decides the DEMO_MODE network-exposure invariant
+    (see the module note near DEMO_MODE's definition). Leave it unset only
+    when the bind address genuinely isn't known yet; that fails closed to
+    restricted, not open."""
+    global DEMO_MODE, DEMO_REASON
+    DEMO_MODE = _compute_demo_mode(host)
+    DEMO_REASON = _compute_demo_reason(host)
+
     app = FastAPI(
         title="OpenOSINT",
         version=_VERSION,
@@ -1190,18 +1750,23 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(RequestGuardMiddleware, loopback_bind=_is_loopback_host(host), port=port)
+    app.add_middleware(PassiveModeMiddleware)
 
     # ------------------------------------------------------------------
     # GET /api/health
     # ------------------------------------------------------------------
 
     @app.get("/api/health")
-    async def health():
+    async def health(request: Request):
         ai_backend, ollama_host, ollama_reachable = _get_ai_backend()
+        restricted, restriction_reason = _request_restriction(request)
         return {
             "status": "ok",
             "version": _VERSION,
             "demo_mode": DEMO_MODE,
+            "restricted": restricted,
+            "restriction_reason": restriction_reason or None,
             "setup_complete": _is_setup_complete(),
             "ai_backend": ai_backend,
             "ollama_host": ollama_host,
@@ -1217,10 +1782,23 @@ def create_app() -> FastAPI:
         result = []
         for meta in _TOOL_CATALOG:
             available, reason = _check_available(meta)
+            policy = TOOL_POLICY[meta["name"]]
+            is_enabled = is_tool_enabled(meta["name"])
+            if not is_enabled:
+                available = False
+                reason = (
+                    f"Disabled in passive mode ({policy.noise.value}). "
+                    + ("Not available on this public instance." if is_forced_passive() else "Turn on active tools in Settings.")
+                )
             result.append(
                 {
                     "name": meta["name"],
-                    "description": meta["description"],
+                    "description": describe(meta["name"], meta["description"]),
+                    "noise": policy.noise.value,
+                    "noise_label": label(meta["name"]),
+                    "noise_note": policy.note,
+                    "active_part": policy.active_part,
+                    "enabled": is_enabled,
                     "input_label": meta["input_label"],
                     "input_placeholder": meta["input_placeholder"],
                     "category": meta["category"],
@@ -1245,18 +1823,124 @@ def create_app() -> FastAPI:
         return result
 
     # ------------------------------------------------------------------
+    # GET/POST /api/policy  — passive/active mode and the per-request call cap
+    # ------------------------------------------------------------------
+
+    @app.get("/api/policy")
+    async def get_policy(request: Request):
+        restricted, restriction_reason = _request_restriction(request)
+        return {
+            "allow_active": is_tool_enabled("search_username"),
+            "restricted": restricted,
+            "can_change": _is_loopback_request(request) and not restricted,
+            "max_tool_calls": max_tool_calls(),
+            "restriction_reason": restriction_reason if restricted else None,
+            "active_tools": [
+                {"name": n, "noise": p.noise.value, "note": p.note}
+                for n, p in TOOL_POLICY.items()
+                if not p.is_passive
+            ],
+        }
+
+    @app.post("/api/policy")
+    async def set_policy(request: Request):
+        restricted, reason = _request_restriction(request)
+        if restricted:
+            return JSONResponse(
+                {"status": "error", "message": f"Active tools cannot be enabled here: {reason}."},
+                status_code=403,
+            )
+        if not _setup_request_is_authorized(request):
+            return JSONResponse({"status": "error", "message": _SETUP_FORBIDDEN_MESSAGE}, status_code=403)
+        if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
+            return JSONResponse(
+                {"status": "error", "message": "Content-Type must be application/json."}, status_code=415
+            )
+        body = await request.json()
+        if not isinstance(body, dict) or not isinstance(body.get("allow_active"), bool):
+            return JSONResponse(
+                {"status": "error", "message": 'Body must be {"allow_active": true|false}.'}, status_code=400
+            )
+        if value_source(ENV_ALLOW_ACTIVE) == "environment":
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "message": f"{ENV_ALLOW_ACTIVE} is set as a real environment variable; change it there.",
+                },
+                status_code=409,
+            )
+        value = "1" if body["allow_active"] else "0"
+        try:
+            write_config({ENV_ALLOW_ACTIVE: value})
+        except OSError as exc:
+            return JSONResponse(
+                {"status": "error", "message": f"Could not save to {config_path()}: {exc.strerror or 'write failed'}."},
+                status_code=500,
+            )
+        os.environ[ENV_ALLOW_ACTIVE] = value
+        return {"status": "ok", "allow_active": env_allows_active()}
+
+    # ------------------------------------------------------------------
     # GET /api/sponsors
     # ------------------------------------------------------------------
 
     @app.get("/api/sponsors")
     async def list_sponsors():
-        from openosint.sponsors import SponsorsValidationError, load_sponsors
+        from openosint.sponsors import SponsorsFileMissing, SponsorsValidationError, load_sponsors
 
         try:
             sponsors = load_sponsors()
+        except SponsorsFileMissing:
+            # Fallback only: sponsors.json ships inside the package.
+            sponsors = []
         except SponsorsValidationError as exc:
             return JSONResponse({"status": "error", "message": str(exc)}, status_code=500)
         return {"status": "ok", "sponsors": sponsors}
+
+    # ------------------------------------------------------------------
+    # GET /api/tiles/{z}/{x}/{y} — globe basemap tile proxy (see the
+    # module-level comment near _tile_cache for why this exists).
+    # ------------------------------------------------------------------
+
+    @app.get("/api/tiles/{z}/{x}/{y}")
+    async def get_tile(z: int, x: int, y: int, request: Request):
+        if z < 0 or z > _TILE_MAX_ZOOM or x < 0 or x >= 2**z or y < 0 or y >= 2**z:
+            return Response(status_code=404)
+
+        cache_key = (z, x, y)
+        cached = _tile_cache_get(cache_key)
+
+        if cached is None:
+            client_ip = _get_client_ip(request)
+            if not _check_tile_rate_limit(client_ip):
+                return Response(status_code=429)
+
+            url = _EOX_TILE_URL.format(z=z, y=y, x=x)
+            try:
+                resp = await asyncio.to_thread(_fetch_tile, url)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Tile fetch failed for z=%d x=%d y=%d: %s", z, x, y, type(exc).__name__
+                )
+                return Response(content=_BLANK_TILE, media_type="image/gif")
+
+            if resp.status_code != 200:
+                logging.getLogger(__name__).warning(
+                    "Tile server returned HTTP %d for z=%d x=%d y=%d", resp.status_code, z, x, y
+                )
+                return Response(content=_BLANK_TILE, media_type="image/gif")
+
+            cached = resp.content
+            _tile_cache_set(cache_key, cached)
+
+        # Imagery is a static 2020 composite — content-addressed ETag lets the
+        # browser cache absorb repeat views instead of the in-process LRU.
+        etag = f'"{hashlib.sha256(cached).hexdigest()[:16]}"'
+        headers = {"Cache-Control": _TILE_CACHE_CONTROL, "ETag": etag}
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers=headers)
+
+        return Response(content=cached, media_type="image/jpeg", headers=headers)
 
     # ------------------------------------------------------------------
     # POST /api/run/{tool_name}
@@ -1275,6 +1959,17 @@ def create_app() -> FastAPI:
                 status_code=404,
             )
 
+        if not is_tool_enabled(tool_name):
+            return JSONResponse(
+                {
+                    "status": "disabled_in_passive_mode",
+                    "output": disabled_result(tool_name),
+                    "tool": tool_name,
+                    "elapsed": 0,
+                },
+                status_code=403,
+            )
+
         # Rate-limit keyless tools per real client IP
         if tool_name in _KEYLESS_TOOLS:
             client_ip = _get_client_ip(request)
@@ -1289,17 +1984,60 @@ def create_app() -> FastAPI:
                     status_code=429,
                 )
 
-        # Check that ALL required keys are present (request body or env)
+        restricted, restriction_reason = _request_restriction(request)
+
+        # Breach data is never served from the operator's own key, BYOK or not —
+        # this is a hard block with no flag, since the public-demo concern is
+        # not just HIBP's ToS but the operator acting as controller for a
+        # breach lookup on a non-consenting third party. See .claude/LEGAL_CONTEXT.md.
+        if restricted and tool_name == "search_breach":
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "output": "Breach-data lookups are disabled: " + restriction_reason,
+                    "tool": tool_name,
+                    "elapsed": 0,
+                },
+                status_code=403,
+            )
+
+        # Check that ALL required keys are present.
+        # When restricted, the operator's own env var never counts — only a
+        # caller-supplied key (BYOK) can satisfy a credentialed tool, so a
+        # publicly-reachable instance can never run a lookup on a locally-held key.
         meta = next((m for m in _TOOL_CATALOG if m["name"] == tool_name), None)
         if meta:
-            required_keys: list[str] = meta.get("requires_env", [])
             supplied: dict[str, str] = req.api_keys or {}
-            missing = [
-                k for k in required_keys
-                if not supplied.get(k) and not os.environ.get(k, "").strip()
-            ]
+            if restricted:
+                # search_ip/search_github work keyless (requires_env is empty
+                # for both — the token only raises rate limits), but their
+                # tool modules do `api_key or os.environ.get(...)` internally,
+                # so a locally-held key would still leak through if we only
+                # checked requires_env here. Gate them the same as a hard
+                # requirement when restricted.
+                demo_required_keys = set(meta.get("requires_env", []))
+                optional_key = _OPTIONAL_OPERATOR_KEY_ENV.get(tool_name)
+                if optional_key:
+                    demo_required_keys.add(optional_key)
+                missing = [k for k in sorted(demo_required_keys) if not supplied.get(k)]
+            else:
+                required_keys: list[str] = meta.get("requires_env", [])
+                missing = [
+                    k for k in required_keys
+                    if not supplied.get(k) and not os.environ.get(k, "").strip()
+                ]
             if missing:
                 how_to_get = {k: meta.get("env_hints", {}).get(k, "") for k in missing}
+                error_message = (
+                    f"API key required — {restriction_reason}, so a locally-held key "
+                    "cannot be used for this lookup. Pass your own key in the api_keys "
+                    "field, or self-host with your own .env."
+                    if restricted
+                    else (
+                        "API key required — pass it in the api_keys field "
+                        "or set the corresponding environment variable"
+                    )
+                )
                 return JSONResponse(
                     {
                         "status": "error",
@@ -1307,10 +2045,7 @@ def create_app() -> FastAPI:
                         "missing_keys": missing,
                         "how_to_get": how_to_get,
                         "tool": tool_name,
-                        "error": (
-                            "API key required — pass it in the api_keys field "
-                            "or set the corresponding environment variable"
-                        ),
+                        "error": error_message,
                         "elapsed": 0,
                     }
                 )
@@ -1318,7 +2053,8 @@ def create_app() -> FastAPI:
         # api_keys values are intentionally not logged anywhere in this handler
         start = time.monotonic()
         try:
-            result = await _RUNNERS[tool_name](req.input, req.timeout, req.api_keys or {})
+            extra = {"bbox": req.bbox} if tool_name == "search_gdelt_geo" and req.bbox else {}
+            result = await _RUNNERS[tool_name](req.input, req.timeout, req.api_keys or {}, **extra)
             elapsed = round(time.monotonic() - start, 2)
             return {"status": "ok", "output": result, "tool": tool_name, "elapsed": elapsed}
         except Exception as exc:
@@ -1341,6 +2077,49 @@ def create_app() -> FastAPI:
                 yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
 
             return EventSourceResponse(_err(), ping=15)
+
+        if not is_tool_enabled(tool_name):
+
+            async def _disabled() -> AsyncIterator[dict]:
+                yield {"data": json.dumps({"line": disabled_result(tool_name), "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_disabled(), ping=15)
+
+        # This endpoint has no BYOK parameter — it always falls back to a
+        # locally-held env-var key. When restricted that must never happen,
+        # so every credentialed tool (and breach unconditionally) is blocked
+        # here outright rather than gated. Use POST /api/tools/{tool}/run with
+        # a caller-supplied key instead.
+        if tool_name in _KEYLESS_TOOLS and not _check_rate_limit(_get_client_ip(request)):
+
+            async def _limited() -> AsyncIterator[dict]:
+                yield {"data": json.dumps({"line": "Rate limit exceeded. Please wait before retrying.", "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_limited(), ping=15)
+
+        restricted, restriction_reason = _request_restriction(request)
+        _meta = next((m for m in _TOOL_CATALOG if m["name"] == tool_name), None)
+        _needs_operator_key = bool(
+            (_meta and _meta.get("requires_env")) or tool_name in _OPTIONAL_OPERATOR_KEY_ENV
+        )
+        if restricted and (tool_name == "search_breach" or _needs_operator_key):
+
+            async def _blocked() -> AsyncIterator[dict]:
+                msg = (
+                    f"Breach-data lookups are disabled: {restriction_reason}."
+                    if tool_name == "search_breach"
+                    else (
+                        f"This tool requires an API key ({restriction_reason}, so a "
+                        "locally-held key cannot be used). Use POST /api/tools/{tool}/run "
+                        "with your own key, or self-host with your own .env."
+                    )
+                )
+                yield {"data": json.dumps({"line": msg, "done": False})}
+                yield {"data": json.dumps({"line": "", "done": True, "elapsed": 0})}
+
+            return EventSourceResponse(_blocked(), ping=15)
 
         async def event_gen() -> AsyncIterator[dict]:
             yield {
@@ -1394,7 +2173,7 @@ def create_app() -> FastAPI:
         ollama_host = os.environ.get("OLLAMA_HOST", "http://localhost:11434").rstrip("/")
         try:
             if _httpx is not None:
-                async with _httpx.AsyncClient(timeout=1.5) as client:
+                async with _httpx.AsyncClient(timeout=1.5, follow_redirects=False) as client:
                     r = await client.get(f"{ollama_host}/api/tags")
                     reachable = r.status_code == 200
             else:
@@ -1419,9 +2198,23 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/openai/test")
-    async def openai_test(req: OpenAITestRequest):
-        base_url = (req.openai_base_url or os.environ.get("OPENAI_BASE_URL", "")).strip()
-        api_key = (req.openai_api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
+    async def openai_test(req: OpenAITestRequest, request: Request):
+        # Same coupling bug as /api/chat (GHSA-q6cw-g86h-m2cq), and arguably
+        # worse here: this endpoint echoes the probe result back to the
+        # caller, making it a non-blind SSRF oracle for internal port
+        # scanning if the destination/credential split isn't enforced.
+        if _byo_backend_enabled():
+            _check_browser_origin(request)
+
+        if req.openai_base_url:
+            if not _byo_backend_enabled():
+                _reject_client_backend()
+            base_url = await _validate_outbound_base_url(req.openai_base_url)
+            api_key = (req.openai_api_key or "").strip()  # no os.environ fallback, ever
+        else:
+            base_url = os.environ.get("OPENAI_BASE_URL", "").strip()
+            api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+
         if not base_url:
             return {"status": "ok", "reachable": False, "auth_ok": False, "status_code": None}
         probe = await _probe_openai_endpoint(base_url, api_key)
@@ -1432,16 +2225,21 @@ def create_app() -> FastAPI:
     # ------------------------------------------------------------------
 
     @app.post("/api/chat")
-    async def chat(req: ChatRequest):
-        if DEMO_MODE:
+    async def chat(req: ChatRequest, request: Request):
+        restricted, restriction_reason = _request_restriction(request)
+        if restricted:
             async def _demo_block():
-                yield f'data: {json.dumps({"type": "error", "message": "Server-side LLM is disabled in demo mode — add your own API key in Settings."})}\n\n'
+                message = f"Server-side LLM is disabled ({restriction_reason}) — add your own API key in Settings."
+                yield f'data: {json.dumps({"type": "error", "message": message})}\n\n'
                 yield f'data: {json.dumps({"type": "done"})}\n\n'
             return StreamingResponse(
                 _demo_block(),
                 media_type="text/event-stream",
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
             )
+
+        if _byo_backend_enabled():
+            _check_browser_origin(request)
 
         messages: list[dict] = []
         for h in req.history:
@@ -1453,17 +2251,38 @@ def create_app() -> FastAPI:
 
         backend = _select_chat_backend(req)
 
+        # Resolve backend-specific connection params up front (not inside the
+        # generator) so a validation failure returns a proper HTTP error
+        # instead of being swallowed as an SSE event after streaming started.
+        openai_base_url = ""
+        openai_api_key = ""
+        openai_model = ""
+        ollama_host = ""
+
+        if backend == "openai":
+            if req.openai_base_url:
+                if not _byo_backend_enabled():
+                    _reject_client_backend()
+                openai_base_url = await _validate_outbound_base_url(req.openai_base_url)
+                openai_api_key = (req.openai_api_key or "").strip()  # no os.environ fallback, ever
+            else:
+                openai_base_url = os.environ.get("OPENAI_BASE_URL", "http://localhost:4000/v1")
+                openai_api_key = os.environ.get("OPENAI_API_KEY", "")
+            openai_model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
+        elif backend == "ollama":
+            default_ollama = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
+            if req.ollama_host and req.ollama_host.rstrip("/") != default_ollama.rstrip("/"):
+                if not _byo_backend_enabled():
+                    _reject_client_backend()
+                ollama_host = await _validate_outbound_base_url(req.ollama_host)
+            else:
+                ollama_host = default_ollama
+
         async def generate():
             if backend == "openai":
-                base_url = (
-                    req.openai_base_url
-                    or os.environ.get("OPENAI_BASE_URL", "http://localhost:8080/v1")
-                ).strip()
-                api_key = (req.openai_api_key or os.environ.get("OPENAI_API_KEY", "")).strip()
-                model = (req.openai_model or os.environ.get("OPENAI_MODEL", "gpt-4o-mini")).strip()
-                gen = _stream_openai(messages, base_url, api_key, model)
+                gen = _stream_openai(messages, openai_base_url, openai_api_key, openai_model)
             elif backend == "ollama":
-                gen = _stream_ollama(messages, req.ollama_host, req.ollama_model)
+                gen = _stream_ollama(messages, ollama_host, req.ollama_model)
             else:
                 gen = _stream_claude(messages)
 
@@ -1486,28 +2305,34 @@ def create_app() -> FastAPI:
     @app.post("/api/setup")
     async def setup(request: Request):
         # GHSA-cqr4-hcfp-m6m4: this endpoint writes to live process env vars
-        # and .env, so it must never be reachable from the network. Loopback
-        # callers are always allowed; anyone else needs OPENOSINT_SETUP_TOKEN.
+        # and the config file, so it must never be reachable from the network.
+        # Loopback callers are always allowed; anyone else needs OPENOSINT_SETUP_TOKEN.
+        client_ip = request.client.host if request.client else "unknown"
+        if not _is_loopback_request(request) and not _check_setup_attempt_limit(client_ip):
+            return JSONResponse(
+                {"status": "error", "message": "Too many setup attempts. Wait a minute and retry."},
+                status_code=429,
+            )
         if not _setup_request_is_authorized(request):
             return JSONResponse(
-                {
-                    "status": "error",
-                    "message": "Setup is only allowed from localhost, or with a valid X-Setup-Token.",
-                },
+                {"status": "error", "message": _SETUP_FORBIDDEN_MESSAGE},
                 status_code=403,
             )
 
-        body: dict = await request.json()
-        env_path = _ROOT / ".env"
-        existing: dict[str, str] = {}
-        if env_path.exists():
-            for raw in env_path.read_text().splitlines():
-                line = raw.strip()
-                if "=" in line and not line.startswith("#"):
-                    k, _, v = line.partition("=")
-                    existing[k.strip()] = v.strip()
+        if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
+            return JSONResponse(
+                {"status": "error", "message": "Content-Type must be application/json."},
+                status_code=415,
+            )
 
-        applied: list[str] = []
+        body = await request.json()
+        if not isinstance(body, dict):
+            return JSONResponse(
+                {"status": "error", "message": "Body must be a JSON object of KEY: value pairs."},
+                status_code=400,
+            )
+
+        accepted: dict[str, str] = {}
         rejected: list[str] = []
         for k, v in body.items():
             key = str(k).strip()
@@ -1520,12 +2345,67 @@ def create_app() -> FastAPI:
             if key in _SETUP_URL_KEYS and not _is_valid_base_url(v_str):
                 rejected.append(key)
                 continue
-            existing[key] = v_str
-            os.environ[key] = v_str
-            applied.append(key)
+            try:
+                validate_pair(key, v_str)
+            except ValueError:
+                rejected.append(key)
+                continue
+            accepted[key] = v_str
 
-        env_path.write_text("\n".join(f"{k}={v}" for k, v in existing.items()) + "\n")
-        return {"status": "ok", "applied": applied, "rejected": rejected}
+        # A real environment variable outranks the config file on every future start,
+        # so saving over one would only look like it worked until the next restart.
+        shadowed = sorted(k for k in accepted if value_source(k) == "environment")
+        try:
+            if accepted:
+                write_config(accepted)
+        except OSError as exc:
+            logging.getLogger(__name__).error("Could not write %s: %s", config_path(), exc)
+            return JSONResponse(
+                {
+                    "status": "error",
+                    "message": f"Could not save to {config_path()}: {exc.strerror or 'write failed'}.",
+                },
+                status_code=500,
+            )
+        for key, value in accepted.items():
+            if key not in shadowed:
+                os.environ[key] = value
+                mark_saved(key)
+        applied = [k for k in accepted if k not in shadowed]
+        return {
+            "status": "ok",
+            "applied": applied,
+            "rejected": rejected,
+            "shadowed_by_environment": shadowed,
+            "saved_to": str(config_path()),
+        }
+
+    # ------------------------------------------------------------------
+    # GET /api/setup/status  — the key form's field list + what is configured
+    # ------------------------------------------------------------------
+
+    @app.get("/api/setup/status")
+    async def setup_status(request: Request):
+        restricted, _ = _request_restriction(request)
+        can_save = _is_loopback_request(request)
+        fields = public_catalog()
+        if not restricted:
+            saved = set(read_config())  # names only; values never leave config_store
+            for field in fields:
+                source = value_source(field["key"])
+                field["configured"] = source is not None
+                field["source"] = source
+                field["saved_in_config"] = field["key"] in saved
+                # Saved to config.env, but a real environment variable wins on every start.
+                field["shadowed"] = field["saved_in_config"] and source == "environment"
+        return {
+            "status": "ok",
+            "can_save": can_save,
+            "restricted": restricted,
+            "forbidden_message": None if can_save else _SETUP_FORBIDDEN_MESSAGE,
+            "config_path": str(config_path()) if can_save else None,
+            "keys": fields,
+        }
 
     # ------------------------------------------------------------------
     # POST /api/demo/chat  — pre-scripted demo stream, no API key needed
@@ -1548,6 +2428,177 @@ def create_app() -> FastAPI:
         )
 
     # ------------------------------------------------------------------
+    # Graph routes — read the LOCAL SQLite graph store only. No outbound
+    # network calls of any kind. followthemoney is imported lazily inside
+    # each handler (via openosint.graph.web_view / .review) so a missing
+    # `graph` extra degrades to 503 here and leaves every other route working.
+    # ------------------------------------------------------------------
+
+    @app.get("/api/graph/subgraph")
+    async def graph_subgraph(
+        entity_id: str,
+        depth: int = 1,
+        cross_layer: bool = False,
+        dataset: str | None = None,
+    ):
+        try:
+            from openosint.graph.web_view import (
+                build_subgraph,
+                is_valid_entity_id,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if not is_valid_entity_id(entity_id):
+            raise HTTPException(400, "invalid entity_id")
+        if depth < 0:
+            raise HTTPException(400, "depth must be >= 0")
+        if dataset is not None and not dataset.strip():
+            dataset = None
+
+        def _work() -> dict:
+            store = open_default_store()
+            try:
+                return build_subgraph(
+                    store,
+                    entity_id=entity_id,
+                    depth=depth,
+                    cross_layer=cross_layer,
+                    dataset=dataset,
+                )
+            finally:
+                store.close()
+
+        return await asyncio.to_thread(_work)
+
+    @app.get("/api/graph/entity")
+    async def graph_entity(entity_id: str):
+        try:
+            from openosint.graph.web_view import (
+                entity_detail,
+                is_valid_entity_id,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if not is_valid_entity_id(entity_id):
+            raise HTTPException(400, "invalid entity_id")
+
+        def _work() -> dict | None:
+            store = open_default_store()
+            try:
+                return entity_detail(store, entity_id)
+            finally:
+                store.close()
+
+        detail = await asyncio.to_thread(_work)
+        if detail is None:
+            raise HTTPException(404, "entity not found")
+        return detail
+
+    @app.get("/api/graph/review/candidates")
+    async def graph_review_candidates(
+        schema: str | None = None,
+        min_score: float | None = None,
+        max_score: float | None = None,
+        dataset: str | None = None,
+    ):
+        try:
+            from dataclasses import asdict
+
+            from openosint.graph.review import list_review_candidates
+            from openosint.graph.web_view import open_default_store
+        except ImportError:
+            return _graph_unavailable()
+
+        def _work() -> list[dict]:
+            store = open_default_store()
+            try:
+                candidates = list_review_candidates(
+                    store,
+                    schema=schema,
+                    min_score=min_score,
+                    max_score=max_score,
+                    dataset=dataset,
+                )
+                return [asdict(c) for c in candidates]
+            finally:
+                store.close()
+
+        return {"candidates": await asyncio.to_thread(_work)}
+
+    @app.post("/api/graph/review/decide")
+    async def graph_review_decide(req: GraphDecideRequest):
+        try:
+            from openosint.graph.review import decide_review_candidate
+            from openosint.graph.web_view import (
+                is_valid_entity_id,
+                latest_resolution_for_pair,
+                open_default_store,
+            )
+        except ImportError:
+            return _graph_unavailable()
+
+        if req.decision not in ("accept", "reject"):
+            raise HTTPException(400, "decision must be 'accept' or 'reject'")
+        if not is_valid_entity_id(req.entity_id) or not is_valid_entity_id(req.canonical_id):
+            raise HTTPException(400, "invalid entity_id or canonical_id")
+        if req.entity_id == req.canonical_id:
+            raise HTTPException(400, "entity_id and canonical_id must differ")
+
+        judgement = "positive" if req.decision == "accept" else "negative"
+
+        def _work() -> dict:
+            from datetime import datetime, timezone
+
+            store = open_default_store()
+            try:
+                # Idempotent: if the pair's latest row already carries this
+                # judgement, a repeat click (or replay) appends nothing —
+                # return the existing resolution, keeping decision history clean.
+                existing = latest_resolution_for_pair(store, req.entity_id, req.canonical_id)
+                if existing is not None and existing.judgement == judgement:
+                    resolution_id = existing.id
+                    idempotent = True
+                else:
+                    resolution = decide_review_candidate(
+                        store,
+                        entity_id=req.entity_id,
+                        canonical_id=req.canonical_id,
+                        judgement=judgement,
+                        decided_at=datetime.now(timezone.utc),
+                        reviewer_id=req.reviewer_id,
+                    )
+                    resolution_id = resolution.id
+                    idempotent = False
+
+                canonical = store.canonical_for(req.entity_id)
+                return {
+                    "status": "ok",
+                    "resolution_id": resolution_id,
+                    "idempotent": idempotent,
+                    "judgement": judgement,
+                    "decision": req.decision,
+                    "entity_id": req.entity_id,
+                    "canonical_id": req.canonical_id,
+                    "canonical": canonical,
+                    "cluster": store.members_of_canonical(canonical),
+                }
+            finally:
+                store.close()
+
+        return await asyncio.to_thread(_work)
+
+    @app.get("/graph", include_in_schema=False)
+    async def graph_page():
+        page = _WEB_DIR / "graph.html"
+        if page.exists():
+            return HTMLResponse(page.read_text(encoding="utf-8"))
+        return HTMLResponse("<h1>graph.html not found</h1>", status_code=404)
+
+    # ------------------------------------------------------------------
     # Static mounts — docs, then catch-all for frontend
     # ------------------------------------------------------------------
 
@@ -1563,7 +2614,7 @@ def create_app() -> FastAPI:
     async def serve_frontend(full_path: str):
         index = _WEB_DIR / "index.html"
         if index.exists():
-            return HTMLResponse(index.read_text())
+            return HTMLResponse(index.read_text(encoding="utf-8"))
         return HTMLResponse(
             "<h1>OpenOSINT</h1>"
             "<p><strong>web/index.html not found.</strong></p>"
@@ -1579,9 +2630,6 @@ def create_app() -> FastAPI:
 # ---------------------------------------------------------------------------
 # Entry points (called from cli.py)
 # ---------------------------------------------------------------------------
-
-
-_SAFE_BIND_HOSTS: frozenset[str] = frozenset({"127.0.0.1", "localhost", "::1"})
 
 
 def _require_safe_bind(host: str, allow_remote: bool) -> None:
@@ -1605,29 +2653,86 @@ def _require_safe_bind(host: str, allow_remote: bool) -> None:
     )
 
 
-async def serve_async(host: str = "127.0.0.1", port: int = 8080, allow_remote: bool = False) -> None:
-    """Run uvicorn within an already-running asyncio event loop."""
+def _bind_socket(host: str, port: int) -> socket.socket:
+    """Bind the listening socket up front so a busy port fails before anything is announced."""
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    sock = socket.socket(family, socket.SOCK_STREAM)
+    if os.name != "nt":  # on Windows SO_REUSEADDR would allow a second bind to the same port
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind((host, port))
+    except OSError as exc:
+        sock.close()
+        if exc.errno == errno.EADDRINUSE:
+            raise SystemExit(
+                f"Port {port} is already in use. "
+                f"Pick another one with: openosint web --port {port + 1}"
+            ) from None
+        raise SystemExit(f"Cannot listen on {host}:{port}: {exc.strerror or exc}") from None
+    sock.set_inheritable(True)
+    return sock
+
+
+async def serve_async(
+    host: str = "127.0.0.1",
+    port: int = 8080,
+    allow_remote: bool = False,
+    on_started: Callable[[], None] | None = None,
+) -> None:
+    """Run uvicorn within an already-running asyncio event loop.
+
+    `on_started` runs once the port is bound and the URL has been printed.
+    """
     _require_safe_bind(host, allow_remote)
-    load_dotenv()
-    app = create_app()
+    load_env_or_exit()
+    app = create_app(host=host, port=port)
+    sock = _bind_socket(host, port)
     _print_banner(host, port)
+    if on_started is not None:
+        on_started()
     config = uvicorn.Config(app, host=host, port=port, log_level="warning", loop="none")
     server = uvicorn.Server(config)
-    await server.serve()
+    await server.serve(sockets=[sock])
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8080, allow_remote: bool = False) -> None:
     """Standalone blocking entry point."""
-    _require_safe_bind(host, allow_remote)
-    load_dotenv()
-    app = create_app()
-    _print_banner(host, port)
-    uvicorn.run(app, host=host, port=port, log_level="warning")
+    asyncio.run(serve_async(host=host, port=port, allow_remote=allow_remote))
 
 
 def _print_banner(host: str, port: int) -> None:
     display = "localhost" if host in ("0.0.0.0", "") else host
-    print(f"[*] OpenOSINT {_VERSION} web server")
-    print(f"[*] App  → http://{display}:{port}/")
-    print(f"[*] Docs → http://{display}:{port}/docs/")
-    print("[*] Press Ctrl+C to stop.")
+    lines = [
+        f"[*] OpenOSINT {_VERSION} web server",
+        f"[*] App  → http://{display}:{port}/",
+        f"[*] Docs → http://{display}:{port}/docs/",
+        f"[*] Data → {home_dir()}",
+    ]
+    if not (
+        os.environ.get("ANTHROPIC_API_KEY", "").strip()
+        or os.environ.get("OPENAI_BASE_URL", "").strip()
+    ):
+        lines.append(
+            "[*] No AI provider configured (a local Ollama is auto-detected). "
+            "Set ANTHROPIC_API_KEY to enable chat; keyless tools work without it."
+        )
+    if _restriction_lifted_by_declaration(host):
+        lines.append(
+            "[*] OPENOSINT_PUBLISHED_BIND="
+            f"{os.environ['OPENOSINT_PUBLISHED_BIND'].strip()}: the port is declared "
+            "published on loopback only, so the non-loopback restriction lifted. "
+            "Never set this if the port is reachable from other interfaces."
+        )
+    if _is_loopback_host(host) and not OPENOSINT_TRUSTED_PROXY:
+        lines.append(
+            "[*] Bound to loopback. If you put a reverse proxy in front of this, "
+            "set OPENOSINT_TRUSTED_PROXY=true — otherwise credentialed tools and "
+            "chat will refuse proxied requests. See the README before doing so."
+        )
+    lines.append("[*] Press Ctrl+C to stop.")
+    try:
+        # A redirected stdout on Windows is cp1252, which cannot encode "→".
+        sys.stdout.reconfigure(errors="replace")
+    except (AttributeError, ValueError):
+        pass  # not a TextIOWrapper (e.g. a test capture object)
+    print("\n".join(lines), flush=True)

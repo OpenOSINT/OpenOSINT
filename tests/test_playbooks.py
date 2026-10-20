@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+
+import pytest
 
 
 # ---------------------------------------------------------------------------
@@ -58,6 +61,23 @@ _ALL_CANNED = {
     "search_domain": _DOMAIN_OUTPUT,
     "search_footprint": _FOOTPRINT_OUTPUT,
 }
+
+
+@pytest.fixture(autouse=True)
+def _requirements_satisfied(monkeypatch):
+    """Playbook steps are skipped when a tool's binary or API key is missing.
+
+    These tests mock every tool, so they must not depend on what the machine
+    (or CI runner) happens to have installed or exported.
+    """
+    from openosint.playbooks import runner
+
+    monkeypatch.setattr(
+        runner, "shutil", SimpleNamespace(which=lambda binary: f"/fake/bin/{binary}")
+    )
+    for env_vars, _binaries, _note in runner.TOOL_REQUIREMENTS.values():
+        for var in env_vars:
+            monkeypatch.setenv(var, "test-value")
 
 
 def _make_tool_mocks(overrides: dict | None = None) -> dict:
@@ -633,18 +653,7 @@ class TestPersonPlaybook:
         assert "ℹ️ Skipped" in content
         assert "⚠ Step error" not in content
 
-    async def test_person_summary_counts_correct(self, tmp_path, monkeypatch):
-        import shutil as _shutil
-
-        monkeypatch.setattr(
-            "openosint.playbooks.runner.shutil",
-            type(
-                "shutil",
-                (),
-                {"which": staticmethod(lambda b: _shutil.which(b))},
-            )(),
-        )
-
+    async def test_person_summary_counts_correct(self, tmp_path):
         from openosint.playbooks.loader import load_recipe
         from openosint.playbooks.runner import TOOL_MAP, run_playbook
 

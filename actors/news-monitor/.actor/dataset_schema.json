@@ -1,0 +1,82 @@
+{
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "query": {
+                "type": "string",
+                "title": "Query",
+                "description": "The search query this article matched.",
+                "example": "ukraine"
+            },
+            "title": {
+                "type": ["string", "null"],
+                "title": "Title",
+                "description": "Article headline.",
+                "example": "Real hardship and difficulties lie ahead"
+            },
+            "url": {
+                "type": ["string", "null"],
+                "title": "URL",
+                "description": "Article URL.",
+                "example": "https://example-news.com/article-1"
+            },
+            "domain": {
+                "type": ["string", "null"],
+                "title": "Domain",
+                "description": "Publisher domain.",
+                "example": "example-news.com"
+            },
+            "language": {
+                "type": ["string", "null"],
+                "title": "Language",
+                "description": "Article language, as detected by GDELT.",
+                "example": "English"
+            },
+            "sourceCountry": {
+                "type": ["string", "null"],
+                "title": "Source country",
+                "description": "Publisher's country, when GDELT could determine one.",
+                "example": "United Kingdom"
+            },
+            "seenDate": {
+                "type": ["string", "null"],
+                "title": "Seen date",
+                "description": "GDELT's compact UTC timestamp for when this article was indexed, e.g. 20260913T091500Z.",
+                "example": "20260913T091500Z"
+            },
+            "timespanMinutes": {
+                "type": "integer",
+                "title": "Timespan (minutes)",
+                "description": "The lookback window used for this search.",
+                "example": 60
+            },
+            "checkedAt": {
+                "type": "string",
+                "title": "Checked at",
+                "description": "ISO 8601 timestamp when this search was run.",
+                "example": "2026-09-17T12:00:00Z"
+            }
+        },
+        "required": ["query", "checkedAt"]
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": ["title", "domain", "sourceCountry", "language", "seenDate"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "title": { "label": "Title", "format": "link", "url": "url" },
+                    "domain": { "label": "Domain" },
+                    "sourceCountry": { "label": "Country" },
+                    "language": { "label": "Language" },
+                    "seenDate": { "label": "Seen" }
+                }
+            }
+        }
+    }
+}

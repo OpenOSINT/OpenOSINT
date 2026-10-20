@@ -1,0 +1,107 @@
+---
+title: 'Phone Number OSINT: What Intelligence Can Be Gathered from a Number'
+seo_title: 'Phone number OSINT: what a number reveals'
+description: 'What a phone number reveals: E.164 structure, carrier and line type lookups, phoneinfoga scanners, reverse lookups and the legal limits by jurisdiction.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>Phone numbers as persistent identifiers</h2>
+<div class="indent">
+<p>Email addresses get burned and replaced — investigators regularly encounter subjects cycling through throwaway Gmail accounts. Usernames get abandoned when platforms ban accounts or personas shift. Phone numbers behave differently. Number portability means that changing carriers does not change the number. People keep the same mobile number for years, sometimes for the duration of an entire adult life. This persistence makes phone numbers high-value identity anchors in OSINT investigations.</p>
+
+<p>A phone number, properly investigated, can be linked to: the issuing country and original geographic region, the carrier (current and historical, before and after porting), the line type distinguishing mobile, landline, VoIP, and toll-free numbers, and increasingly, a verified real identity through social platform reverse lookup. Platforms that use phone numbers for 2FA essentially create a permanent binding between a number and an account — and by extension, an identity.</p>
+
+<p>This persistence also makes phone OSINT sensitive. Unlike searching a username on a public platform, phone number lookups often query carrier infrastructure or crowdsourced databases built on contact sync. Understand the legal landscape in your jurisdiction before beginning any phone number investigation. Authorized investigation is the prerequisite, not an afterthought.</p>
+</div>
+
+<h2>What E.164 format reveals structurally</h2>
+<div class="indent">
+<p>E.164 is the ITU-T standard for international phone number formatting: a plus sign, country code, and subscriber number with no spaces or dashes. Before making a single API call, the E.164 number itself encodes meaningful intelligence.</p>
+
+<p><strong>+14155552671</strong>: Country code +1 indicates North America (NANP). Area code 415 is the San Francisco Bay Area — assigned by NANPA (North American Numbering Plan Administration). The NPA-NXX (415-555) could be further cross-referenced against the NANPA database to identify the original carrier assignment for that block, though this reflects the original assignment, not the current carrier after porting.</p>
+
+<p><strong>+447911123456</strong>: Country code +44 is the United Kingdom. The leading 7 after the country code means mobile (UK mobile numbers begin with 07 in domestic format, which becomes +447 in E.164). UK carriers are identifiable to some degree from number ranges: 07700-07799 was historically Vodafone, 07800-07899 was O2, though number portability has eroded this mapping considerably.</p>
+
+<p><strong>+81-90-1234-5678</strong>: Country code +81 is Japan. The 090/080/070 prefix identifies mobile numbers from the major carriers (NTT Docomo, SoftBank, au). 050 prefix indicates IP phone (VoIP) services in Japan.</p>
+
+<p>This structural analysis is entirely passive — no network request required. Google's <code>libphonenumber</code> library performs this parsing and is available as a Python package:</p>
+
+<pre>import phonenumbers
+n = phonenumbers.parse("+14155552671")
+print(phonenumbers.carrier.name_for_number(n, "en"))
+print(phonenumbers.geocoder.description_for_number(n, "en"))</pre>
+
+<p>OpenOSINT's <code>search_phone</code> tool runs this local analysis as the first pass before any network queries.</p>
+</div>
+
+<h2>Carrier and line type lookup</h2>
+<div class="indent">
+<p>HLR (Home Location Register) lookups query carrier infrastructure databases. An HLR is the database within a GSM network that stores subscriber information. HLR queries were traditionally used by carriers to route calls and SMS — commercial HLR lookup services exposed this capability to external clients, making it useful for OSINT.</p>
+
+<p>What an HLR lookup can return: the currently serving carrier, the original carrier (before any number porting), line type classification (mobile, landline, VoIP, toll-free, premium rate), and in some cases roaming status indicating the subscriber is currently using a foreign network. The distinction between original and current carrier is specifically relevant for OSINT: a number that was originally issued by AT&T but ported to a VoIP provider later suggests deliberate anonymization steps.</p>
+
+<p>Line type carries particular intelligence value. VoIP numbers indicate a specific class of service:</p>
+
+<ul>
+<li>Google Voice numbers (US): often used for anonymous registration on platforms that require phone verification, because they accept SMS but are not tied to a physical SIM.</li>
+<li>Skype numbers: internationally registered VoIP DIDs that route calls to the Skype app.</li>
+<li>TextNow, Burner, MySudo: apps that provision disposable US mobile numbers on VoIP infrastructure. These are frequently used by subjects attempting to evade identification.</li>
+<li>Twilio/Vonage DID blocks: if a number falls in a known Twilio or Vonage range, it may be a programmatically provisioned number used for SMS campaigns, fraud, or API-driven services.</li>
+</ul>
+
+<p>Commercial HLR APIs include Numverify, Twilio Lookup, and Telesign. These require API keys and incur per-lookup costs. phoneinfoga can use Numverify when the <code>NUMVERIFY_API_KEY</code> environment variable is configured.</p>
+</div>
+
+<h2>phoneinfoga in detail</h2>
+<div class="indent">
+<p>phoneinfoga is the primary open-source tool for phone number OSINT. It operates in two modes: local scan and remote scan.</p>
+
+<p>The local scan runs purely from the number structure using <code>libphonenumber</code>: format validation, country extraction, geocoding, and carrier assignment from number range databases. This should not need the network and produces results instantly. The remote scan queries multiple external sources: Google dork URLs generated for the number, Numverify (if key is configured), and the phoneinfoga REST API server (which can optionally be self-hosted). OpenOSINT's <code>search_phone</code> runs <code>phoneinfoga scan</code>; its network traffic has not been verified with a capture, so the tool is labeled unverified and is off unless you pass <code>--allow-active</code>.</p>
+
+<p>OpenOSINT's <code>search_phone</code> wraps phoneinfoga's output and structures it for the AI agent:</p>
+
+<pre>$ openosint phone +14155552671
+
+Phone intelligence for '+14155552671':
+[+] Country: United States
+[+] Region: California
+[+] Carrier: AT&amp;T
+[+] Line type: Mobile
+[+] Valid: Yes
+[+] International format: +1 415-555-2671
+[+] Local format: (415) 555-2671</pre>
+
+<p>The full phoneinfoga CLI also generates Google dork URLs for the number in various formats (with and without country code, with dashes, with spaces) that you can run manually to surface forum posts, profiles, or documents mentioning the number. This dork generation is the same pattern used by OpenOSINT's <a href="/blog/google-dorks-guide.html">generate_dorks tool</a> for other identifiers.</p>
+
+<p>phoneinfoga's remote scan requires caution: the full remote mode in phoneinfoga v2 uses a headless browser to scrape carrier lookup sites. Some of these lookups generate reverse query logs on the carrier side. For sensitive investigations, the local scan plus a manually-run HLR API call is preferable to the automated remote scan.</p>
+</div>
+
+<h2>Social media reverse lookup and legal constraints</h2>
+<div class="indent">
+<p>Several major platforms historically allowed or still allow reverse lookup of accounts by phone number. The mechanism varies: some platforms expose an API endpoint that accepts a phone number and returns whether an account exists; others allow account lookup when adding to contacts (exploited via contact sync enumeration); others return profile data directly in search results when queried with a phone number.</p>
+
+<p>Platform-specific notes as of 2025:</p>
+
+<ul>
+<li><strong>Telegram</strong>: Contact sync still exposes account information. If you add a number to your device contacts and sync with Telegram, any Telegram account registered to that number becomes visible. Telegram's privacy settings allow users to restrict this, but the default allows it. Investigators have historically used mass contact sync to enumerate Telegram accounts at scale — this is against Telegram's ToS and rate-limited.</li>
+<li><strong>WhatsApp</strong>: Changed privacy settings in 2023 now restrict profile information returned to non-contacts. The registration check (does this number have a WhatsApp account) is still possible via the unofficial API libraries, but against Meta's ToS.</li>
+<li><strong>Truecaller</strong>: A crowdsourced name database built from address book submissions. If a subject's number appears in enough contact books under a consistent name, Truecaller returns that name. High false positive rate for common names, but useful for confirmation.</li>
+<li><strong>Twitter/X</strong>: Phone-to-account lookup was available via the API until 2023 when it was restricted. Archived data from that period may still be queryable through third-party data brokers.</li>
+</ul>
+
+<p>Legal constraints are non-negotiable. GDPR (EU) prohibits processing personal data of EU residents without a lawful basis — legitimate interest may apply in authorized security investigations but requires documentation. The TCPA (US) governs commercial contact via phone but does not directly restrict lookup. Australia's Privacy Act, Canada's PIPEDA, and equivalent frameworks in other jurisdictions all impose constraints on collecting personal data tied to phone numbers. The rule: document your authorization before you begin, keep records of what queries were run and why, and restrict use of findings to the stated investigation purpose. <a href="/tools/">OpenOSINT's tools</a> are built for authorized research only — the same applies to every technique described here.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/email-osint-guide.html">Email OSINT Guide</a> &mdash; Parallel techniques for investigating email addresses with holehe and HIBP</li>
+<li><a href="/blog/what-is-osint.html">What Is OSINT?</a> &mdash; Framework overview including legal and ethical constraints on intelligence collection</li>
+<li><a href="/tools/">OpenOSINT Tools</a> &mdash; Full reference for all 14 OSINT tools including search_phone</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

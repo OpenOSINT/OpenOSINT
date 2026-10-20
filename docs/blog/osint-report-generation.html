@@ -1,64 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Generating Structured OSINT Reports: JSON, PDF, and Markdown</title>
-<meta name="description" content="Raw OSINT tool output is unstructured text. This guide covers converting investigation results into structured JSON, readable Markdown, and printable PDF reports using OpenOSINT's built-in export tools and Python.">
-<meta name="keywords" content="OSINT report generation, OSINT JSON export, OSINT PDF report, investigation report, structured OSINT output, OpenOSINT export, OSINT documentation">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Structured OSINT reports: JSON, Markdown and PDF</title>
+<meta name="description" content="Turn raw OSINT tool output into JSON, Markdown and PDF reports with OpenOSINT&#39;s export options, and build a repeatable report pipeline in Python.">
 <link rel="canonical" href="https://openosint.tech/blog/osint-report-generation.html">
-<meta property="og:title" content="Generating Structured OSINT Reports: JSON, PDF, and Markdown">
-<meta property="og:description" content="Convert raw OSINT tool output into structured JSON, readable Markdown, and printable PDF reports using OpenOSINT's export tools and Python patterns.">
-<meta property="og:url" content="https://openosint.tech/blog/osint-report-generation.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Structured OSINT reports: JSON, Markdown and PDF">
+<meta property="og:description" content="Turn raw OSINT tool output into JSON, Markdown and PDF reports with OpenOSINT&#39;s export options, and build a repeatable report pipeline in Python.">
+<meta property="og:url" content="https://openosint.tech/blog/osint-report-generation.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Generating Structured OSINT Reports: JSON, PDF, and Markdown">
-<meta name="twitter:description" content="Convert OSINT findings into structured JSON, Markdown, and PDF reports. OpenOSINT export tools and Python patterns for investigation documentation.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Structured OSINT reports: JSON, Markdown and PDF">
+<meta name="twitter:description" content="Turn raw OSINT tool output into JSON, Markdown and PDF reports with OpenOSINT&#39;s export options, and build a repeatable report pipeline in Python.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Generating Structured OSINT Reports: JSON, PDF, and Markdown",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Turn raw OSINT tool output into JSON, Markdown and PDF reports with OpenOSINT's export options, and build a repeatable report pipeline in Python.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/osint-report-generation.html",
-  "description": "Raw OSINT tool output is unstructured text. This guide covers converting investigation results into structured JSON, readable Markdown, and printable PDF reports using OpenOSINT's built-in export tools and Python."
+  "mainEntityOfPage": "https://openosint.tech/blog/osint-report-generation.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>GENERATING STRUCTURED OSINT REPORTS</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>WHY OUTPUT FORMAT MATTERS</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Generating Structured OSINT Reports: JSON, PDF, and Markdown</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <h2>Why output format matters</h2>
 <div class="indent">
 <p>An investigation that produces only terminal output has a short half-life. The findings exist in the scrollback buffer of a single session. They can't be searched programmatically, diffed against a previous investigation of the same target, ingested by a SIEM, or handed to a colleague who wasn't present. Structured output transforms a one-time lookup into a persistent record that can feed downstream systems, support a chain of custody, or serve as the basis for a client-facing report.</p>
 <p>The right output format depends on the consumer. JSON is the right format when downstream automation will process the results &mdash; SIEM ingestion, database storage, diff analysis. Markdown is the right format when a human will read the output in a terminal, editor, or document system that renders it. PDF is the right format when the report needs to be attached to a ticket, sent to a client, or archived with a legal hold. OpenOSINT supports all three export paths, plus the REPL's <code>/export</code> command for on-the-fly Markdown export during interactive sessions.</p>
 </div>
 
-<h2>JSON OUTPUT: STRUCTURED MACHINE-READABLE RESULTS</h2>
+<h2>JSON output: Structured machine-readable results</h2>
 <div class="indent">
 <p>The <code>--json</code> flag on any OpenOSINT command produces a structured JSON object instead of Rich-rendered terminal output:</p>
 <pre># Single target, JSON output
@@ -89,7 +117,7 @@ openosint multi targets.txt --json &gt; bulk_results.json</pre>
 <p>The <code>timestamp</code> field is ISO 8601 UTC. For multi-target output, results is an array of these objects. The schema is stable across OpenOSINT versions from v2.0 onward; breaking changes are versioned.</p>
 </div>
 
-<h2>MARKDOWN EXPORT: THE /EXPORT SLASH COMMAND</h2>
+<h2>Markdown export: The /export slash command</h2>
 <div class="indent">
 <p>During an interactive REPL session, <code>/export</code> writes the current session's findings to a Markdown file:</p>
 <pre>openosint &gt; investigate target@example.com
@@ -109,7 +137,7 @@ with open('report.md', 'w') as f:
     f.write(md)</pre>
 </div>
 
-<h2>PDF REPORT GENERATION</h2>
+<h2>PDF report generation</h2>
 <div class="indent">
 <p>PDF generation requires the <code>reportlab</code> optional dependency: <code>pip install openosint[pdf]</code> or <code>pip install reportlab</code>. Once installed, the <code>--pdf</code> flag generates a formatted PDF report:</p>
 <pre>openosint email target@example.com --pdf report.pdf</pre>
@@ -118,7 +146,7 @@ with open('report.md', 'w') as f:
 <p>PDF reports are appropriate for any investigation that will be reviewed by someone outside the terminal environment: a security team reviewing a threat actor profile, a compliance team auditing contractor background checks, or a client receiving a deliverable from a security engagement.</p>
 </div>
 
-<h2>BUILDING A REPORT PIPELINE</h2>
+<h2>Building a report pipeline</h2>
 <div class="indent">
 <p>For recurring investigations &mdash; weekly threat intelligence reports on a watchlist of domains, monthly breach exposure audits of an employee email list &mdash; the recommended pattern is: run the investigation in JSON mode, commit the JSON to a git repository, generate human-readable output from JSON on demand.</p>
 <pre>#!/bin/bash
@@ -139,7 +167,7 @@ git add reports/ &amp;&amp; git commit -m "Weekly OSINT run ${DATE}"</pre>
 <p>This gives you a queryable history of investigation results, diff-able to track changes in target state week over week. Combined with the <a href="/blog/parallel-osint.html">parallel investigation patterns</a>, this pipeline handles hundreds of targets in a single scheduled run. For the full tool output schemas that the JSON exporter relies on, see the <a href="/tools/">tools reference</a>. For AI-assisted investigation that writes findings directly to disk, see the <a href="/blog/claude-code-osint.html">Claude Code OSINT guide</a>.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/parallel-osint.html">Parallel OSINT</a> &mdash; generating bulk JSON results to feed into report pipelines</li>
@@ -150,19 +178,44 @@ git add reports/ &amp;&amp; git commit -m "Weekly OSINT run ${DATE}"</pre>
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

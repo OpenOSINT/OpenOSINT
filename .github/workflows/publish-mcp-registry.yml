@@ -14,6 +14,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Validate server.json version matches release tag
+        run: |
+          TOP_VERSION=$(python3 -c "import json; print(json.load(open('.mcp/server.json'))['version'])")
+          PKG_VERSION=$(python3 -c "import json; print(json.load(open('.mcp/server.json'))['packages'][0]['version'])")
+          if [ "$TOP_VERSION" != "$PKG_VERSION" ]; then
+            echo "❌ Version mismatch inside .mcp/server.json: top-level=$TOP_VERSION, packages[0]=$PKG_VERSION"
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" != "release" ]; then
+            echo "⚠️  Not a release event (workflow_dispatch) — no tag to compare against, using .mcp/server.json version $TOP_VERSION"
+            exit 0
+          fi
+          TAG_VERSION="${{ github.event.release.tag_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          if [ "$TAG_VERSION" != "$TOP_VERSION" ]; then
+            echo "❌ Version mismatch: release tag=$TAG_VERSION, .mcp/server.json=$TOP_VERSION"
+            echo "   .mcp/server.json is stale in the repo — sync it to $TAG_VERSION and commit before this release can publish."
+            exit 1
+          fi
+          echo "✅ Version match: $TAG_VERSION"
+
       - name: Install mcp-publisher
         run: |
           curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher

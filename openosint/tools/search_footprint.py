@@ -33,6 +33,7 @@ from urllib.parse import urlparse
 import requests
 
 from openosint.brightdata import BRIGHTDATA_LINK_CLI
+from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.regexes import detect_entity_kind
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -43,16 +44,6 @@ _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_QUERIES = 3
 _GOOGLE_SEARCH_BASE = "https://www.google.com/search?q="
 
-_MISSING_KEY_MSG = (
-    "Scan error: BRIGHTDATA_API_KEY environment variable is not set. "
-    "A free tier (5,000 requests/month) is available — "
-    f"sign up at {BRIGHTDATA_LINK_CLI}"
-)
-_MISSING_ZONE_MSG = (
-    "Scan error: BRIGHTDATA_SERP_ZONE environment variable is not set. "
-    "Set it to your Bright Data SERP API zone name (e.g. 'serp_api1'). "
-    f"Create a zone at {BRIGHTDATA_LINK_CLI}"
-)
 
 # ---------------------------------------------------------------------------
 # Entity-type-aware query templates
@@ -114,7 +105,7 @@ def _fetch_serp(url: str, api_key: str, zone: str, timeout: int) -> dict:
         raise OSINTError(f"Network error querying Bright Data SERP: {exc}") from exc
 
     if response.status_code == 401:
-        raise OSINTError("Bright Data SERP: invalid API key.")
+        raise OSINTError(f"Bright Data SERP: invalid API key. Get a key: {BRIGHTDATA_LINK_CLI}")
     if response.status_code == 403:
         raise OSINTError("Bright Data SERP: forbidden — check zone permissions.")
     if response.status_code == 429:
@@ -194,13 +185,11 @@ async def run_footprint_osint(
         descriptive error message.
     """
     _k = api_keys or {}
-    api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ.get("BRIGHTDATA_API_KEY", "")
-    if not api_key:
-        return _MISSING_KEY_MSG
-
-    zone = _k.get("BRIGHTDATA_SERP_ZONE") or os.environ.get("BRIGHTDATA_SERP_ZONE", "")
-    if not zone:
-        return _MISSING_ZONE_MSG
+    missing = missing_from(["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"], _k, os.environ)
+    if missing:
+        return missing_keys_message("search_footprint", missing)
+    api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ["BRIGHTDATA_API_KEY"]
+    zone = _k.get("BRIGHTDATA_SERP_ZONE") or os.environ["BRIGHTDATA_SERP_ZONE"]
 
     target = target.strip()
     if not target:

@@ -399,8 +399,8 @@ class TestRunToolInputValidation:
         async def fake_runner(v, t):
             return f"ran:{v}"
 
-        with patch("openosint.web_server._RUNNERS", {"test_tool": lambda v, t: fake_runner(v, t)}):
-            result = await _run_tool("test_tool", "my_target")
+        with patch("openosint.web_server._RUNNERS", {"search_ip": lambda v, t: fake_runner(v, t)}):
+            result = await _run_tool("search_ip", "my_target")
 
         assert result == "ran:my_target"
 
@@ -464,13 +464,18 @@ class TestSearchFootprintWebRegistration:
 
 @pytest_asyncio.fixture
 async def http_client():
-    from openosint.web_server import create_app, _RATE_STORE
+    """Loopback client: simulates a self-hosted instance bound to 127.0.0.1,
+    which is normal operation with no restriction — see
+    TestDemoModeFailsClosed for the network-exposure invariant itself."""
+    import openosint.web_server as ws
 
-    _RATE_STORE.clear()
-    app = create_app()
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    ws._RATE_STORE.clear()
+    ws._TILE_RATE_STORE.clear()
+    app = ws.create_app(host="127.0.0.1")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as c:
         yield c
-    _RATE_STORE.clear()
+    ws._RATE_STORE.clear()
+    ws._TILE_RATE_STORE.clear()
 
 
 # ---------------------------------------------------------------------------
@@ -743,6 +748,195 @@ class TestRateLimiting:
 
 
 # ---------------------------------------------------------------------------
+# GET /api/tiles/{z}/{x}/{y} — globe basemap tile proxy
+# ---------------------------------------------------------------------------
+
+
+class TestTileProxy:
+    async def test_out_of_range_coords_return_404(self, http_client):
+        r = await http_client.get("/api/tiles/2/99/99")  # x,y >= 2**z
+        assert r.status_code == 404
+
+    async def test_negative_zoom_returns_404(self, http_client):
+        r = await http_client.get("/api/tiles/-1/0/0")
+        assert r.status_code == 404
+
+    async def test_zoom_above_max_returns_404(self, http_client):
+        from openosint.web_server import _TILE_MAX_ZOOM
+
+        r = await http_client.get(f"/api/tiles/{_TILE_MAX_ZOOM + 1}/0/0")
+        assert r.status_code == 404
+
+    async def test_zoom_at_max_is_allowed(self, http_client):
+        import openosint.web_server as ws
+        from openosint.web_server import _TILE_MAX_ZOOM
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get(f"/api/tiles/{_TILE_MAX_ZOOM}/0/0")
+        assert r.status_code == 200
+
+    async def test_happy_path_fetches_and_caches(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r1 = await http_client.get("/api/tiles/3/4/5")
+            r2 = await http_client.get("/api/tiles/3/4/5")
+
+        assert r1.status_code == 200
+        assert r1.content == b"\xff\xd8\xff\xe0fakejpeg"
+        assert r1.headers["content-type"] == "image/jpeg"
+        assert r2.content == r1.content
+        mreq.get.assert_called_once()  # second request served from cache
+
+    async def test_upstream_exception_returns_blank_tile(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.side_effect = Exception("connection reset")
+            r = await http_client.get("/api/tiles/3/1/1")
+
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "image/gif"
+        assert r.content == ws._BLANK_TILE
+
+    async def test_transient_upstream_error_is_retried_once(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        ok = _mock_requests_response(status_code=200)
+        ok.content = b"\xff\xd8jpeg"
+        with (
+            patch("openosint.web_server._requests") as mreq,
+            patch("openosint.web_server.time.sleep"),
+        ):
+            mreq.get.side_effect = [Exception("connection reset"), ok]
+            r = await http_client.get("/api/tiles/3/3/1")
+
+        assert r.headers["content-type"] == "image/jpeg"
+        assert r.content == b"\xff\xd8jpeg"
+        assert mreq.get.call_count == 2
+
+    async def test_upstream_non_200_returns_blank_tile(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=503)
+
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get("/api/tiles/3/2/2")
+
+        assert r.status_code == 200
+        assert r.content == ws._BLANK_TILE
+
+    async def test_rate_limited_after_limit(self, http_client):
+        from openosint.web_server import _TILE_RL_MAX_REQS
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        ws._TILE_RATE_STORE.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"jpegbytes"
+
+        statuses = []
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            # Distinct z7 coordinates each time so the cache never masks the
+            # limiter; z7 has 128x128 tiles, plenty of headroom.
+            for i in range(_TILE_RL_MAX_REQS + 1):
+                r = await http_client.get(f"/api/tiles/7/{i % 100}/{i // 100}")
+                statuses.append(r.status_code)
+
+        assert statuses[0] == 200
+        assert statuses[-1] == 429
+
+    async def test_cache_control_and_etag_present(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get("/api/tiles/3/6/6")
+
+        assert r.headers["cache-control"] == "public, max-age=31536000, immutable"
+        assert r.headers["etag"].startswith('"') and r.headers["etag"].endswith('"')
+
+    async def test_if_none_match_returns_304(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r1 = await http_client.get("/api/tiles/3/6/7")
+            etag = r1.headers["etag"]
+            r2 = await http_client.get("/api/tiles/3/6/7", headers={"If-None-Match": etag})
+
+        assert r1.status_code == 200
+        assert r2.status_code == 304
+        assert r2.content == b""
+        mreq.get.assert_called_once()  # 304 path never re-fetches upstream
+
+    async def test_stale_etag_returns_full_200(self, http_client):
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"\xff\xd8\xff\xe0fakejpeg"
+        with patch("openosint.web_server._requests") as mreq:
+            mreq.get.return_value = mock_resp
+            r = await http_client.get("/api/tiles/3/6/1", headers={"If-None-Match": '"stale-etag"'})
+
+        assert r.status_code == 200
+        assert r.content == b"\xff\xd8\xff\xe0fakejpeg"
+
+    async def test_tile_bucket_is_separate_from_keyless_tool_bucket(self, http_client):
+        """A globe pan (tile requests) must never 429 a keyless tool call
+        sharing the same client IP, and vice versa — separate buckets."""
+        from openosint.web_server import _RL_MAX_REQS
+        import openosint.web_server as ws
+
+        ws._tile_cache.clear()
+        ws._TILE_RATE_STORE.clear()
+        ws._RATE_STORE.clear()
+
+        async def fake_whois(domain, timeout_seconds=15):
+            return "ok"
+
+        mock_resp = _mock_requests_response(status_code=200)
+        mock_resp.content = b"jpegbytes"
+
+        with patch("openosint.web_server._requests") as mreq, \
+             patch("openosint.web_server.run_whois_osint", new=fake_whois):
+            mreq.get.return_value = mock_resp
+            # Exhaust the keyless-tool bucket completely.
+            tool_statuses = []
+            for _ in range(_RL_MAX_REQS + 1):
+                r = await http_client.post("/api/run/search_whois", json={"input": "example.com"})
+                tool_statuses.append(r.status_code)
+
+            # A tile request from the same client must still succeed — proves
+            # the tile bucket wasn't touched by exhausting the tool bucket.
+            tile_r = await http_client.get("/api/tiles/3/6/6")
+
+        assert tool_statuses[-1] == 429  # tool bucket genuinely exhausted
+        assert tile_r.status_code == 200  # tile bucket unaffected
+
+
+# ---------------------------------------------------------------------------
 # api_keys absent from logs (unconditional)
 # ---------------------------------------------------------------------------
 
@@ -751,13 +945,14 @@ class TestDemoMode:
     """OPENOSINT_DEMO_MODE=true: /api/health exposes flag; /api/chat is blocked server-side."""
 
     @pytest_asyncio.fixture
-    async def demo_client(self, monkeypatch):
+    async def demo_client(self):
+        """Simulates a process bound to 0.0.0.0 — a non-loopback bind, which
+        is what actually drives DEMO_MODE now (see TestDemoModeFailsClosed)."""
         import openosint.web_server as ws
-        monkeypatch.setattr(ws, "DEMO_MODE", True)
         from openosint.web_server import _RATE_STORE
         _RATE_STORE.clear()
-        app = ws.create_app()
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        app = ws.create_app(host="0.0.0.0")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as c:
             yield c
         _RATE_STORE.clear()
 
@@ -766,7 +961,9 @@ class TestDemoMode:
         assert resp.status_code == 200
         assert resp.json()["demo_mode"] is True
 
-    async def test_health_demo_mode_false_by_default(self, http_client):
+    async def test_health_demo_mode_false_when_explicitly_disabled(self, http_client):
+        """http_client pins DEMO_MODE False (see fixture) — this is NOT the
+        real default; see TestDemoModeFailsClosed for the fail-closed default."""
         resp = await http_client.get("/api/health")
         assert resp.status_code == 200
         assert resp.json()["demo_mode"] is False
@@ -790,8 +987,283 @@ class TestDemoMode:
         assert len(called) == 0, "_select_chat_backend must not be called in demo mode"
         body = resp.text
         assert '"type": "error"' in body
-        assert "demo mode" in body.lower()
+        assert "not bound to loopback" in body.lower()
         assert '"type": "done"' in body
+
+    # -- Exposure A: no operator-keyed lookup may run for an anonymous demo caller --
+
+    async def test_credentialed_tool_blocked_on_operator_key_in_demo_mode(
+        self, demo_client, monkeypatch
+    ):
+        """A credentialed tool must not fall back to the operator's own env-var
+        key while demo mode is active — the runner must never even be called."""
+        monkeypatch.setenv("IPINFO_TOKEN", "operator-secret-token")
+        called = []
+
+        async def fake_ip(ip, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_ip_osint", new=fake_ip):
+            resp = await demo_client.post("/api/run/search_ip", json={"input": "8.8.8.8"})
+
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body.get("key_required") is True
+        assert "IPINFO_TOKEN" in body.get("missing_keys", [])
+        assert called == [], "operator's key must never reach the tool runner in demo mode"
+
+    async def test_credentialed_tool_runs_with_visitor_supplied_key_in_demo_mode(
+        self, demo_client, monkeypatch
+    ):
+        """BYOK still works in demo mode — only the operator's own key is blocked."""
+        monkeypatch.delenv("IPINFO_TOKEN", raising=False)
+        received = []
+
+        async def fake_ip(ip, timeout_seconds=30, *, api_key=None):
+            received.append(api_key)
+            return "ok"
+
+        with patch("openosint.web_server.run_ip_osint", new=fake_ip):
+            resp = await demo_client.post(
+                "/api/run/search_ip",
+                json={"input": "8.8.8.8", "api_keys": {"IPINFO_TOKEN": "visitor-own-key"}},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+        assert received == ["visitor-own-key"]
+
+    async def test_breach_lookup_blocked_in_demo_mode_even_with_visitor_key(
+        self, demo_client, monkeypatch
+    ):
+        """Breach/HIBP is off in demo mode unconditionally — BYOK does not
+        reopen it, because the data-controller concern isn't about whose key
+        is used. No flag exists to turn this back on; it's a hard block."""
+        monkeypatch.setenv("HIBP_API_KEY", "operator-secret-token")
+        called = []
+
+        async def fake_breach(email, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_breach_osint", new=fake_breach):
+            resp = await demo_client.post(
+                "/api/run/search_breach",
+                json={
+                    "input": "target@example.com",
+                    "api_keys": {"HIBP_API_KEY": "visitor-own-key"},
+                },
+            )
+
+        assert resp.status_code == 403
+        assert called == [], "breach lookups must never run in demo mode, BYOK or not"
+
+    async def test_stream_endpoint_blocked_for_credentialed_tool_in_demo_mode(
+        self, demo_client, monkeypatch
+    ):
+        """/api/stream/{tool} has no BYOK parameter at all, so in demo mode it
+        must refuse credentialed tools outright rather than silently falling
+        back to the operator's key."""
+        monkeypatch.setenv("SHODAN_API_KEY", "operator-secret-token")
+        called = []
+
+        async def fake_shodan(query, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_shodan_osint", new=fake_shodan):
+            async with demo_client.stream(
+                "GET", "/api/stream/search_shodan", params={"input": "8.8.8.8"}
+            ) as resp:
+                assert resp.status_code == 200
+                body = b"".join([chunk async for chunk in resp.aiter_bytes()]).decode()
+
+        assert called == [], "operator's key must never reach the tool runner in demo mode"
+        assert "disabled" in body.lower() or "api key" in body.lower()
+
+    async def test_keyless_tool_still_works_in_demo_mode(self, demo_client):
+        """Tools with no operator credential (search_dns, search_domain, etc.)
+        are unaffected by demo mode — Exposure A is about operator-held keys."""
+
+        async def fake_dns(domain, timeout_seconds=15):
+            return "ok"
+
+        with patch("openosint.web_server.run_dns_osint", new=fake_dns):
+            resp = await demo_client.post("/api/run/search_dns", json={"input": "example.com"})
+
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+
+
+class TestDemoModeFailsClosed:
+    """DEMO_MODE is a network-exposure invariant: driven by bind address, with
+    OPENOSINT_DEMO_MODE only able to tighten it further, never loosen it. A
+    self-hosted install bound to loopback must never be punished for an unset
+    env var — that was the bug this replaced."""
+
+    # -- bind address is the primary signal --
+
+    def test_loopback_ipv4_is_not_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("127.0.0.1") is False
+
+    def test_localhost_is_not_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("localhost") is False
+
+    def test_loopback_ipv6_is_not_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("::1") is False
+
+    def test_wildcard_bind_is_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("0.0.0.0") is True
+
+    def test_explicit_external_address_is_restricted(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("203.0.113.5") is True
+
+    def test_undeterminable_bind_fails_closed_to_restricted(self, monkeypatch):
+        """create_app() called with no host (e.g. a raw uvicorn --factory
+        target bypassing serve_async()/run_server()) must not default open."""
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode(None) is True
+
+    # -- OPENOSINT_DEMO_MODE can only tighten, never loosen --
+
+    def test_env_var_forces_restriction_even_on_loopback(self, monkeypatch):
+        monkeypatch.setenv("OPENOSINT_DEMO_MODE", "true")
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("127.0.0.1") is True
+
+    def test_env_var_cannot_loosen_a_public_bind(self, monkeypatch):
+        monkeypatch.setenv("OPENOSINT_DEMO_MODE", "false")
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("0.0.0.0") is True
+
+    def test_malformed_env_var_adds_no_restriction_of_its_own(self, monkeypatch):
+        """Safety no longer depends on this var's parsing — a garbage value
+        on a loopback bind stays unrestricted; the bind address is what
+        fails closed, not this variable (see test_undeterminable_bind_..)."""
+        monkeypatch.setenv("OPENOSINT_DEMO_MODE", "yes please")
+        import openosint.web_server as ws
+        assert ws._compute_demo_mode("127.0.0.1") is False
+
+    # -- create_app(host=...) actually applies the computation --
+
+    def test_create_app_sets_demo_mode_from_host(self, monkeypatch):
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        import openosint.web_server as ws
+        ws.create_app(host="127.0.0.1")
+        assert ws.DEMO_MODE is False
+        ws.create_app(host="0.0.0.0")
+        assert ws.DEMO_MODE is True
+
+
+class TestProxyExposureInvariant:
+    """A loopback bind behind an on-host reverse proxy is publicly reachable
+    even though nothing at the TCP layer distinguishes it from a direct local
+    connection — GHSA-cqr4-hcfp-m6m4's exact concern, extended from
+    /api/setup to every credentialed-tool and chat gate. See
+    _request_restriction() and .claude/LEGAL_CONTEXT.md §8."""
+
+    @pytest_asyncio.fixture
+    async def loopback_client(self, monkeypatch):
+        import openosint.web_server as ws
+        monkeypatch.delenv("OPENOSINT_TRUSTED_PROXY", raising=False)
+        monkeypatch.delenv("OPENOSINT_DEMO_MODE", raising=False)
+        ws._RATE_STORE.clear()
+        app = ws.create_app(host="127.0.0.1")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as c:
+            yield c
+        ws._RATE_STORE.clear()
+
+    async def test_direct_loopback_is_not_restricted(self, loopback_client):
+        resp = await loopback_client.get("/api/health")
+        body = resp.json()
+        assert body["restricted"] is False
+        assert body["restriction_reason"] is None
+
+    async def test_loopback_behind_undeclared_proxy_is_restricted(self, loopback_client):
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-For": "203.0.113.9"}
+        )
+        body = resp.json()
+        assert body["restricted"] is True
+        assert "trusted-proxy" in body["restriction_reason"]
+
+    async def test_loopback_behind_declared_trusted_proxy_is_not_restricted(
+        self, loopback_client, monkeypatch
+    ):
+        monkeypatch.setattr("openosint.web_server.OPENOSINT_TRUSTED_PROXY", True)
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-For": "203.0.113.9"}
+        )
+        body = resp.json()
+        assert body["restricted"] is False
+
+    async def test_conflicting_forwarded_proto_restricted_even_with_declared_trust(
+        self, loopback_client, monkeypatch
+    ):
+        """Trust in the proxy doesn't extend to trusting headers that
+        disagree with themselves — that's still treated as spoofing."""
+        monkeypatch.setattr("openosint.web_server.OPENOSINT_TRUSTED_PROXY", True)
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-Proto": "https, http"}
+        )
+        body = resp.json()
+        assert body["restricted"] is True
+        assert "inconsistent" in body["restriction_reason"]
+
+    async def test_conflicting_forwarded_host_restricted(self, loopback_client):
+        resp = await loopback_client.get(
+            "/api/health", headers={"X-Forwarded-Host": "a.example.com, b.example.com"}
+        )
+        assert resp.json()["restricted"] is True
+
+    async def test_credentialed_tool_blocked_behind_undeclared_proxy(
+        self, loopback_client, monkeypatch
+    ):
+        """Prove the invariant actually gates tool access, not just /api/health's
+        reporting: a locally-held key must not reach the runner."""
+        monkeypatch.setenv("IPINFO_TOKEN", "locally-held-token")
+        called = []
+
+        async def fake_ip(ip, timeout_seconds=30, *, api_key=None):
+            called.append(api_key)
+            return "should never run"
+
+        with patch("openosint.web_server.run_ip_osint", new=fake_ip):
+            resp = await loopback_client.post(
+                "/api/run/search_ip",
+                json={"input": "8.8.8.8"},
+                headers={"X-Forwarded-For": "203.0.113.9"},
+            )
+
+        assert resp.status_code == 200
+        assert resp.json().get("key_required") is True
+        assert called == [], "locally-held key must never reach the tool runner"
+
+    async def test_startup_warning_logged_once_for_undeclared_proxy(
+        self, loopback_client, monkeypatch, caplog
+    ):
+        import logging as _logging
+        import openosint.web_server as ws
+
+        monkeypatch.setattr(ws, "_proxy_warning_emitted", False)
+        with caplog.at_level(_logging.WARNING):
+            await loopback_client.get("/api/health", headers={"X-Forwarded-For": "203.0.113.9"})
+            await loopback_client.get("/api/health", headers={"X-Forwarded-For": "203.0.113.9"})
+
+        warnings = [r for r in caplog.records if "OPENOSINT_TRUSTED_PROXY" in r.getMessage()]
+        assert len(warnings) == 1, "the warning must fire once, not on every request"
 
 
 class TestCreateAppFactoryRoutes:
@@ -803,7 +1275,7 @@ class TestCreateAppFactoryRoutes:
 
         _RATE_STORE.clear()
         app = create_app()
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as c:
             yield c
         _RATE_STORE.clear()
 
@@ -817,14 +1289,13 @@ class TestCreateAppFactoryRoutes:
         resp = await factory_client.get("/static/config.js")
         assert resp.status_code == 200
 
-    async def test_health_demo_mode_flag(self, monkeypatch):
+    async def test_health_demo_mode_flag(self):
         import openosint.web_server as ws
         from openosint.web_server import _RATE_STORE
 
-        monkeypatch.setattr(ws, "DEMO_MODE", True)
         _RATE_STORE.clear()
-        app = ws.create_app()
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+        app = ws.create_app(host="0.0.0.0")
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://127.0.0.1") as c:
             resp = await c.get("/api/health")
         assert resp.status_code == 200
         assert resp.json()["demo_mode"] is True
@@ -833,6 +1304,11 @@ class TestCreateAppFactoryRoutes:
 class TestSetupEndpointGuards:
     """GHSA-cqr4-hcfp-m6m4: /api/setup must reject remote callers, unknown
     keys, and malformed *_BASE_URL values."""
+
+    @pytest.fixture(autouse=True)
+    def _clean_openai_env(self, monkeypatch):
+        for var in ("OPENAI_BASE_URL", "OPENAI_MODEL", "OPENAI_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
 
     async def test_loopback_caller_can_save_allowlisted_key(self, http_client, tmp_path, monkeypatch):
         import openosint.web_server as ws
@@ -852,7 +1328,7 @@ class TestSetupEndpointGuards:
         monkeypatch.setattr(ws, "_ROOT", tmp_path)
         app = ws.create_app()
         transport = ASGITransport(app=app, client=("203.0.113.5", 12345))
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as c:
             resp = await c.post("/api/setup", json={"OPENAI_BASE_URL": "http://attacker.example/v1"})
 
         assert resp.status_code == 403
@@ -867,7 +1343,7 @@ class TestSetupEndpointGuards:
         monkeypatch.delenv("OPENOSINT_SETUP_TOKEN", raising=False)
         app = ws.create_app()
         transport = ASGITransport(app=app, client=("203.0.113.5", 12345))
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as c:
             resp = await c.post(
                 "/api/setup",
                 json={"SHODAN_API_KEY": "x"},
@@ -884,7 +1360,7 @@ class TestSetupEndpointGuards:
         monkeypatch.setenv("OPENOSINT_SETUP_TOKEN", "correct-token")
         app = ws.create_app()
         transport = ASGITransport(app=app, client=("203.0.113.5", 12345))
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as c:
             resp = await c.post(
                 "/api/setup",
                 json={"SHODAN_API_KEY": "x"},
@@ -901,7 +1377,7 @@ class TestSetupEndpointGuards:
         monkeypatch.setenv("OPENOSINT_SETUP_TOKEN", "correct-token")
         app = ws.create_app()
         transport = ASGITransport(app=app, client=("203.0.113.5", 12345))
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
+        async with AsyncClient(transport=transport, base_url="http://127.0.0.1") as c:
             resp = await c.post(
                 "/api/setup",
                 json={"SHODAN_API_KEY": "x"},

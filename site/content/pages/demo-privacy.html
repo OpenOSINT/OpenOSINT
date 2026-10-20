@@ -1,0 +1,138 @@
+---
+url: /demo/privacy/
+title: Demo privacy and cookie notice
+seo_title: Demo privacy and cookie notice | OpenOSINT
+description: Privacy and cookie notice for the bring-your-own-key OpenOSINT demo at demo.openosint.tech. Draft, dated 2026-06-26.
+---
+<h1 id="intro">PRIVACY &amp; COOKIE NOTICE &mdash; OPENOSINT DEMO</h1>
+<!-- DRAFT NOTICE -->
+<p class="note">
+&#9888; DRAFT &mdash; This document has not been reviewed by legal counsel. It is provided as a
+good-faith description of actual data flows and must be reviewed before treating it as a
+final legal disclosure.
+</p>
+<div class="indent">
+<p><b>Applies to:</b> the interactive BYOK demo at <a href="https://demo.openosint.tech">demo.openosint.tech</a>.</p>
+<p><b>Does not apply to:</b> OpenOSINT Cloud (the authenticated paid service) &mdash; see
+<a href="/privacy/">openosint.tech/privacy</a> for that service.</p>
+<p><b>Contact:</b> <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a></p>
+</div>
+
+<h2 id="storage">1. BROWSER STORAGE &mdash; COMPLETE INVENTORY</h2>
+<div class="indent">
+<p>The demo uses only functional browser storage. There are no cookies. All items listed below
+are set and read exclusively by client-side JavaScript; nothing is transmitted to our servers
+except the in-flight API calls described in &sect;2.</p>
+
+<table>
+<tr>
+  <th>Storage type</th>
+  <th>Key</th>
+  <th>What it holds</th>
+  <th>When cleared</th>
+</tr>
+<tr>
+  <td><code>sessionStorage</code></td>
+  <td><code>openosint_byok</code></td>
+  <td>Your chosen LLM provider name, API key, base URL, and model. Set when you enter
+  credentials in Settings.</td>
+  <td>Automatically when the browser tab is closed or the session ends.</td>
+</tr>
+<tr>
+  <td><code>sessionStorage</code></td>
+  <td><code>openosint_tool_keys</code></td>
+  <td>Optional tool API keys you supply (e.g. Shodan, VirusTotal). Set when you enter
+  them in Settings.</td>
+  <td>Automatically when the browser tab is closed or the session ends.</td>
+</tr>
+<tr>
+  <td><code>localStorage</code></td>
+  <td><code>openosint-theme</code></td>
+  <td><code>&ldquo;light&rdquo;</code> or <code>&ldquo;dark&rdquo;</code> &mdash; your
+  preferred colour scheme. Set when you toggle the theme button.</td>
+  <td>Persists until you clear site data or the browser clears storage. Contains no personal data.</td>
+</tr>
+<tr>
+  <td><code>localStorage</code></td>
+  <td><code>openosint_settings</code></td>
+  <td>Miscellaneous UI preferences (selected provider, Ollama host URL, etc.). Does not
+  hold API keys under normal use.</td>
+  <td>Persists until you clear site data. Contains no personal data under normal use.</td>
+</tr>
+<tr>
+  <td><code>localStorage</code></td>
+  <td><code>openosint-ack</code></td>
+  <td>A flag (<code>&ldquo;1&rdquo;</code>) recording that you accepted the authorization
+  gate. Prevents the gate from re-appearing on subsequent visits to the same browser.</td>
+  <td>Persists until you clear site data. Contains no personal data.</td>
+</tr>
+<tr>
+  <td><code>localStorage</code></td>
+  <td><code>openosint-notice</code></td>
+  <td>A flag (<code>&ldquo;1&rdquo;</code>) recording that you dismissed this notice bar.
+  Prevents the bar from reappearing.</td>
+  <td>Persists until you clear site data. Contains no personal data.</td>
+</tr>
+</table>
+</div>
+
+<h2 id="apikeys">2. YOUR API KEYS &mdash; HOW THEY ARE USED</h2>
+<div class="indent">
+<p>This is a <b>Bring Your Own Key (BYOK)</b> demo. If you enter an API key (Anthropic,
+OpenRouter, Shodan, etc.) it is stored <b>in your browser session only</b>
+(<code>sessionStorage</code>). It is transmitted <b>exclusively</b> in outbound HTTP
+requests that perform the OSINT lookup you requested &mdash; directly to the LLM provider or
+through the proxy you configured. We do not log, copy, or store your key server-side.</p>
+<p>When you close the tab, your session storage is cleared and your key is gone from the
+browser. No copy remains on our infrastructure.</p>
+</div>
+
+<h2 id="cdns">3. THIRD-PARTY SCRIPT CONNECTIONS</h2>
+<div class="indent">
+<p>The demo page loads the following resources from third-party CDNs on every page load.
+None of these services set cookies or track users on this page; they deliver script and font
+files. Your IP address reaches their servers as a byproduct of the HTTP requests.</p>
+<ul>
+  <li><b>Google Fonts</b> (fonts.googleapis.com, fonts.gstatic.com) &mdash; Inter and
+  JetBrains Mono typefaces.</li>
+  <li><b>Tailwind CSS CDN</b> (cdn.tailwindcss.com) &mdash; CSS utility framework.</li>
+  <li><b>Cytoscape.js</b> (cdnjs.cloudflare.com) &mdash; graph visualization library.</li>
+  <li><b>Alpine.js, cytoscape-fcose</b> (cdn.jsdelivr.net) &mdash; UI reactivity and
+  graph layout plugin.</li>
+</ul>
+<p>There are <b>no analytics scripts, no advertising scripts, no fingerprinting scripts</b>
+on this page. No Google Analytics, Google Tag Manager, Meta Pixel, Hotjar, Plausible, or
+equivalent service is loaded.</p>
+</div>
+
+<h2 id="nocookies">4. COOKIES</h2>
+<div class="indent">
+<p>The demo sets <b>no HTTP cookies</b>. All persistence uses <code>localStorage</code> and
+<code>sessionStorage</code> as described in &sect;1. Because there are no non-essential cookies
+or trackers, no cookie consent wall is required or shown &mdash; only an informational
+notice bar.</p>
+</div>
+
+<h2 id="thirdparty">5. THIRD-PARTY DATA SOURCES</h2>
+<div class="indent">
+<p>When you run an investigation the demo calls external OSINT data APIs (WHOIS registrars,
+IP geolocation providers, HaveIBeenPwned, Shodan, VirusTotal, etc.) on your behalf. Each
+provider has its own privacy policy. Results may include personal data about third parties;
+you are responsible for having a lawful basis to investigate any target you submit.</p>
+</div>
+
+<h2 id="contact">6. CONTACT</h2>
+<div class="indent">
+<p><a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a></p>
+</div>
+
+<hr>
+<div id="footer">
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="mhead-l">OpenOSINT Demo</td>
+<td class="mhead-c">Privacy &amp; Cookie Notice</td>
+<td class="mhead-r">2026-06-26</td>
+</tr>
+</table>
+</div>

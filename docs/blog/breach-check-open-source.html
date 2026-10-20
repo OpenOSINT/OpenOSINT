@@ -1,58 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk</title>
-<meta name="description" content="K-anonymity lets you verify whether credentials appear in breach databases without sending them to a third party. Learn how HIBP's API, offline databases, and Python integrations work.">
-<meta name="keywords" content="breach check, HaveIBeenPwned, k-anonymity, credential verification, open source breach tools, HIBP API, pwned passwords">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open-source breach checks with k-anonymity</title>
+<meta name="description" content="Check passwords against breaches without sending them anywhere: how HIBP k-anonymity works, with a Python example and offline database options.">
 <link rel="canonical" href="https://openosint.tech/blog/breach-check-open-source.html">
-<meta property="og:title" content="Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk">
-<meta property="og:description" content="K-anonymity lets you verify whether credentials appear in breach databases without sending them to a third party. Learn how HIBP's API, offline databases, and Python integrations work.">
-<meta property="og:url" content="https://openosint.tech/blog/breach-check-open-source.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Open-source breach checks with k-anonymity">
+<meta property="og:description" content="Check passwords against breaches without sending them anywhere: how HIBP k-anonymity works, with a Python example and offline database options.">
+<meta property="og:url" content="https://openosint.tech/blog/breach-check-open-source.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk">
-<meta name="twitter:description" content="K-anonymity lets you verify whether credentials appear in breach databases without sending them to a third party. Learn how HIBP's API, offline databases, and Python integrations work.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Open-source breach checks with k-anonymity">
+<meta name="twitter:description" content="Check passwords against breaches without sending them anywhere: how HIBP k-anonymity works, with a Python example and offline database options.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Check passwords against breaches without sending them anywhere: how HIBP k-anonymity works, with a Python example and offline database options.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/breach-check-open-source.html",
-  "description": "K-anonymity lets you verify whether credentials appear in breach databases without sending them to a third party. Learn how HIBP's API, offline databases, and Python integrations work."
+  "mainEntityOfPage": "https://openosint.tech/blog/breach-check-open-source.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>OPEN SOURCE BREACH CHECK TOOLS: VERIFYING CREDENTIALS WITHOUT THIRD-PARTY RISK</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>THE PRIVACY PROBLEM WITH BREACH CHECKING</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 6 min read</p>
+    <h2>The privacy problem with breach checking</h2>
 <div class="indent">
 <p>Most breach checking services require you to send the email address or password you want to verify. The service logs that query, knows exactly what you searched for, and can correlate it with your IP address, account, and any prior queries. For a security researcher investigating a sensitive target, this creates an audit trail you may not want. For a corporation running credential hygiene checks against employee accounts, it means sending HR-sensitive data to a third-party API you don't control.</p>
 
@@ -61,7 +89,7 @@
 <p>Understanding how k-anonymity works, how to use the HIBP API correctly, and how to build offline lookup infrastructure for high-volume use cases gives you breach intelligence without introducing a new trust dependency.</p>
 </div>
 
-<h2>HOW K-ANONYMITY WORKS FOR PASSWORDS</h2>
+<h2>How k-anonymity works for passwords</h2>
 <div class="indent">
 <p>The Pwned Passwords endpoint uses SHA-1 hashing with a k-anonymity model. The protocol works like this: you hash the password locally, take the first 5 hexadecimal characters of the resulting hash (the prefix), and send only that 5-character prefix to the API. The API returns all hash suffixes in its dataset that begin with that same prefix — typically between 400 and 900 results per query. You then check locally whether your complete hash appears in the returned set.</p>
 
@@ -72,7 +100,7 @@
 <p>For corporate or sensitive use, consider whether this tradeoff is acceptable for your threat model. Cached local lookups (see below) are the alternative.</p>
 </div>
 
-<h2>USING THE HIBP API IN PYTHON</h2>
+<h2>Using the HIBP API in Python</h2>
 <div class="indent">
 <p>The k-anonymity password check is straightforward to implement. Here is a minimal Python function that returns the number of times a password appears in the breach dataset:</p>
 
@@ -113,7 +141,7 @@ else:
 <p><a href="/blog/email-osint-guide.html">OpenOSINT's email investigation workflow</a> uses the HIBP endpoint via the <code>search_breach</code> tool, which wraps the v3 API with rate limiting and formats the breach list for terminal output. It integrates with the AI agent loop so Claude can reason about which breaches are most significant based on the investigation context.</p>
 </div>
 
-<h2>OFFLINE BREACH DATABASES FOR HIGH-VOLUME LOOKUP</h2>
+<h2>Offline breach databases for high-volume lookup</h2>
 <div class="indent">
 <p>If you're checking hundreds of thousands of credentials — password hygiene audits, leaked database correlation, bulk investigation pipelines — per-query API calls are slow, expensive, and create a dependency on external uptime. The HIBP Pwned Passwords list is publicly available for offline use under a Creative Commons license.</p>
 
@@ -128,7 +156,7 @@ else:
 <p>For email-based offline lookup, no official dump exists — HIBP does not release email breach data as a downloadable dataset. The practical approach is aggressive API caching: query the API once per email, store results in a local SQLite database keyed by email hash, and never query the same address twice. This reduces API calls to net-new addresses only.</p>
 </div>
 
-<h2>WHAT BREACH DATA ACTUALLY TELLS YOU</h2>
+<h2>What breach data actually tells you</h2>
 <div class="indent">
 <p>Raw breach lookup output gains meaning from context. An email address appearing in the 2016 LinkedIn breach (117 million accounts) confirms the target had a LinkedIn account at that time and provides a SHA-256 or bcrypt hash of their password from that period. The 2013 Adobe breach (153 million accounts) exposed encrypted — not hashed — passwords using 3DES in ECB mode, a catastrophically weak scheme. Those passwords are largely crackable and are present in credential stuffing lists used by attackers today.</p>
 
@@ -139,7 +167,7 @@ else:
 <p><a href="/blog/what-is-osint.html">OSINT investigations</a> rarely rely on a single signal. Breach data is most valuable when correlated with username enumeration, email verification, and social footprint analysis — the full chain that <a href="/tools/">OpenOSINT's tool suite</a> automates through the AI agent loop.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/email-osint-guide.html">Email OSINT Guide</a> &mdash; Full methodology for investigating email addresses including account enumeration and breach correlation</li>
@@ -150,19 +178,44 @@ else:
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

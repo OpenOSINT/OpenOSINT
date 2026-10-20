@@ -15,6 +15,7 @@ import os
 
 import requests
 
+from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -35,10 +36,7 @@ def _fetch_hibp_breaches(email: str, timeout_seconds: int, api_key: str) -> list
         On missing API key, HTTP errors, or network failures.
     """
     if not api_key:
-        raise OSINTError(
-            "HIBP_API_KEY environment variable is not set. "
-            "Get a key at https://haveibeenpwned.com/API/Key"
-        )
+        raise OSINTError("HIBP API key is not set.")  # run_breach_osint reports this clearly first
 
     headers = {"hibp-api-key": api_key, "user-agent": _USER_AGENT}
     url = _HIBP_API_URL.format(email=email)
@@ -105,6 +103,8 @@ async def run_breach_osint(
         Formatted result string or a descriptive error message.
     """
     resolved_key = api_key or os.environ.get("HIBP_API_KEY", "")
+    if missing_from(["HIBP_API_KEY"], {"HIBP_API_KEY": resolved_key}, {}):
+        return missing_keys_message("search_breach", ["HIBP_API_KEY"])
     logger.info("Starting breach check for: %s", email)
     try:
         breaches = await asyncio.to_thread(_fetch_hibp_breaches, email, timeout_seconds, resolved_key)

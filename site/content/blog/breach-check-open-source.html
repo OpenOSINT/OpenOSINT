@@ -1,0 +1,107 @@
+---
+title: 'Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk'
+seo_title: Open-source breach checks with k-anonymity
+description: 'Check passwords against breaches without sending them anywhere: how HIBP k-anonymity works, with a Python example and offline database options.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>The privacy problem with breach checking</h2>
+<div class="indent">
+<p>Most breach checking services require you to send the email address or password you want to verify. The service logs that query, knows exactly what you searched for, and can correlate it with your IP address, account, and any prior queries. For a security researcher investigating a sensitive target, this creates an audit trail you may not want. For a corporation running credential hygiene checks against employee accounts, it means sending HR-sensitive data to a third-party API you don't control.</p>
+
+<p>The naive implementation of breach checking — hash the credential, send the hash, get a yes/no back — does not solve the problem. If you send the full SHA-1 of a password, the service can brute-force common passwords against every hash it receives. With a dictionary of 100 million common passwords and a fast hash function, this is feasible for a well-resourced operator. The only genuinely private model is k-anonymity: you send a prefix of the hash so ambiguous that the server cannot determine what you were checking.</p>
+
+<p>Understanding how k-anonymity works, how to use the HIBP API correctly, and how to build offline lookup infrastructure for high-volume use cases gives you breach intelligence without introducing a new trust dependency.</p>
+</div>
+
+<h2>How k-anonymity works for passwords</h2>
+<div class="indent">
+<p>The Pwned Passwords endpoint uses SHA-1 hashing with a k-anonymity model. The protocol works like this: you hash the password locally, take the first 5 hexadecimal characters of the resulting hash (the prefix), and send only that 5-character prefix to the API. The API returns all hash suffixes in its dataset that begin with that same prefix — typically between 400 and 900 results per query. You then check locally whether your complete hash appears in the returned set.</p>
+
+<p>The API never sees the full hash. From the server's perspective, your query is one of approximately 100,000 possible 5-character hex prefixes. If someone is monitoring the API, they see a prefix like <code>5BAA6</code> — they cannot determine whether you were checking "password", "letmein", or any specific string. That's the k-anonymity guarantee: your query is indistinguishable from roughly k other possible queries that would produce the same prefix.</p>
+
+<p>For comparison, the HIBP email endpoint does not use k-anonymity — it requires the full email address and a paid API key. This is a deliberate tradeoff. Email breach lookup has lower practical abuse risk than password lookup (you can't reconstruct which email addresses are "common" the same way you can with passwords), and requiring an API key creates accountability. But the email endpoint does expose the queried address to the HIBP service.</p>
+
+<p>For corporate or sensitive use, consider whether this tradeoff is acceptable for your threat model. Cached local lookups (see below) are the alternative.</p>
+</div>
+
+<h2>Using the HIBP API in Python</h2>
+<div class="indent">
+<p>The k-anonymity password check is straightforward to implement. Here is a minimal Python function that returns the number of times a password appears in the breach dataset:</p>
+
+<pre>
+import hashlib
+import requests
+
+def check_password(password: str) -> int:
+    """
+    Returns number of times this password appears in HIBP breach data.
+    Returns 0 if not found. Uses k-anonymity — full hash never sent.
+    """
+    sha1 = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
+    prefix, suffix = sha1[:5], sha1[5:]
+    resp = requests.get(
+        f"https://api.pwnedpasswords.com/range/{prefix}",
+        headers={"Add-Padding": "true"},  # mitigates timing analysis
+    )
+    resp.raise_for_status()
+    for line in resp.text.splitlines():
+        h, count = line.split(":")
+        if h == suffix:
+            return int(count)
+    return 0
+
+# Usage
+count = check_password("hunter2")
+if count:
+    print(f"Compromised — seen {count} times in breach data")
+else:
+    print("Not found in breach data")
+</pre>
+
+<p>The <code>Add-Padding: true</code> header causes the API to pad responses to a fixed length, preventing timing-based inference about how many results your prefix matched. This is a defense-in-depth measure for high-sensitivity environments.</p>
+
+<p>For email lookup, the HIBP v3 API returns structured breach objects. Each breach includes: <code>Name</code>, <code>Domain</code>, <code>BreachDate</code>, <code>AddedDate</code>, <code>ModifiedDate</code>, <code>PwnCount</code>, a <code>DataClasses</code> array describing what data was exposed (email addresses, passwords, IP addresses, phone numbers, etc.), and a <code>Description</code> field. The endpoint is <code>https://haveibeenpwned.com/api/v3/breachedaccount/{email}</code> and requires a <code>hibp-api-key</code> header from a subscription.</p>
+
+<p><a href="/blog/email-osint-guide.html">OpenOSINT's email investigation workflow</a> uses the HIBP endpoint via the <code>search_breach</code> tool, which wraps the v3 API with rate limiting and formats the breach list for terminal output. It integrates with the AI agent loop so Claude can reason about which breaches are most significant based on the investigation context.</p>
+</div>
+
+<h2>Offline breach databases for high-volume lookup</h2>
+<div class="indent">
+<p>If you're checking hundreds of thousands of credentials — password hygiene audits, leaked database correlation, bulk investigation pipelines — per-query API calls are slow, expensive, and create a dependency on external uptime. The HIBP Pwned Passwords list is publicly available for offline use under a Creative Commons license.</p>
+
+<p>The full SHA-1 ordered file is approximately 40 GB compressed, containing over 1.2 billion compromised passwords hashed and sorted by hash. The NTLM version covers the same dataset with NTLM hashes, which is useful for Active Directory environments. Import options for fast local lookup:</p>
+
+<ul>
+  <li><strong>Sorted file with binary search:</strong> The list is sorted by hash. A binary search on the file achieves O(log n) lookup with no preprocessing. Python's <code>bisect</code> module handles this with memory-mapped file access.</li>
+  <li><strong>Bloom filter:</strong> A Bloom filter pre-built from the dataset gives probabilistic membership testing in O(1) with no false negatives and a configurable false positive rate. 5GB of bloom filter RAM covers the full 1.2B password dataset at ~0.001% FPR.</li>
+  <li><strong>SQLite index:</strong> Import the prefix+suffix pairs into SQLite with an index on prefix. Queries match the k-anonymity model: <code>SELECT suffix, count FROM pwned WHERE prefix = ?</code>.</li>
+</ul>
+
+<p>For email-based offline lookup, no official dump exists — HIBP does not release email breach data as a downloadable dataset. The practical approach is aggressive API caching: query the API once per email, store results in a local SQLite database keyed by email hash, and never query the same address twice. This reduces API calls to net-new addresses only.</p>
+</div>
+
+<h2>What breach data actually tells you</h2>
+<div class="indent">
+<p>Raw breach lookup output gains meaning from context. An email address appearing in the 2016 LinkedIn breach (117 million accounts) confirms the target had a LinkedIn account at that time and provides a SHA-256 or bcrypt hash of their password from that period. The 2013 Adobe breach (153 million accounts) exposed encrypted — not hashed — passwords using 3DES in ECB mode, a catastrophically weak scheme. Those passwords are largely crackable and are present in credential stuffing lists used by attackers today.</p>
+
+<p>Older breaches that included plaintext passwords in their datasets are particularly dangerous. The 2013 Stratfor breach, 2012 LinkedIn breach (before hashing), and various forum dumps from that era contain cleartext or easily cracked credentials. Knowing which breach databases a target's email appears in tells you which credential lists attackers would attempt in a stuffing campaign against that account.</p>
+
+<p>For security researchers, the breach list also reveals behavioral patterns. A target appearing in 12 different breaches across 10 years suggests long-term presence on the internet under consistent identity. A target appearing only in recent data-aggregator breaches (LexisNexis, Exactis, etc.) suggests their email was harvested from marketing lists rather than from direct service use. These distinctions matter for attribution.</p>
+
+<p><a href="/blog/what-is-osint.html">OSINT investigations</a> rarely rely on a single signal. Breach data is most valuable when correlated with username enumeration, email verification, and social footprint analysis — the full chain that <a href="/tools/">OpenOSINT's tool suite</a> automates through the AI agent loop.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/email-osint-guide.html">Email OSINT Guide</a> &mdash; Full methodology for investigating email addresses including account enumeration and breach correlation</li>
+<li><a href="/blog/what-is-osint.html">What Is OSINT?</a> &mdash; Foundational concepts for open source intelligence gathering and tool selection</li>
+<li><a href="/tools/">OpenOSINT Tools</a> &mdash; All 14 investigation tools including search_breach, search_email, and search_username</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

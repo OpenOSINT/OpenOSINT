@@ -1,0 +1,6 @@
+# Real GitHub star count (gh api repos/OpenOSINT/OpenOSINT --jq .stargazers_count, 2026-10-18).
+# The home page shows it rounded down. Refresh it when you rebuild before a release.
+stars: 1773
+docs_groups: [Get started, Use, Reference]
+# Cloudflare Web Analytics site token. Public by design (it ships in every page).
+cf_analytics_token: "8c1e6e8590b649a5803fbbd3356aa7d2"

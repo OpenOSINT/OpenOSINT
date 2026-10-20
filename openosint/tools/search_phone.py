@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 
 from openosint.proxy import get_subprocess_env
+from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 from openosint.utils import run_subprocess
 
@@ -44,6 +45,7 @@ def _format_phone_results(raw: str, phone: str) -> str:
     return f"Phone intelligence for '{phone}':\n\n{raw}"
 
 
+@requires_active("search_phone")
 async def run_phone_osint(
     phone: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,

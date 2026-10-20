@@ -1,0 +1,107 @@
+---
+title: 'Email OSINT: Enumeration, Breach Detection, and What You Can Find'
+seo_title: 'Email OSINT: enumeration, breaches and dorks'
+description: Investigate an email address with holehe account enumeration, HaveIBeenPwned breach lookups and generated Google dorks, then chain the results.
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<div class="indent">
+<p>Of all the pivot points in OSINT — name, phone number, IP address, username — an email address returns the most consistent results. It's required for account creation on virtually every platform, it appears in breach databases, it's searchable in paste site archives, and the format (local-part@domain) is often guessable from a name and employer domain. An email address is the identity anchor that links everything else together. Start with one and you have a thread that pulls through dozens of data sources.</p>
+</div>
+
+<h2>Email as an identity anchor</h2>
+<div class="indent">
+<p>The reason email is so effective as an OSINT starting point is structural: it is the one credential that virtually every online service requires and then permanently associates with an account. Phone numbers change. Names change. Usernames change. Email addresses are changed far less frequently — they appear in years-old breach databases, forum registrations, and newsletter signups that the target has long forgotten. A 2013 Adobe breach entry links an email to a real account that existed at that time, even if the account was deleted the following year.</p>
+
+<p>Email addresses also have predictable format patterns when the domain is known. Corporate addresses follow first.last@company.com or f.last@company.com conventions that can be tested with verification techniques. Public figures often use name@domain.com patterns guessable from their professional presence. This guessability means email is not just a pivot point when you already have one — it is sometimes constructable from other information.</p>
+
+<p>The investigation starts with what the email links to. Account enumeration, breach exposure, paste site presence, and dork-generated search results each answer a different question about the email's history and the identity behind it.</p>
+</div>
+
+<h2>Account enumeration with holehe</h2>
+<div class="indent">
+<p>holehe probes 300+ services to determine whether an email address has an account. The technique exploits a consistent asymmetry in web authentication flows: login pages often obscure whether an email is registered (to prevent user enumeration attacks), but password-reset flows cannot. A password-reset form must tell you whether the email is recognized in order to function. holehe submits password-reset requests and reads the response.</p>
+
+<p>A response of "no account found" or "email not recognized" means the address is not registered. A response containing a confirmation message, a reset link, or a redirect to a verification screen means it is. This is not a bug in the platforms being probed — it is an inherent property of how password reset UX works. The asymmetry is built into the design.</p>
+
+<p>The breadth of what gets found is often surprising. Beyond the obvious social platforms, holehe identifies accounts on professional services (Slack, Notion, Zoom, Dropbox), developer platforms (GitHub, GitLab, npm, Docker Hub), gaming services (Steam, Twitch, Epic), e-commerce (Shopify merchant accounts, Etsy), and regional platforms. Each confirmed account is a profile that may contain a display name, profile photo, linked accounts, location, and activity history. The account list from holehe is a map of the target's digital ecosystem.</p>
+
+<pre>$ openosint email target@example.com -t 60
+[+] Spotify     account found
+[+] GitHub      https://github.com/target-handle
+[+] WordPress   https://wordpress.com/target
+[+] Duolingo    account found
+[-] Twitter     not found
+[*] 4 of 312 services returned a positive result</pre>
+
+<p>Results should be verified manually. Some platforms change their reset flow behavior between holehe updates, producing false positives or false negatives until the tool's site list is updated. Open each returned URL before treating it as confirmed.</p>
+</div>
+
+<h2>Breach exposure via HIBP</h2>
+<div class="indent">
+<p>HaveIBeenPwned (HIBP) aggregates data from hundreds of confirmed data breaches. The v3 API accepts an email address and returns a JSON array of breach objects, each containing the breach name, domain, breach date, description, and the categories of data that were exposed (passwords, phone numbers, physical addresses, financial data, and more).</p>
+
+<p>For OSINT purposes, breach data provides several types of value beyond the obvious "the password may be compromised" use case:</p>
+
+<ul>
+<li><strong>Account existence in time</strong>: A 2016 LinkedIn breach entry confirms the target had a LinkedIn account in 2016. If the current profile is deleted or uses privacy settings, this historical confirmation is valuable.</li>
+<li><strong>Platform history</strong>: Breach entries reveal what services the target used at specific points in time, constructing a timeline of their platform presence.</li>
+<li><strong>Data class exposure</strong>: If a breach exposed phone numbers alongside the email, that phone number may appear in the raw breach data (queryable through other services) or may be inferable from breach metadata.</li>
+<li><strong>Credential reuse risk indicator</strong>: Password breaches from multiple services increase the probability of credential reuse — relevant if the investigation is security-focused.</li>
+</ul>
+
+<p>HIBP uses k-anonymity for its Pwned Passwords endpoint: the client hashes the password locally, sends only the first 5 characters of the SHA-1 hash to the API, and receives all hashes that start with those 5 characters. The client checks the full hash locally. The API server never sees the full hash — it cannot determine what password is being checked. This design is worth understanding because it illustrates how privacy-preserving querying can be built into OSINT tools when the design is deliberate.</p>
+</div>
+
+<h2>Dork generation for deeper investigation</h2>
+<div class="indent">
+<p>Google dorks are search operator combinations that surface content that standard search queries miss. For an email address target, the relevant dork patterns surface paste site dumps, credential lists, forum registrations, and document leaks that contain the target email. OpenOSINT's <code>generate_dorks</code> tool produces a set of ready-to-open URLs for 12 dork patterns.</p>
+
+<p>The most productive dork patterns for email targets:</p>
+<ul>
+<li><code>"target@example.com" site:pastebin.com</code> — finds paste dumps containing the email, which often include surrounding context like usernames, passwords, or full data records</li>
+<li><code>"target@example.com" leaked OR breach OR dump</code> — surfaces credential dump indexes and security disclosure posts</li>
+<li><code>"target@example.com" filetype:csv OR filetype:txt</code> — finds publicly indexed data files containing the email, including scraped datasets and leaked exports</li>
+<li><code>"target@example.com" intext:password OR intext:passwd</code> — finds pages where the email appears alongside password-related content</li>
+<li><code>"target@example.com" site:linkedin.com</code> — finds LinkedIn profiles directly associated with the email address in public profile data</li>
+</ul>
+
+<p>The dork URLs are not scraped automatically — they are generated for the analyst to open manually in a browser. This is intentional: automated Google scraping violates ToS and gets blocked quickly. The tool's value is generating the exact query strings without requiring the analyst to remember the operator syntax. It is a time-saver, not a web scraper. The analyst opens each URL, reviews results, and extracts relevant findings manually.</p>
+</div>
+
+<h2>Chaining in an AI-assisted investigation</h2>
+<div class="indent">
+<p>When using <a href="/">OpenOSINT</a>'s REPL with the AI agent enabled, typing "investigate target@example.com" triggers the agentic loop. The model receives the email and the full set of tool definitions, then decides what to run and in what order based on intermediate findings.</p>
+
+<p>A typical chain:</p>
+
+<pre>openosint > investigate target@example.com
+  → generate_dorks('target@example.com')
+     ✓ Generated 12 dork URLs
+  → search_email('target@example.com')
+     ✓ Found: GitHub, WordPress, Spotify
+  → search_breach('target@example.com')
+     ✓ LinkedIn (2016), Adobe (2013)
+  → search_username('target-handle')   [pivoted from GitHub find]
+     ✓ Found on: Reddit, HackerNews, Keybase
+
+[Agent compiling report...]</pre>
+
+<p>The pivot to <code>search_username</code> with the handle discovered by holehe is not scripted — the AI makes that decision after reading holehe's output and recognizing that a GitHub username is worth enumerating across other platforms. The analyst receives a compiled report rather than four separate tool outputs to read sequentially.</p>
+
+<p>This is the difference between a collection of tools and an investigative framework. The tools do the data retrieval; the agent handles the decision sequencing; the analyst applies judgment to the compiled findings. See the <a href="/blog/osint-ai-agents.html">AI agents for OSINT</a> article for a deeper look at how the agentic loop works, and the <a href="/tools/">tools reference</a> for complete parameter documentation on the full tool set, including search_email, search_breach, and generate_dorks.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/breach-check-open-source.html">Breach Check with Open Source Tools</a> &mdash; HIBP API usage, k-anonymity design, and bulk lookup patterns</li>
+<li><a href="/blog/username-search-300-platforms.html">Username Search Across 300+ Platforms</a> &mdash; what to do when holehe surfaces a platform handle</li>
+<li><a href="/tools/">OpenOSINT Tools Reference</a> &mdash; complete parameter documentation for search_email, search_breach, and generate_dorks</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

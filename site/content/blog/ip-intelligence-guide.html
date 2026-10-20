@@ -1,0 +1,127 @@
+---
+title: 'IP Intelligence: What an IP Address Actually Reveals'
+seo_title: 'IP intelligence: what an IP address reveals'
+description: 'Five questions an IP address can answer: location, network owner, infrastructure type, abuse history and anonymization. Includes accuracy limits.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>The five questions an IP address answers</h2>
+<div class="indent">
+<p>An IP address alone is just a 32-bit or 128-bit number. Against public data sources, it becomes an anchor for five distinct intelligence dimensions. Understanding what each dimension can and cannot tell you is the foundation of reliable IP-based OSINT — and knowing the limitations prevents the analytical errors that produce false attribution.</p>
+
+<p><strong>1. Physical location.</strong> Country-level accuracy is near-perfect for routable public IPs — geolocation databases disagree on country for fewer than 0.5% of addresses. City-level accuracy degrades sharply: for residential IP addresses, the best databases resolve to the ISP's hub city or network operations center, which may be 50–200 miles from the actual user's location. For datacenter IPs, city-level accuracy is much higher because the hosting company registers their block at a fixed physical location.</p>
+
+<p><strong>2. Network operator.</strong> Every public IP belongs to an organization that registered the IP prefix with a regional internet registry (ARIN, RIPE, APNIC, LACNIC, AFRINIC). The registration record names the ASN holder. This tells you who routes the traffic — which may be a cloud provider, an ISP, a CDN, a university, or a corporation's own network.</p>
+
+<p><strong>3. Infrastructure type.</strong> Is this a residential broadband address? A datacenter or VPS? A known VPN exit node? A Tor exit relay? A proxy service endpoint? Infrastructure classification is increasingly accurate as commercial providers maintain continuously updated lists of VPN/proxy/datacenter IP ranges.</p>
+
+<p><strong>4. Abuse history.</strong> Has this IP been reported for spam campaigns, brute-force attacks, C2 communication, port scanning, or credential stuffing? Aggregated threat intelligence from honeypots, security teams, and network operators provides a historical abuse record.</p>
+
+<p><strong>5. Reverse DNS.</strong> What hostname does this IP present in PTR records? Reverse DNS is voluntary and unverified — anyone can set any PTR record — but datacenter IPs frequently carry meaningful reverse DNS (e.g., <code>ec2-54-214-19-20.us-west-2.compute.amazonaws.com</code>) that confirms provider and region.</p>
+</div>
+
+<h2>Geolocation accuracy and its limits</h2>
+<div class="indent">
+<p>IP geolocation works by correlating IP prefix registrations with probe measurements, CDN logs, user-submitted data, and network topology analysis. The fundamental accuracy constraint is that IP blocks are assigned to organizations, not to specific physical locations.</p>
+
+<p>A major ISP like Comcast holds IP blocks allocated to their network. The ARIN registration gives a corporate address — their headquarters or NOC. The actual customer using that IP may be anywhere in the ISP's service territory. For Comcast, that's most of the US. MaxMind and similar providers use measurement infrastructure to narrow down which city a given prefix actually serves, but this is probabilistic inference, not precise location.</p>
+
+<p>The critical analytical failure mode: <strong>geolocating a VPN user gives you the VPN exit node, not the user.</strong> If a target's IP geolocates to Amsterdam, and that IP is flagged as belonging to a VPN provider's AS, the only information you have is that the target used a VPN with a Dutch exit node. Their physical location is unknown. This is the most common IP intelligence mistake in non-technical reporting.</p>
+
+<p>Legitimate geolocation interpretation: use it to classify infrastructure (US datacenter vs. Russian residential vs. German cloud provider), not to make precise physical claims about individuals.</p>
+</div>
+
+<h2>ASN lookups and infrastructure classification</h2>
+<div class="indent">
+<p>Every publicly routable IP belongs to an Autonomous System identified by an ASN. The AS number directly links to the organization registered as its holder in the regional internet registry. Key ASNs to recognize immediately:</p>
+
+<ul>
+  <li><strong>AS15169</strong> — Google (GCP, search infrastructure, DNS)</li>
+  <li><strong>AS16509</strong> — Amazon AWS (largest cloud provider by IP count)</li>
+  <li><strong>AS8075</strong> — Microsoft Azure</li>
+  <li><strong>AS14061</strong> — DigitalOcean (VPS hosting)</li>
+  <li><strong>AS13335</strong> — Cloudflare (CDN, proxy, DNS)</li>
+  <li><strong>AS20473</strong> — Vultr (VPS hosting)</li>
+  <li><strong>AS174</strong> — Cogent Communications (major transit provider)</li>
+</ul>
+
+<p>An IP in AS14061 or AS20473 is definitively a rented VPS or dedicated server — not a residential end user. An IP in a small regional ISP's AS (AS22773 = Cox Communications, AS11486 = Verizon residential) is almost certainly a broadband subscriber. This classification is more reliable than geolocation for determining whether you're looking at a person's internet connection or a piece of attack infrastructure.</p>
+
+<p>Look up ASN data directly:</p>
+
+<pre>
+# Using ipinfo.io API (free tier available)
+curl https://ipinfo.io/198.51.100.1/json
+
+# Response includes:
+# "org": "AS14061 DigitalOcean, LLC"
+# "city": "Toronto"
+# "country": "CA"
+
+# Team Cymru WHOIS (free, high quality)
+whois -h whois.cymru.com " -v 198.51.100.1"
+# Returns: ASN | IP | BGP Prefix | CC | Registry | Allocated | Info
+</pre>
+
+<p><a href="/blog/osint-api-automation.html">Automating these API calls</a> across a list of IPs is straightforward — the ipinfo.io batch endpoint accepts up to 1,000 IPs per request.</p>
+</div>
+
+<h2>Abuse history and reputation scoring</h2>
+<div class="indent">
+<p>IP reputation databases aggregate reports from security operations centers, honeypot networks, spam traps, and automated abuse detection systems. The most useful public sources:</p>
+
+<p><strong>AbuseIPDB</strong> maintains reports submitted by the security community. Each report includes a timestamp, the submitting organization's category (SSH brute force, port scan, spam, C2, etc.), and optional comment. The API returns an abuse confidence score from 0–100%, calculated from report volume, recency, and reporter diversity. A score above 50% indicates reports from multiple independent sources — this threshold is meaningful. A score of 80%+ with recent reports is strong evidence the IP is actively used for malicious activity.</p>
+
+<p>OpenOSINT's <code>search_abuseipdb</code> tool queries the AbuseIPDB v2 API and surfaces: confidence score, total report count, country code, ISP, usage type (data center, residential, etc.), domain, and the timestamp of the most recent report. This integrates into the AI agent loop so Claude can reason about whether a reported IP represents current threat activity or historical noise.</p>
+
+<p><strong>VirusTotal's IP report</strong> shows detection verdicts from security vendors, passive DNS records showing which domains have resolved to this IP, files downloaded from the IP, and SSL certificates presented by the IP. This is complementary to AbuseIPDB — VirusTotal captures malware delivery and C2 patterns that AbuseIPDB's community reporting may miss.</p>
+
+<pre>
+$ openosint abuseipdb 198.51.100.1
+[AbuseIPDB] IP: 198.51.100.1
+[AbuseIPDB] Abuse Confidence Score: 82%
+[AbuseIPDB] Total Reports: 94
+[AbuseIPDB] Last Reported: 2026-05-20
+[AbuseIPDB] Country: DE | ISP: Hetzner Online GmbH
+[AbuseIPDB] Usage Type: Data Center/Web Hosting/Transit
+</pre>
+</div>
+
+<h2>Combining multiple sources for confident attribution</h2>
+<div class="indent">
+<p>No single IP intelligence source is authoritative. Geolocation databases disagree. AbuseIPDB may be sparse for newer malicious IPs. VPN detection lists lag behind newly provisioned exit nodes. The methodology that produces reliable intelligence layers multiple sources and looks for convergent signals.</p>
+
+<p>The three-source stack used in OpenOSINT:</p>
+
+<ul>
+  <li><strong>ipinfo.io</strong> — ASN, basic geolocation, reverse DNS, basic hosted/residential classification. Fast, free tier covers most investigative use.</li>
+  <li><strong>IP2Location.io</strong> — Enriched geolocation with infrastructure classification: VPN flag, proxy flag, Tor exit flag, datacenter flag, threat score. OpenOSINT's <a href="/tools/">sponsored integration</a> uses the IP2Location.io API, which provides these enriched fields that ipinfo's free tier doesn't include.</li>
+  <li><strong>AbuseIPDB</strong> — Historical abuse reports and confidence score from the security community.</li>
+</ul>
+
+<p>Consider an IP that ipinfo.io places in the US, IP2Location flags as a VPN endpoint with high threat score, and AbuseIPDB scores at 75% confidence with 40 recent port scan reports. The convergence of three independent sources — provider classification, VPN detection, and community abuse reports — makes a strong case that this is threat infrastructure rather than a legitimate user. No single source would be as convincing alone.</p>
+
+<pre>
+$ openosint ip2location 198.51.100.1
+[IP2Location] Country: US  | City: New York
+[IP2Location] ISP: M247 Europe SRL
+[IP2Location] VPN: Yes  | Proxy: No  | TOR: No  | Datacenter: Yes
+[IP2Location] Threat Score: high
+</pre>
+
+<p>For <a href="/blog/ip-reputation-osint.html">IP reputation investigations</a>, especially in incident response contexts where an IP appears in logs, the three-source stack gives you enough signal to classify the address within seconds — and feeds the full context into OpenOSINT's AI agent for narrative synthesis.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/ip-reputation-osint.html">IP Reputation OSINT</a> &mdash; Deep dive into threat intelligence feeds, AbuseIPDB integration, and reputation scoring methodology</li>
+<li><a href="/blog/osint-api-automation.html">OSINT API Automation</a> &mdash; Batch querying, rate limit handling, and pipeline design for IP intelligence at scale</li>
+<li><a href="/tools/">OpenOSINT Tools</a> &mdash; search_ip, search_ip2location, and search_abuseipdb tool reference</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

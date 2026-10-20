@@ -1,0 +1,73 @@
+---
+title: 'OSINT for Bug Bounty Hunters: Recon Before the First Request'
+seo_title: OSINT for bug bounty recon before the first request
+description: 'Passive recon for bug bounty targets: subdomain inventory, WHOIS and ASN mapping, certificate transparency and GitHub dorking, all before active testing.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>Recon before the first request</h2>
+<div class="indent">
+<p>Bug bounty hunters who skip passive recon spend time attacking scope they don't understand and miss targets that aren't linked from the main domain. The most valuable findings in a program often live on forgotten subdomains running outdated software, development servers that slipped into production, or third-party integrations with weaker security than the primary application. None of these are discoverable by browsing the main site. All of them are discoverable through passive OSINT before you send a single active probe.</p>
+<p>Passive means: no requests to target infrastructure. Everything in this guide touches only public data sources &mdash; DNS aggregators, certificate transparency logs, WHOIS registries, and search engine indexes. This matters for two reasons. First, some programs have rules against active scanning during recon. Second, active scanning generates noise. A well-executed passive recon phase builds the full target map silently, letting you choose exactly where to apply active techniques.</p>
+</div>
+
+<h2>Building the subdomain inventory</h2>
+<div class="indent">
+<p>Start with certificate transparency. Every TLS certificate issued for target.com and its subdomains appears in public CT logs. Query crt.sh:</p>
+<pre>curl -s "https://crt.sh/?q=%25.target.com&output=json" \
+  | jq -r '.[].name_value' \
+  | sort -u \
+  | grep -v '\*'</pre>
+<p>This returns every subdomain that ever received a TLS certificate, including decommissioned ones that may still be live. Unlike DNS brute-force, it produces no false positives &mdash; every result is a real certificate that was issued.</p>
+<p>Follow with passive DNS aggregation. OpenOSINT's <code>search_domain</code> wraps sublist3r, which queries Google, Bing, DNSdumpster, VirusTotal, and several other sources:</p>
+<pre>openosint domain target.com</pre>
+<p>Cross-reference both lists. Subdomains appearing in CT logs but not DNS aggregators may be live but not indexed &mdash; more likely to host forgotten services. Subdomains appearing in both are confirmed active in recent history.</p>
+<p>For each confirmed subdomain, record the A record IP. Group subdomains by IP range using ASN lookup. Subdomains on the same /24 as the main application are likely internally managed. Subdomains on entirely different ASNs often indicate third-party SaaS integrations or acquired infrastructure &mdash; frequently managed by a different team with different security posture.</p>
+</div>
+
+<h2>WHOIS and infrastructure mapping</h2>
+<div class="indent">
+<p>WHOIS tells you who owns the target and when it was registered. For bug bounty, the more useful information is nameservers and registrar. Nameservers reveal the DNS provider: Route53, Cloudflare, custom nameservers. Custom nameservers often indicate self-managed DNS infrastructure; DNS provider nameservers indicate the program uses a managed service.</p>
+<pre>openosint whois target.com</pre>
+<p>Check the ASN for each IP in your subdomain inventory. If the main application is on AWS (AS16509) but a subdomain resolves to a different ASN, it may be old infrastructure or an acquisition. These are worth examining closely &mdash; infrastructure that predates the current security program often hasn't been through the same hardening process.</p>
+<p>For corporate targets with large IP portfolios, Shodan queries against the ASN reveal everything the organization has publicly exposed on non-standard ports. <code>org:"Target Corp"</code> or <code>asn:AS12345</code> returns the full port/service inventory. Admin panels, development servers, and monitoring interfaces exposed on unusual ports are common findings here.</p>
+</div>
+
+<h2>GitHub dorking for exposed secrets</h2>
+<div class="indent">
+<p>Before touching any target system, search GitHub for leaked credentials. This is entirely passive and frequently produces critical findings:</p>
+<pre># Search for secrets in public repos referencing the target domain
+"target.com" "api_key" OR "secret" OR "password" site:github.com
+
+# Search for the company name
+"TargetCorp" "AWS_SECRET_ACCESS_KEY" site:github.com
+
+# Search for internal hostnames
+"internal.target.com" site:github.com</pre>
+<p>The <a href="/blog/google-dorks-guide.html">Google dorks guide</a> covers additional patterns. OpenOSINT's <code>generate_dorks</code> generates 12 ready-to-use search URLs for any target domain, including the GitHub patterns.</p>
+<p>What to look for on GitHub: hardcoded API keys that appear in commit history even if removed from current HEAD (GitHub's search indexes history), internal hostname patterns that reveal the target's internal network topology, configuration files containing database connection strings, and employee personal repos that contain work-related credentials.</p>
+<p>Any credential found through GitHub dorking should be tested for validity before reporting. An expired token is still a valid low/informational finding with historical exposure context. A live token is a critical.</p>
+</div>
+
+<h2>Assembling the recon report before active work</h2>
+<div class="indent">
+<p>After passive recon, you should have: a confirmed subdomain list with IPs and ASN annotations, WHOIS data for the primary domain and any interesting registrant patterns, a GitHub finding log, and a set of Google dork URLs to review manually.</p>
+<p>Use OpenOSINT to run the IP reputation pass on each unique IP in the inventory:</p>
+<pre>openosint multi ips.txt --json &gt; ip_results.json</pre>
+<p>IPs with high AbuseIPDB confidence scores on in-scope infrastructure are worth noting &mdash; either the program's infrastructure is being used maliciously (a valid finding category), or the IPs are shared hosting that also hosts abusive content.</p>
+<p>This full passive recon pass takes 15&ndash;30 minutes on a typical program and produces a prioritized target list before a single probe is sent to the program's infrastructure. The subdomains with different ASNs, decommissioned CT-log entries still resolving, and GitHub credential hits are your first active investigation priorities. See the <a href="/blog/subdomain-enumeration.html">subdomain enumeration guide</a> for deeper coverage of the enumeration phase, and the <a href="/blog/osint-api-automation.html">OSINT API automation guide</a> for programmatic Shodan and Censys integration.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/subdomain-enumeration.html">Subdomain enumeration</a> &mdash; passive CT logs, DNS aggregation, and tool comparison</li>
+<li><a href="/blog/google-dorks-guide.html">Google dorks for security researchers</a> &mdash; target-specific recon patterns including GitHub secret search</li>
+<li><a href="/blog/osint-api-automation.html">Automating OSINT with APIs</a> &mdash; Shodan, Censys, and VirusTotal programmatic integration</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

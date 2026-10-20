@@ -117,7 +117,7 @@ The same 5 infrastructure tools as `/v1/enrich`:
 | `search_ip2location` | Proxy/VPN/Tor/datacenter, threat score (IP2Location.io) | server — included |
 | `search_abuseipdb` | Abuse confidence score, reports, ISP (AbuseIPDB) | customer BYOK — `abuseipdb` |
 | `search_dns` | A, AAAA, MX, NS, TXT, CNAME, SOA records | none |
-| `search_domain` | Subdomain enumeration (passive DNS) | none |
+| `search_domain` | Subdomain enumeration by scraping search engines and aggregators (noisy; disabled unless the operator enables active tools) | none |
 
 Each tool takes one string parameter `target` (an IP address or domain name).  BYOK tools require the corresponding key to be stored first via `POST /v1/keys`; a missing key returns a structured error string, not a protocol error.
 
@@ -203,7 +203,7 @@ IP and domain infrastructure intelligence only.
 | `search_ip2location` | Proxy/VPN/Tor/datacenter detection, threat score | IP2Location.io (sponsored) | server | — | ~1–2 s |
 | `search_abuseipdb` | IP abuse reputation, report history | AbuseIPDB | **customer** (BYOK) | `abuseipdb` | ~1–2 s |
 | `search_dns` | A, AAAA, MX, NS, TXT, CNAME, SOA records | dnspython | none | — | ~2–5 s |
-| `search_domain` | Subdomain enumeration (passive DNS) | sublist3r | none | — | ~10–30 s |
+| `search_domain` | Subdomain enumeration by scraping search engines and aggregators (noisy; disabled unless the operator enables active tools) | sublist3r | none | — | ~10–30 s |
 
 **Key source legend:**
 - **customer** — customer must add their own key via `POST /v1/keys` before calling this tool; missing key returns 422.
@@ -283,3 +283,78 @@ heroku config:set CONFIG_ENCRYPTION_KEY=<generated_key>
 > **Warning:** Never rotate `CONFIG_ENCRYPTION_KEY` without first decrypting and
 > re-encrypting all rows in `customer_keys`.  Rotating without migration makes all
 > stored secrets unreadable.
+
+---
+
+## 12. Waitlist
+
+A public, unauthenticated demand-validation signup for a future self-serve Cloud
+tier (Free/Pro/Team).  No payment processing — signup only.  Frontend page:
+`docs/cloud/waitlist/index.html`.  Backend: `cloud/routes/waitlist.py`.
+
+> **Current status:** the live waitlist page posts directly to
+> [Formspree](https://formspree.io/) (`FORMSPREE_ENDPOINT` in the page's
+> `<script>`), not to this gateway.  The `POST /v1/waitlist` /
+> `GET /v1/waitlist/stats` routes, the `waitlist` table, the migration below,
+> and their tests all still exist and pass — they're just not wired to the
+> live page right now.  Switching the page back to this endpoint is a
+> one-line change to `FORMSPREE_ENDPOINT`'s replacement in the script.
+
+### Endpoint
+
+```
+POST /v1/waitlist
+Content-Type: application/json
+
+{
+  "email": "analyst@example.com",
+  "role": "soc_analyst",
+  "use_case": "Enriching alerts with IP reputation",
+  "plan_interest": "pro",
+  "consent": true,
+  "source": "utm_source=twitter"
+}
+```
+
+Always returns `200` with the same success message, including on a duplicate
+email (never reveals whether the address was already on the list) and on a
+tripped honeypot (the hidden `website` field — non-empty means the row is
+dropped, not stored).  `400` on missing consent, `422` on an invalid email,
+`429` on the per-IP burst limiter (`WAITLIST_RATE_WINDOW_SECS` /
+`WAITLIST_RATE_MAX_CALLS`, default 5 calls / 60 s).  No IP address is ever
+written to the `waitlist` table.
+
+CORS on this route (and only this route's origin set) is restricted to
+`https://openosint.tech` plus `localhost`/`127.0.0.1` for dev — see
+`cloud/main.py`.
+
+### Migration (existing databases)
+
+New installs get the `waitlist` table for free from `db/init.sql`.  For an
+already-deployed database, run the idempotent migration:
+
+```bash
+heroku pg:psql -a your-app-name < db/migrations/0001_add_waitlist.sql
+```
+
+### Stats (operator only)
+
+```bash
+curl -s https://your-app.herokuapp.com/v1/waitlist/stats \
+  -H "X-Setup-Token: $OPENOSINT_SETUP_TOKEN" | jq .
+# -> {"total": 42, "by_role": {...}, "by_plan_interest": {...}, "by_source": {...}}
+```
+
+Gated by the same `OPENOSINT_SETUP_TOKEN` mechanism used elsewhere for
+operator-only access — unset by default, so this route stays closed until an
+operator opts in.  It never returns individual email addresses.
+
+### Exporting emails
+
+There is no endpoint that lists emails by design.  Export directly with SQL:
+
+```bash
+heroku pg:psql -a your-app-name -c \
+  "COPY (SELECT email, role, plan_interest, source, created_at FROM waitlist ORDER BY created_at) TO STDOUT WITH CSV HEADER" \
+  > waitlist_export.csv
+```

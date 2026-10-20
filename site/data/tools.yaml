@@ -1,0 +1,67 @@
+search_email:
+  method: holehe
+  finds: Accounts linked to an email (noisy, off by default)
+  binary: holehe
+search_username:
+  method: sherlock
+  finds: Accounts across 300+ platforms (noisy, off by default)
+  binary: sherlock
+search_breach:
+  method: HaveIBeenPwned API
+  finds: Data breach exposure
+search_whois:
+  method: python-whois
+  finds: Domain registration data
+search_ip:
+  method: ipinfo.io
+  finds: Geolocation, ASN, hostname
+search_domain:
+  method: sublist3r
+  finds: Subdomain enumeration
+  binary: sublist3r
+generate_dorks:
+  method: built-in
+  finds: 12 targeted Google dork URLs
+search_paste:
+  method: psbdmp.ws
+  finds: Pastebin dump mentions
+search_phone:
+  method: phoneinfoga
+  finds: Carrier, country, line type
+  binary: phoneinfoga
+search_censys:
+  method: Censys API
+  finds: Open ports, services, certs
+search_virustotal:
+  method: VirusTotal API
+  finds: URL / hash / IP analysis
+search_shodan:
+  method: Shodan API
+  finds: Host banners, open ports
+search_ip2location:
+  method: IP2Location API
+  finds: Geo, ISP, VPN/Proxy/Tor detection
+search_abuseipdb:
+  method: AbuseIPDB v2 API
+  finds: Abuse score, reports, ISP
+search_github:
+  method: GitHub REST API
+  finds: Profile, repos, commit-discovered emails
+search_dns:
+  method: dnspython (built-in)
+  finds: A/AAAA/MX/NS/TXT/CNAME/SOA, SPF/DMARC/DKIM
+search_rdap:
+  method: RDAP (IANA bootstrap)
+  finds: Registrar, dates, name servers, status
+search_gdelt_geo:
+  method: GDELT 15-minute GKG feed
+  finds: Recent worldwide news on a map (GeoJSON)
+search_dorks_live:
+  method: Bright Data SERP API
+  finds: Live Google dork results (title, URL, snippet)
+scrape_url:
+  method: Bright Data Web Unlocker
+  finds: Fetch any URL bypassing Cloudflare/CAPTCHA
+search_footprint:
+  method: Bright Data SERP API
+  finds: Entity-type-aware SERP footprint + correlation graph

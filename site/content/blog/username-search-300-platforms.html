@@ -1,0 +1,94 @@
+---
+title: 'Username Search Across 300+ Platforms: How It Works'
+seo_title: Username search across 300+ platforms, explained
+description: 'How sherlock checks a username on 300+ sites without logging in: response classification, false positives, rate limits and what platform clusters reveal.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<div class="indent">
+<p>Username enumeration is one of the highest-yield OSINT techniques. A person may use dozens of platforms with the same handle — and each one potentially exposes a different slice of their digital footprint: a profile photo on one, a location on another, a linked email or phone number on a third. Tools like sherlock automate the detection problem, but understanding how the detection actually works is what lets you interpret results correctly and avoid false positives in real investigations.</p>
+</div>
+
+<h2>The detection problem</h2>
+<div class="indent">
+<p>Checking whether username "johndoe99" exists on GitHub is trivial: send a HEAD request to <code>github.com/johndoe99</code>. A 200 response means the profile page exists. A 404 means it does not. This status-code pattern works because GitHub returns a real 404 for missing profiles, not a generic 200 with an empty template.</p>
+
+<p>Not all platforms are this cooperative. Some return HTTP 200 for missing users and include a "user not found" message somewhere in the response body — this requires parsing the body, not just checking the status code. Some platforms return a redirect: existing users get <code>301 → profile</code>, missing users get <code>301 → homepage</code>. Some require JavaScript rendering to produce profile content, making a simple HTTP request useless. Some block automated requests after just a few hits with a CAPTCHA or rate-limit response that looks identical to a normal page.</p>
+
+<p>Sherlock solves this with a YAML site list where each entry specifies: the URL pattern to probe (with <code>{}</code> as the username placeholder), the detection method (status_code, message, or response_url), and the exact value to check against. The site list is maintained by the community — when a platform changes its behavior, someone updates the entry. This is why sherlock's site list is the actual intellectual work: the scraping logic is simple; the per-platform knowledge is not.</p>
+</div>
+
+<h2>How Sherlock classifies responses</h2>
+<div class="indent">
+<p>Three detection methods cover almost every platform:</p>
+
+<p><strong>status_code</strong>: The expected HTTP status when a user exists (typically 200) and when they do not (typically 404). This is the simplest method and covers most large platforms with well-behaved REST responses. GitHub, GitLab, npm, Docker Hub all use this approach.</p>
+
+<p><strong>message</strong>: The response body contains a specific string when the user does not exist. The site entry specifies the error string — something like "Sorry, this page isn't available" (Instagram) or "The specified user does not exist" (Steam). The check is: does the body contain this string? If yes, the user does not exist. If no, assume they do. This is necessary for platforms that return HTTP 200 for all profile URLs.</p>
+
+<p><strong>response_url</strong>: The URL the request ultimately resolves to after redirects reveals existence. If the platform redirects missing users to the homepage or a generic error page, the final URL differs from the expected profile URL. The site entry specifies what URL indicates existence, and any other final URL is treated as not-found.</p>
+
+<p>False positives are an inherent risk in the message-based method. If the platform changes the exact error string — a common occurrence during site redesigns — sherlock will report the username as found on every probe until the YAML entry is updated. This is why you always open the returned URL manually before treating a result as confirmed. A found result is a candidate, not a confirmation.</p>
+</div>
+
+<h2>Rate limiting and concurrency</h2>
+<div class="indent">
+<p>Sherlock sends all probes concurrently by default, up to the configured number of workers. For 400 platforms, this means 400 HTTP requests going out in a short burst. Most platforms have no problem with a single request for a single username — it looks like a normal browser visit. Some have aggressive WAF rules that block anything that looks like scanning, and a burst of concurrent requests from the same IP is a clear signal.</p>
+
+<p>Practical mitigation strategies:</p>
+<ul>
+<li>Reduce timeout with <code>--timeout</code> to drop slow-responding platforms quickly rather than holding connections open, which can extend the detection window.</li>
+<li>Use <code>--site</code> to target specific platforms rather than running the full list when you already have a hypothesis about where the username might appear.</li>
+<li>Route through a rotating proxy if the investigation requires avoiding network-level blocking.</li>
+<li>Be aware that some platforms log every profile view and may notify the account owner. This is uncommon but happens on some smaller platforms with notification-heavy designs.</li>
+</ul>
+
+<p><a href="/">OpenOSINT</a>'s <code>search_username</code> tool wraps sherlock with a configurable timeout parameter, making it accessible from the REPL and MCP server without requiring the analyst to manage sherlock's CLI arguments directly. A typical run from the OpenOSINT CLI:</p>
+
+<pre>$ openosint username johndoe99 -t 120
+[+] GitHub      https://github.com/johndoe99
+[+] Reddit      https://reddit.com/user/johndoe99
+[+] HackerNews  https://news.ycombinator.com/user?id=johndoe99
+[+] Keybase     https://keybase.io/johndoe99
+[-] Twitter     not found
+[-] Instagram   not found
+[*] 4 accounts found across 312 sites checked</pre>
+</div>
+
+<h2>What platform clusters reveal</h2>
+<div class="indent">
+<p>The set of platforms where a username is found is often more informative than any individual profile. Platform clusters are behavioral fingerprints.</p>
+
+<p>A username found on GitHub, StackOverflow, HackerNews, and npm suggests a software developer — specifically one who has been active in open-source communities, since all four platforms require meaningful participation to leave a trace. That combination, with no presence on Instagram or TikTok, suggests someone who keeps their professional and personal digital lives separate, or who skews older and more technical.</p>
+
+<p>The same username on Instagram, TikTok, and Twitter suggests a public-facing persona. A presence on both GitHub and Instagram with consistent profile photos and location data suggests the same person using the same handle across professional and personal contexts — a much stronger identity linkage than either alone.</p>
+
+<p>Specialized forum hits are particularly valuable. A username found on a security-focused forum like Security BSides or a specific vulnerability disclosure platform establishes professional context. A hit on a niche hobbyist forum reveals interests not apparent from mainstream platforms. Each platform contributes a different kind of signal to the overall picture.</p>
+
+<p>Critically, each platform profile often contains additional pivot points: a real name in the display name, a location in the bio, a linked email in the public profile, or a linked account on another platform. The username search surfaces the accounts; the analyst follows up on each profile manually to extract these secondary identifiers. The <a href="/blog/email-osint-guide.html">email OSINT guide</a> covers what to do once an email address is found in a profile.</p>
+</div>
+
+<h2>Beyond Sherlock</h2>
+<div class="indent">
+<p>Sherlock is the most widely used username enumeration tool, but it is not the only option and has specific limitations. Its site list skews toward English-language and Western platforms. If the investigation involves targets active on regional platforms — Vkontakte, Weibo, regional forums — sherlock's coverage is incomplete.</p>
+
+<p>maigret is a sherlock fork that extends the concept with cross-source correlation: it can extract secondary identifiers from profile pages (phone numbers, linked emails) and use those to search for additional accounts, making it closer to an investigative graph builder than a simple username checker. The tradeoff is a slower run time and more complex output.</p>
+
+<p>For investigations requiring custom platform coverage, sherlock's YAML format is straightforward to extend. A site entry requires the URL pattern, the detection method, and the value to check against. Adding a regional platform or a newly relevant service takes fewer than ten lines of YAML. OpenOSINT's underlying tool invokes the installed sherlock binary — swapping in a more comprehensive site list updates the tool's behavior without any code changes.</p>
+
+<p>The broader point is that username enumeration is a solved problem for the mechanical part — the probing is well-understood. The investigative value comes from what you do with the results: which platforms you follow up on manually, what secondary identifiers you extract, and how you correlate the findings with other signals from the investigation. See the <a href="/tools/">OpenOSINT tools reference</a> for details on how <code>search_username</code> integrates with other tools in the framework, and the <a href="/blog/what-is-osint.html">OSINT fundamentals guide</a> for how username enumeration fits into a complete investigation methodology.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/email-osint-guide.html">Email OSINT Guide</a> &mdash; what to do when username enumeration surfaces an email address</li>
+<li><a href="/blog/what-is-osint.html">What Is OSINT?</a> &mdash; fundamentals of passive vs. active collection and the full data surface area</li>
+<li><a href="/tools/">OpenOSINT Tools Reference</a> &mdash; complete parameter documentation for search_username and the other 13 tools</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

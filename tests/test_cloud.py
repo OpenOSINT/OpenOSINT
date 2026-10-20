@@ -37,6 +37,8 @@ def reset_memory_store():
     db._MEMORY_USERS.clear()
     db._MEMORY_USERS_BY_IDENTITY.clear()
     db._next_user_id = 1
+    db._MEMORY_WAITLIST.clear()
+    db._next_waitlist_id = 1
     keys._MEMORY_KEYS.clear()
     # Reset cached Fernet so tests always get a fresh ephemeral key
     keys._fernet = None
@@ -458,7 +460,7 @@ async def test_platform_pool_upstream_error_charges_zero_credits(client):
 
 # ── (j) allow-list shape and removed-tool 400s ───────────────────────────────
 
-from cloud.tools import ALLOW_LIST as _ALLOW_LIST
+from cloud.tools import ALLOW_LIST as _ALLOW_LIST  # noqa: E402
 
 _EXPECTED_TOOLS = {
     "search_ip", "search_ip2location", "search_abuseipdb", "search_dns", "search_domain",
@@ -621,3 +623,172 @@ async def test_link_key_conflict_returns_409(client, monkeypatch):
     await _login(client, monkeypatch, "google_link_c2", "c2@example.com")
     second = await client.post("/v1/link-key", json={"customer_api_key": "key-link-conflict"})
     assert second.status_code == 409
+
+
+# ── logging: no target values, in any log line, on the Cloud surface ─────────
+#
+# cloud/main.py used to run its root logger at INFO, which let every
+# openosint.tools.* module's free-text logging (built for CLI/MCP debugging,
+# and including the raw target) straight through. See
+# .claude/LEGAL_CONTEXT.md §4.1 and legal/INCIDENT-NOTES.md.
+
+
+def test_shared_tool_loggers_are_silenced_for_cloud(caplog):
+    """Direct proof of the suppression mechanism: openosint.tools.* loggers
+    inherit an effective level above CRITICAL once cloud.main has configured
+    logging, so a call that would otherwise log the target produces nothing."""
+    import logging as _logging
+
+    import cloud.main  # noqa: F401 -- import applies the logging config
+
+    target_logger = _logging.getLogger("openosint.tools.search_ip")
+    sentinel = "SENTINEL-TARGET-203.0.113.99"
+    with caplog.at_level(_logging.DEBUG):
+        target_logger.info("Starting IP lookup for: %s", sentinel)
+        target_logger.warning("IP lookup failed: %s", sentinel)
+        target_logger.exception("Unexpected error during IP lookup: %s", sentinel)
+
+    assert sentinel not in caplog.text
+
+
+async def test_enrich_end_to_end_logs_no_target_value(client, caplog):
+    """Run a real /v1/enrich request through the real search_ip tool code
+    (only the outbound HTTP call is faked) and prove the captured log output
+    contains the tool name and outcome status, but never the target."""
+    import logging
+
+    _seed("key-log-proof", credits=5)
+    await keys.store_key("key-log-proof", "ipinfo", "tok_test_byok")
+    sentinel_ip = "203.0.113.77"  # TEST-NET-3 (RFC 5737) — reserved, not a real host
+
+    fake_response = type(
+        "FakeResponse",
+        (),
+        {"status_code": 200, "json": lambda self: {"ip": sentinel_ip, "org": "AS0 Reserved"}},
+    )()
+
+    with (
+        patch("openosint.tools.search_ip.requests.get", return_value=fake_response),
+        caplog.at_level(logging.DEBUG),
+    ):
+        resp = await client.post(
+            "/v1/enrich",
+            json={"tool": "search_ip", "target": sentinel_ip},
+            headers={"X-API-Key": "key-log-proof"},
+        )
+
+    assert resp.status_code == 200
+    assert sentinel_ip not in caplog.text, "target value leaked into Cloud's captured logs"
+    assert "tool=search_ip" in caplog.text
+    assert "status=ok" in caplog.text
+
+
+def test_retention_constant_matches_documented_policy():
+    """legal/PRIVACY_POLICY.md §4 states '12 months' — pinned to this constant
+    so the documented figure and the implemented one cannot drift apart."""
+    from cloud.config import USAGE_METADATA_RETENTION_DAYS
+
+    assert USAGE_METADATA_RETENTION_DAYS == 365
+
+
+# ── waitlist ────────────────────────────────────────────────────────────────
+
+
+async def test_waitlist_valid_signup_returns_200_and_is_stored(client):
+    resp = await client.post(
+        "/v1/waitlist",
+        json={
+            "email": "Analyst@Example.com",
+            "role": "soc_analyst",
+            "use_case": "Enriching alerts with IP reputation",
+            "plan_interest": "pro",
+            "consent": True,
+            "source": "utm_source=twitter",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+    # Stored lowercased
+    assert "analyst@example.com" in db._MEMORY_WAITLIST
+    stored = db._MEMORY_WAITLIST["analyst@example.com"]
+    assert stored.role == "soc_analyst"
+    assert stored.plan_interest == "pro"
+
+
+async def test_waitlist_duplicate_email_returns_same_success_message(client):
+    body = {"email": "dup@example.com", "consent": True}
+    first = await client.post("/v1/waitlist", json=body)
+    second = await client.post("/v1/waitlist", json=body)
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert first.json() == second.json()
+    # Still only one row — the second call didn't create a duplicate
+    assert len(db._MEMORY_WAITLIST) == 1
+
+
+async def test_waitlist_missing_consent_returns_400(client):
+    resp = await client.post(
+        "/v1/waitlist", json={"email": "noconsent@example.com", "consent": False}
+    )
+    assert resp.status_code == 400
+    assert "noconsent@example.com" not in db._MEMORY_WAITLIST
+
+
+async def test_waitlist_invalid_email_returns_422(client):
+    resp = await client.post(
+        "/v1/waitlist", json={"email": "not-an-email", "consent": True}
+    )
+    assert resp.status_code == 422
+    assert len(db._MEMORY_WAITLIST) == 0
+
+
+async def test_waitlist_honeypot_filled_returns_200_and_stores_nothing(client):
+    resp = await client.post(
+        "/v1/waitlist",
+        json={
+            "email": "bot@example.com",
+            "consent": True,
+            "website": "http://spam.example",
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "ok"
+    assert len(db._MEMORY_WAITLIST) == 0
+
+
+async def test_waitlist_stats_requires_setup_token(client):
+    resp = await client.get("/v1/waitlist/stats")
+    assert resp.status_code == 403
+
+
+async def test_waitlist_stats_rejects_wrong_token(client):
+    with patch.dict(os.environ, {"OPENOSINT_SETUP_TOKEN": "correct-token"}):
+        resp = await client.get(
+            "/v1/waitlist/stats", headers={"X-Setup-Token": "wrong-token"}
+        )
+    assert resp.status_code == 403
+
+
+async def test_waitlist_stats_returns_aggregate_counts_with_valid_token(client):
+    await client.post(
+        "/v1/waitlist",
+        json={"email": "a@example.com", "role": "developer", "plan_interest": "pro", "consent": True},
+    )
+    await client.post(
+        "/v1/waitlist",
+        json={"email": "b@example.com", "role": "developer", "plan_interest": "team", "consent": True},
+    )
+
+    with patch.dict(os.environ, {"OPENOSINT_SETUP_TOKEN": "correct-token"}):
+        resp = await client.get(
+            "/v1/waitlist/stats", headers={"X-Setup-Token": "correct-token"}
+        )
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 2
+    assert body["by_role"] == {"developer": 2}
+    assert body["by_plan_interest"] == {"pro": 1, "team": 1}
+    # No email addresses are ever returned by this endpoint
+    assert "a@example.com" not in resp.text

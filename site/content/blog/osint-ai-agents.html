@@ -1,0 +1,83 @@
+---
+title: How AI Agents Are Changing OSINT
+seo_title: How AI agents are changing OSINT
+description: How an agentic loop picks tools and chains them on findings, why tool results must come from real execution, and where today's agents still fall short.
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<div class="indent">
+<p>OSINT investigations have always been bottlenecked not by data availability but by analyst bandwidth. The data is out there — enumerable from public APIs, DNS registries, breach aggregates, and social platforms. The problem is that each data source requires a separate tool, a separate command, and a human decision about what to do with the output before moving to the next step. AI agents are restructuring this at the loop level: the AI makes the sequential decisions, the analyst reviews the compiled result.</p>
+</div>
+
+<h2>The manual OSINT bottleneck</h2>
+<div class="indent">
+<p>Before AI agents, a standard email investigation looked like this: run holehe against the target email, wait 30–90 seconds, read 40 lines of output identifying which platforms have an account. Decide manually whether any of those usernames are worth pivoting to. Run sherlock against a discovered username, wait another 60 seconds, read another block of output. Decide whether to check breach databases. Run an HIBP API call, parse the JSON, check which breach categories are represented. Decide whether any breach metadata suggests a platform worth querying.</p>
+
+<p>Each decision point requires the analyst to hold context from prior steps in working memory while reading new output. For a single target, this is manageable — fifteen to twenty minutes of focused work. For ten targets in parallel, it becomes an organizational problem. Analysts use spreadsheets, notes, and ticket systems to track state across targets. The tooling is fragmented; the state management is entirely manual.</p>
+
+<p>The bottleneck is not research skill — it is context switching between tools and keeping state across steps. An experienced analyst running this process manually and an inexperienced one differ mainly in which follow-up pivots they recognize, not in how fast they can run tools. The mechanical execution part was always a solved problem that required human attention.</p>
+</div>
+
+<h2>How an agentic loop works</h2>
+<div class="indent">
+<p>The agentic loop replaces the human decision engine for mechanical steps while keeping the analyst in control of the question framing and result verification.</p>
+
+<p>The loop works as follows: the user submits a target (email address, IP, username, domain) via the REPL or CLI. The model receives the target plus a complete set of tool definitions — each tool described by name, natural-language description, and a JSON Schema specifying its parameters. The model generates a <code>tool_use</code> block identifying which tool to call and with what parameters. The Python runtime intercepts this block, calls the actual tool function, waits for real output, and returns that output to the model as a <code>tool_result</code> message. The model reads the output and makes a judgment call: is this complete, or should another tool run? If another tool run is warranted, it generates another <code>tool_use</code> block. The loop continues until the model generates a final text response summarizing findings.</p>
+
+<p>The analyst receives a structured report rather than a sequence of raw tool outputs. <a href="/">OpenOSINT</a>'s agentic loop is implemented in <code>openosint/agent.py</code>: it builds the tool definitions from the 14 available tools, sends them to the Anthropic API, and dispatches each <code>tool_use</code> block to the corresponding <code>run_*_osint()</code> Python function. Real output. No simulation.</p>
+</div>
+
+<h2>Tool use vs. function calling</h2>
+<div class="indent">
+<p>Anthropic's tool use protocol has a structural property that matters for security research: it is a mandatory stop. When the model generates a <code>tool_use</code> content block, the completion halts. The API does not return a continuation — it returns the message with the tool use block and waits for the client to provide a <code>tool_result</code>. The model cannot generate text that follows the tool call without first receiving real output.</p>
+
+<p>This is not universally true of AI function-calling implementations. Some frameworks allow the model to generate both the function call and a simulated response in the same stream, with the runtime optionally intercepting before the simulated response is shown. The model has, in these implementations, seen what a plausible response looks like before the real tool runs. This creates conditions for hallucination: the model has already committed to an expected result shape.</p>
+
+<p>Anthropic's stop-and-wait design prevents this. The model issues a tool call with no visibility into what the response will contain. It receives whatever the actual tool returns — including errors, empty results, and unexpected data formats. This is the architecturally correct approach for any domain where data accuracy is non-negotiable. In OSINT, acting on fabricated breach data or fabricated account findings causes real harm to investigations and to targets. The tool must actually run.</p>
+
+<p>For a detailed look at how this integrates with the Model Context Protocol, see the <a href="/blog/mcp-protocol-explained.html">MCP protocol explainer</a>.</p>
+</div>
+
+<h2>Chaining tools based on findings</h2>
+<div class="indent">
+<p>The qualitative difference between an AI agent and a bash pipeline is adaptive branching. A pipeline runs a fixed sequence. An agent reads each result and decides what runs next based on what was found.</p>
+
+<p>Concrete examples of how this manifests in practice:</p>
+<ul>
+<li>holehe returns a GitHub account for the target email. The agent extracts the GitHub username and issues a <code>search_username</code> call for that username across 300+ platforms.</li>
+<li><code>search_ip</code> returns an ASN registered to a hosting provider the agent recognizes as frequently associated with VPN or proxy services. The agent flags this and calls <code>search_abuseipdb</code> to check abuse reports before concluding anything about the IP's owner.</li>
+<li>A domain WHOIS lookup returns registrar privacy protection — no registrant data visible. The agent pivots to certificate transparency via <code>search_domain</code>, looking for subdomains that may have been issued certificates with real organizational data in the CN field.</li>
+<li>A breach lookup returns a 2015 LinkedIn breach entry. The agent notes that the account existed at that time, which is useful even if the current account is deleted or renamed.</li>
+</ul>
+
+<p>None of these pivot decisions are hardcoded. The model makes them by reading tool output and applying judgment based on what it knows about each data source. The analyst reviewing the final report sees the reasoning chain — which tools ran, in what order, and what each returned.</p>
+</div>
+
+<h2>Current limitations</h2>
+<div class="indent">
+<p>AI agents are good at a specific subset of the OSINT problem: executing known tool sequences, tracking findings across steps, and surfacing connections that would require the analyst to hold a lot of intermediate context simultaneously. They are not a replacement for analyst expertise, and several limitations are structural.</p>
+
+<p><strong>Legal judgment.</strong> The agent will call whichever tool the model believes is most relevant. It does not verify that the investigation is authorized. Authorization is an external constraint that must be enforced by the operator before the agent is invoked, not by the agent itself. Running an AI-powered investigation against a target for which you do not have written authorization is not made safer or more legal by the AI doing the tool calls instead of you.</p>
+
+<p><strong>False positive recognition.</strong> Sherlock returns a hit on "johndoe99" at reddit.com. The agent reports it. Whether that Reddit account belongs to the target or is a different person who happens to use the same username requires human verification. The agent can note ambiguity — multiple accounts with the same handle across platforms — but it cannot verify identity. The analyst must close that loop.</p>
+
+<p><strong>Ambiguous targets.</strong> Common names and widely-used usernames produce high false-positive rates. "john.smith@gmail.com" may be one of many people. The agent will diligently enumerate breach entries and platform accounts, but correlating them to a specific individual requires additional signals (profile photos, mutual followers, overlapping geographic data) that typically require human assessment.</p>
+
+<p><strong>Tool coverage gaps.</strong> OpenOSINT's <a href="/tools/">tool suite</a> covers most standard OSINT surface area, but not all. Court record searches, property records, vehicle registration, and employer verification require jurisdictional APIs that are not yet integrated. The agent works with what it has. Analysts must supplement with manual lookups where needed.</p>
+
+<p>The practical impact of AI agents in OSINT is a significant reduction in mechanical work and a modest improvement in finding connections that a human might miss due to fatigue. The expertise requirement for the analyst — understanding what findings mean, verifying identity, making authorization decisions — does not decrease. Read more about how hallucination risks are managed in the <a href="/blog/ai-hallucination-osint.html">AI hallucination in OSINT</a> article.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/ai-hallucination-osint.html">AI Hallucination in OSINT</a> &mdash; how fabricated results happen and structural approaches to preventing them</li>
+<li><a href="/blog/mcp-protocol-explained.html">Model Context Protocol Explained</a> &mdash; the standard that connects AI clients to external tools like OpenOSINT</li>
+<li><a href="/">OpenOSINT</a> &mdash; the AI-powered OSINT agent, MCP server, and CLI for authorized security research</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

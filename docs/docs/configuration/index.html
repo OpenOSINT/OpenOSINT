@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT configuration: API keys and environment variables</title>
+<meta name="description" content="Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code.">
+<link rel="canonical" href="https://openosint.tech/docs/configuration/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT configuration: API keys and environment variables">
+<meta property="og:description" content="Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code.">
+<meta property="og:url" content="https://openosint.tech/docs/configuration/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT configuration: API keys and environment variables">
+<meta name="twitter:description" content="Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Configuration",
+      "item": "https://openosint.tech/docs/configuration/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/" aria-current="page">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/" aria-current="page">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Configuration</li>
+        </ol>
+      </nav>
+      <h1>Configuration</h1>
+      <p>OpenOSINT starts with zero configuration. A key is only needed by the tool that uses it, plus one AI provider if you use the chat or REPL.</p>
+<h2 id="where-settings-come-from">Where settings come from</h2>
+<p>Highest priority first. The first source to set a variable wins.</p>
+<ol>
+<li>Real environment variables.</li>
+<li><code>config.env</code> in the data directory: <code>~/.openosint/config.env</code>, or <code>$OPENOSINT_HOME/config.env</code>. The web UI saves keys here with user-only permissions where the OS supports it.</li>
+<li>A <code>.env</code> file, found by searching upward from the directory you run <code>openosint</code> from, or the file named by <code>OPENOSINT_ENV_FILE</code>.</li>
+</ol>
+<p>For the MCP server, set the variables in the client's <code>env</code> block; see <a href="/docs/mcp/">MCP server</a>.</p>
+<h2 id="api-keys-and-tokens">API keys and tokens</h2>
+<p>This table is generated from the key catalog in the code, so it matches the version you install.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Used by</th>
+<th>Needed</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ANTHROPIC_API_KEY</code></td>
+<td><code>chat</code></td>
+<td>one provider</td>
+<td>Powers the chat. Alternatives: an OpenAI-compatible server (Settings) or free local Ollama.</td>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code></td>
+<td><code>chat</code></td>
+<td>one provider</td>
+<td>Local servers may not need one.</td>
+</tr>
+<tr>
+<td><code>OPENAI_BASE_URL</code></td>
+<td><code>chat</code></td>
+<td>one provider</td>
+<td>Alternative to Anthropic: OpenRouter, LiteLLM, vLLM, llama.cpp… e.g. https://openrouter.ai/api/v1 or http://localhost:4000/v1</td>
+</tr>
+<tr>
+<td><code>OPENAI_MODEL</code></td>
+<td><code>chat</code></td>
+<td>one provider</td>
+<td></td>
+</tr>
+<tr>
+<td><code>ABUSEIPDB_API_KEY</code></td>
+<td><code>search_abuseipdb</code></td>
+<td>required for those tools</td>
+<td>Free tier available.</td>
+</tr>
+<tr>
+<td><code>BRIGHTDATA_API_KEY</code></td>
+<td><code>search_dorks_live</code>, <code>scrape_url</code>, <code>search_footprint</code></td>
+<td>required for those tools</td>
+<td>A free tier (5,000 requests/month) is available. OpenOSINT earns a referral commission if you sign up through this link.</td>
+</tr>
+<tr>
+<td><code>BRIGHTDATA_SERP_ZONE</code></td>
+<td><code>search_dorks_live</code>, <code>search_footprint</code></td>
+<td>required for those tools</td>
+<td>Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard.</td>
+</tr>
+<tr>
+<td><code>BRIGHTDATA_UNLOCKER_ZONE</code></td>
+<td><code>scrape_url</code></td>
+<td>required for those tools</td>
+<td>Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard.</td>
+</tr>
+<tr>
+<td><code>CENSYS_API_ID</code></td>
+<td><code>search_censys</code></td>
+<td>required for those tools</td>
+<td></td>
+</tr>
+<tr>
+<td><code>CENSYS_SECRET</code></td>
+<td><code>search_censys</code></td>
+<td>required for those tools</td>
+<td></td>
+</tr>
+<tr>
+<td><code>HIBP_API_KEY</code></td>
+<td><code>search_breach</code></td>
+<td>required for those tools</td>
+<td>Paid subscription.</td>
+</tr>
+<tr>
+<td><code>IP2LOCATION_API_KEY</code></td>
+<td><code>search_ip2location</code></td>
+<td>required for those tools</td>
+<td>Sponsor of OpenOSINT.</td>
+</tr>
+<tr>
+<td><code>SHODAN_API_KEY</code></td>
+<td><code>search_shodan</code></td>
+<td>required for those tools</td>
+<td>Free tier available.</td>
+</tr>
+<tr>
+<td><code>VIRUSTOTAL_API_KEY</code></td>
+<td><code>search_virustotal</code></td>
+<td>required for those tools</td>
+<td>Free tier available.</td>
+</tr>
+<tr>
+<td><code>GITHUB_TOKEN</code></td>
+<td><code>search_github</code></td>
+<td>optional</td>
+<td>search_github works without it; a token raises the rate limit.</td>
+</tr>
+<tr>
+<td><code>IPINFO_TOKEN</code></td>
+<td><code>search_ip</code></td>
+<td>optional</td>
+<td>search_ip works without it; a token raises the rate limit.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Bright Data key and zones are created in the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=docs">Bright Data dashboard</a> (a free tier is available). That is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.</p>
+<p>These tools need no key: <code>search_email</code>, <code>search_username</code>, <code>search_whois</code>, <code>search_ip</code>, <code>search_domain</code>, <code>generate_dorks</code>, <code>search_paste</code>, <code>search_phone</code>, <code>search_github</code>, <code>search_rdap</code>, <code>search_dns</code>, <code>search_gdelt_geo</code>. Tools that are noisy or touch the target also need <code>--allow-active</code>; see the <a href="/tools/">tools reference</a>.</p>
+<h2 id="behaviour-settings">Behaviour settings</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OPENOSINT_ALLOW_ACTIVE</code></td>
+<td>off</td>
+<td><code>1</code> enables active tools. Same as <code>--allow-active</code>.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_MAX_TOOL_CALLS</code></td>
+<td>15</td>
+<td>Maximum calls per user request.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_MAX_TOOL_CALLS_MULTI</code></td>
+<td>30</td>
+<td>One shared cap for <code>investigate_multi</code> across all targets.</td>
+</tr>
+<tr>
+<td><code>ANTHROPIC_MODEL</code></td>
+<td><code>claude-sonnet-5</code></td>
+<td>Model requested from Anthropic. <code>OPENOSINT_MODEL</code> still works but is deprecated.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_HOME</code></td>
+<td><code>~/.openosint</code></td>
+<td>Data directory: <code>config.env</code>, <code>graph.db</code>, session history.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_GRAPH_DB</code></td>
+<td><code>$OPENOSINT_HOME/graph.db</code></td>
+<td>Overrides only the graph database path.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_ENV_FILE</code></td>
+<td>unset</td>
+<td>Explicit path to a <code>.env</code> file. A bad path is an error.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_PROXY_URL</code></td>
+<td>unset</td>
+<td>Upstream proxy (<code>http://</code>, <code>https://</code> or <code>socks5://</code>) for web-facing tools. <code>--proxy</code> overrides it.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_ALLOWED_HOSTS</code></td>
+<td>loopback names</td>
+<td>Extra <code>Host</code> values the web UI accepts, comma-separated.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_ALLOWED_ORIGINS</code></td>
+<td>unset</td>
+<td>Extra browser origins allowed to call <code>/api/*</code>.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_ALLOW_REMOTE</code></td>
+<td>off</td>
+<td><code>1</code> is the same as <code>--allow-remote</code> for <code>openosint web</code>.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_SETUP_TOKEN</code></td>
+<td>unset</td>
+<td>Lets a non-loopback browser save keys, sent as <code>X-Setup-Token</code>.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_GDELT_WINDOW_HOURS</code></td>
+<td>6 (max 24)</td>
+<td>Hours of news the globe keeps in memory.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_GDELT_MAX_ARTICLES</code></td>
+<td>30000</td>
+<td>Hard cap on stored news articles; oldest are dropped first.</td>
+</tr>
+<tr>
+<td><code>OPENOSINT_GDELT_USE_PROXY</code></td>
+<td>off</td>
+<td>Route GDELT downloads through the proxy.</td>
+</tr>
+</tbody>
+</table></div>
+<p>A real environment variable always wins over a saved value, and the web UI says so when that happens.</p>
+<h2 id="a-env-file">A <code>.env</code> file</h2>
+<p>Create a file named <code>.env</code> in the directory you work from:</p>
+<pre><code class="language-bash">ANTHROPIC_API_KEY=sk-ant-...
+SHODAN_API_KEY=your-key
+</code></pre>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/web-ui/" rel="prev"><small>Previous</small>Web UI</a><a class="next" href="/docs/safety/" rel="next"><small>Next</small>Safety</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/configuration.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

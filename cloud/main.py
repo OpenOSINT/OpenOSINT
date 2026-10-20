@@ -12,17 +12,39 @@ from contextlib import asynccontextmanager
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from cloud import db, keys
 from cloud.config import DATABASE_URL, resolve_session_secret
-from cloud.routes import dashboard, enrich, oauth as oauth_routes, usage
+from cloud.routes import dashboard, enrich, usage, waitlist
 from cloud.routes import keys as keys_route
+from cloud.routes import oauth as oauth_routes
 from cloud.routes.mcp_gateway import create_mcp_asgi_app
+
+# Only the public site and local dev need browser cross-origin access —
+# every other route here is called server-to-server (curl, MCP client) or
+# same-origin from the session-cookie dashboard, neither of which CORS
+# restricts. Scoped narrowly for the one route that needs it: POST /v1/waitlist.
+_CORS_ALLOWED_ORIGINS = [
+    "https://openosint.tech",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
 
 logging.basicConfig(
     level=logging.INFO, format="[%(levelname)s] %(name)s: %(message)s", force=True
 )  # force: FastMCP's __init__ (imported above) installs a width-cropping RichHandler first
+
+# openosint.tools.* loggers are shared with the CLI/MCP/web UI and interpolate
+# the raw query target directly into their messages by design, for local
+# debugging. Cloud must never emit that. None of those modules set their own
+# level, so they inherit this ancestor's — silencing it here keeps them quiet
+# without touching the shared modules. Cloud's own request logging (see
+# cloud/routes/enrich.py, cloud/routes/mcp_gateway.py) never includes a
+# target or a provider response body — see .claude/LEGAL_CONTEXT.md §4.1 and
+# legal/INCIDENT-NOTES.md.
+logging.getLogger("openosint.tools").setLevel(logging.CRITICAL + 1)
 
 
 @asynccontextmanager
@@ -51,9 +73,16 @@ def create_app() -> FastAPI:
         secret_key=resolve_session_secret(),
         https_only=bool(DATABASE_URL),
     )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_CORS_ALLOWED_ORIGINS,
+        allow_methods=["POST", "GET"],
+        allow_headers=["Content-Type"],
+    )
     app.include_router(enrich.router,      prefix="/v1")
     app.include_router(usage.router,       prefix="/v1")
     app.include_router(keys_route.router,  prefix="/v1")
+    app.include_router(waitlist.router,    prefix="/v1")
     app.include_router(oauth_routes.router)
     app.include_router(dashboard.router)
     app.mount("/mcp", create_mcp_asgi_app())

@@ -1,0 +1,18 @@
+{
+    "actorSpecification": 1,
+    "name": "openosint-news-monitor",
+    "title": "OpenOSINT News Monitor — Real-Time Global News Search",
+    "description": "Given a keyword query, returns matching real-time global news articles via the public GDELT DOC 2.0 API. Native OSINT tool for AI agents via MCP.",
+    "version": "0.1",
+    "meta": {
+        "templateId": "python-start"
+    },
+    "input": "./input_schema.json",
+    "output": "./output_schema.json",
+    "dockerfile": "./Dockerfile",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "minMemoryMbytes": 256,
+    "maxMemoryMbytes": 512
+}

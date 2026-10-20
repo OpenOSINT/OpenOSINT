@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block main %}
+  <section class="intro" aria-label="Introduction">
+    <div class="wrap">
+      <h1>OpenOSINT</h1>
+      <p class="lead">{{ site.tool_count }} investigation tools for passive checks of public information: DNS, WHOIS and RDAP, IP intelligence, breaches, GitHub, news and more.</p>
+      <div class="hero-actions">
+        <div class="install">
+          <pre><code>pip install openosint</code></pre>
+          <p class="muted">Python 3.10 or newer. <a href="/docs/install/">Other ways to install</a></p>
+        </div>
+        <a class="btn btn-secondary" href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">View on GitHub &middot; {{ site.stars_display }} stars</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="ways">
+    <div class="wrap">
+      <h2 id="ways">Use it three ways</h2>
+      <div class="ways">
+        <a href="/docs/quickstart/">
+          <h3>CLI</h3>
+          <p>Direct subcommands and an interactive REPL that picks and chains the tools for you.</p>
+          <span class="card-link">Docs &rarr;</span>
+        </a>
+        <a href="/docs/mcp/">
+          <h3>MCP server</h3>
+          <p>The same tools inside Claude Desktop, Claude Code, Cursor or any MCP client.</p>
+          <span class="card-link">Docs &rarr;</span>
+        </a>
+        <a href="/docs/web-ui/">
+          <h3>Web UI</h3>
+          <p>Chat, globe and graph in your browser, running on your own machine.</p>
+          <span class="card-link">Docs &rarr;</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="hosted">
+    <div class="wrap">
+      <h2 id="hosted">Hosted products built on the engine</h2>
+      <div class="plans">
+        <div class="plan">
+          <div>
+            <h3>Monitor</h3>
+            <p>Know when your domain&rsquo;s security gets worse. External checks of email authentication, TLS, security headers and lookalike domains, and one email when something changes.</p>
+          </div>
+          <a class="btn" href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=home">Open Monitor</a>
+        </div>
+        <div class="plan">
+          <div>
+            <h3>Diligence</h3>
+            <p>For analysts, investors and banks. Official company records compared with the company&rsquo;s public footprint, each signal with its source and retrieval time.</p>
+          </div>
+          <a class="btn" href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=home">Open Diligence</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+{% include "partials/sponsors.html" %}
+{% endblock %}

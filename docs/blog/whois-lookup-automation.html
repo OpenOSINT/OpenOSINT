@@ -1,58 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Automating WHOIS Lookups: Domain Intelligence at Scale | OpenOSINT</title>
-<meta name="description" content="WHOIS data reveals registrar, creation date, nameservers, and sometimes registrant identity. This guide covers RDAP, python-whois, bulk automation, privacy proxy patterns, and what hidden records still reveal.">
-<meta name="keywords" content="WHOIS lookup, RDAP, domain intelligence, whois automation, python-whois, domain registrar, DNS OSINT, registrant lookup">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automating WHOIS lookups with RDAP and Python</title>
+<meta name="description" content="Automate WHOIS at scale: what records contain, why RDAP replaces plaintext WHOIS, bulk lookups in Python, and what redacted records still reveal.">
 <link rel="canonical" href="https://openosint.tech/blog/whois-lookup-automation.html">
-<meta property="og:title" content="Automating WHOIS Lookups: Domain Intelligence at Scale | OpenOSINT">
-<meta property="og:description" content="WHOIS data reveals registrar, creation date, nameservers, and sometimes registrant identity. This guide covers RDAP, python-whois, bulk automation, privacy proxy patterns, and what hidden records still reveal.">
-<meta property="og:url" content="https://openosint.tech/blog/whois-lookup-automation.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Automating WHOIS lookups with RDAP and Python">
+<meta property="og:description" content="Automate WHOIS at scale: what records contain, why RDAP replaces plaintext WHOIS, bulk lookups in Python, and what redacted records still reveal.">
+<meta property="og:url" content="https://openosint.tech/blog/whois-lookup-automation.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Automating WHOIS Lookups: Domain Intelligence at Scale | OpenOSINT">
-<meta name="twitter:description" content="WHOIS data reveals registrar, creation date, nameservers, and sometimes registrant identity. This guide covers RDAP, python-whois, bulk automation, and what hidden records still reveal.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Automating WHOIS lookups with RDAP and Python">
+<meta name="twitter:description" content="Automate WHOIS at scale: what records contain, why RDAP replaces plaintext WHOIS, bulk lookups in Python, and what redacted records still reveal.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "Automating WHOIS Lookups: Domain Intelligence at Scale | OpenOSINT",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "headline": "Automating WHOIS Lookups: Domain Intelligence at Scale",
+  "description": "Automate WHOIS at scale: what records contain, why RDAP replaces plaintext WHOIS, bulk lookups in Python, and what redacted records still reveal.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/whois-lookup-automation.html",
-  "description": "WHOIS data reveals registrar, creation date, nameservers, and sometimes registrant identity. This guide covers RDAP, python-whois, bulk automation, privacy proxy patterns, and what hidden records still reveal."
+  "mainEntityOfPage": "https://openosint.tech/blog/whois-lookup-automation.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>AUTOMATING WHOIS LOOKUPS: DOMAIN INTELLIGENCE AT SCALE</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>WHAT WHOIS RETURNS IN 2025</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Automating WHOIS Lookups: Domain Intelligence at Scale</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 6 min read</p>
+    <h2>What WHOIS returns in 2025</h2>
 <div class="indent">
 <p>GDPR enforcement beginning in 2018 and subsequent ICANN policy changes gutted the registrant data available in most gTLD WHOIS records. Before that, a single WHOIS query on a .com domain would return the registrant's name, organization, street address, phone number, and email. Today, the same query on most .com, .net, .org, and other ICANN-managed TLDs returns a stripped record.</p>
 
@@ -63,7 +91,7 @@
 <p>Despite redaction, the remaining fields contain more intelligence than they appear to. A domain created 28 days before a phishing campaign, registered through a registrar known for bulk registrations, using nameservers associated with bulletproof hosting, and expiring in 1 year reads very differently from a 15-year-old domain registered through a corporate registrar account with custom authoritative nameservers. Registration metadata tells a story about intent and infrastructure even without registrant identity.</p>
 </div>
 
-<h2>RDAP: THE MODERN REPLACEMENT FOR PLAINTEXT WHOIS</h2>
+<h2>RDAP: The modern replacement for plaintext WHOIS</h2>
 <div class="indent">
 <p>WHOIS is a plaintext TCP protocol from 1982. It returns unstructured text with inconsistent field names across different registrars and TLD operators — some write "Creation Date:", others write "Registered:", others write "Domain Name Commencement Date:". Parsing it reliably requires regex soup and constant maintenance.</p>
 
@@ -98,7 +126,7 @@ for ns in data.get("nameservers", []):
 <p>The <code>rdap.org</code> bootstrap service handles RDAP server discovery automatically — you don't need to know which RDAP server handles .com vs .io vs .de. For production use, implement the bootstrap lookup yourself using IANA's RDAP bootstrap registry to avoid the single-point dependency.</p>
 </div>
 
-<h2>BULK WHOIS AUTOMATION WITH PYTHON</h2>
+<h2>Bulk WHOIS automation with Python</h2>
 <div class="indent">
 <p>For investigations involving multiple domains — a threat actor's infrastructure cluster, a company's registered assets, a lookalike domain set — bulk WHOIS automation is essential. The <code>python-whois</code> library handles the majority of gTLDs and provides Python-native parsed output:</p>
 
@@ -139,7 +167,7 @@ for domain in domains:
 <p><a href="/tools/">OpenOSINT's search_whois tool</a> wraps python-whois with enforced timeouts, error handling for malformed records, and output formatting for terminal readability. The AI agent invokes it as part of domain investigation chains where the raw data feeds into Claude's reasoning about infrastructure age and registrar patterns.</p>
 </div>
 
-<h2>READING BETWEEN THE LINES OF REDACTED RECORDS</h2>
+<h2>Reading between the lines of redacted records</h2>
 <div class="indent">
 <p>When registrant identity is fully redacted, the remaining metadata contains correlatable signals that privacy protection does not hide.</p>
 
@@ -152,7 +180,7 @@ for domain in domains:
 <p><strong>Privacy proxy attribution:</strong> The specific privacy proxy service used is not anonymous. "Withheld for Privacy ehf" (an Icelandic company) is distinct from "Contact Privacy Inc. Customer" (Tucows/OpenSRS) which is distinct from GoDaddy's proxy service. Some privacy proxy providers have been more cooperative with legal process than others — this matters for law enforcement cases.</p>
 </div>
 
-<h2>WHEN WHOIS IS COMPLETELY HIDDEN: FALLBACK SOURCES</h2>
+<h2>When WHOIS is completely hidden: Fallback sources</h2>
 <div class="indent">
 <p>Some registrars provide effectively nothing beyond nameservers and dates. For these cases, orthogonal data sources often recover the information WHOIS no longer provides.</p>
 
@@ -165,7 +193,7 @@ for domain in domains:
 <p>The IP address a domain currently resolves to is always queryable via DNS — that's outside WHOIS scope entirely. Resolving the domain and feeding the IP into <a href="/blog/ip-intelligence-guide.html">IP intelligence tools</a> frequently recovers organization attribution even when the domain registration is fully anonymized.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/subdomain-enumeration.html">Subdomain Enumeration</a> &mdash; Attack surface mapping using certificate transparency and DNS brute force</li>
@@ -176,19 +204,44 @@ for domain in domains:
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

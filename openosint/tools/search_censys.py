@@ -18,6 +18,7 @@ import logging
 import os
 import re
 
+from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError
 
@@ -136,16 +137,11 @@ async def run_censys_osint(target: str, timeout_seconds: int = _DEFAULT_TIMEOUT,
     api_id = _k.get("CENSYS_API_ID") or os.environ.get("CENSYS_API_ID", "")
     api_secret = _k.get("CENSYS_SECRET") or os.environ.get("CENSYS_SECRET", "")
 
-    if not api_id:
-        return (
-            "Scan error: CENSYS_API_ID environment variable is not set. "
-            "Get credentials at https://censys.io/account"
-        )
-    if not api_secret:
-        return (
-            "Scan error: CENSYS_SECRET environment variable is not set. "
-            "Get credentials at https://censys.io/account"
-        )
+    missing = missing_from(
+        ["CENSYS_API_ID", "CENSYS_SECRET"], {"CENSYS_API_ID": api_id, "CENSYS_SECRET": api_secret}, {}
+    )
+    if missing:
+        return missing_keys_message("search_censys", missing)
 
     try:
         from censys.search import CensysHosts  # type: ignore

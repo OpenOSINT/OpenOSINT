@@ -21,7 +21,7 @@ pip install -e ".[dev]"
 cd scripts/record-demo && npm install && npx playwright install chromium && cd ../..
 
 # 3. Start the web server in one terminal
-openosint --web
+openosint web
 
 # 4. In another terminal, set key and run
 export OPENOSINT_DEMO_KEY=sk-ant-api03-...   # your Anthropic key — never committed

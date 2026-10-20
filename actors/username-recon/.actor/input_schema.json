@@ -1,0 +1,15 @@
+{
+    "title": "OpenOSINT Username Recon Input",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "usernames": {
+            "title": "Usernames",
+            "type": "array",
+            "description": "One or more usernames to investigate (max 20 per run). Duplicates are removed automatically.",
+            "editor": "stringList",
+            "prefill": ["johndoe", "octocat"]
+        }
+    },
+    "required": ["usernames"]
+}

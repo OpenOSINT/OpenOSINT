@@ -1,58 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phone Number OSINT: What Intelligence Can Be Gathered from a Number</title>
-<meta name="description" content="Phone numbers are persistent identity anchors. This guide covers E.164 structure, carrier and line type lookup, phoneinfoga's scan engines, social media reverse lookup, and legal constraints by jurisdiction.">
-<meta name="keywords" content="phone number OSINT, phoneinfoga, phone carrier lookup, HLR lookup, E.164, phone intelligence, reverse phone lookup, open source intelligence phone">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone number OSINT: what a number reveals</title>
+<meta name="description" content="What a phone number reveals: E.164 structure, carrier and line type lookups, phoneinfoga scanners, reverse lookups and the legal limits by jurisdiction.">
 <link rel="canonical" href="https://openosint.tech/blog/phone-number-osint.html">
-<meta property="og:title" content="Phone Number OSINT: What Intelligence Can Be Gathered from a Number">
-<meta property="og:description" content="Phone numbers persist for years, making them high-value identity anchors. Learn E.164 analysis, carrier lookup, phoneinfoga, and social media reverse search for OSINT investigations.">
-<meta property="og:url" content="https://openosint.tech/blog/phone-number-osint.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Phone number OSINT: what a number reveals">
+<meta property="og:description" content="What a phone number reveals: E.164 structure, carrier and line type lookups, phoneinfoga scanners, reverse lookups and the legal limits by jurisdiction.">
+<meta property="og:url" content="https://openosint.tech/blog/phone-number-osint.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Phone Number OSINT: What Intelligence Can Be Gathered from a Number">
-<meta name="twitter:description" content="Phone numbers are persistent identity anchors. Learn carrier lookup, HLR queries, phoneinfoga, and social media reverse search for OSINT.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Phone number OSINT: what a number reveals">
+<meta name="twitter:description" content="What a phone number reveals: E.164 structure, carrier and line type lookups, phoneinfoga scanners, reverse lookups and the legal limits by jurisdiction.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Phone Number OSINT: What Intelligence Can Be Gathered from a Number",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "What a phone number reveals: E.164 structure, carrier and line type lookups, phoneinfoga scanners, reverse lookups and the legal limits by jurisdiction.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/phone-number-osint.html",
-  "description": "Phone numbers are persistent identity anchors. This guide covers E.164 structure, carrier and line type lookup, phoneinfoga's scan engines, social media reverse lookup, and legal constraints by jurisdiction."
+  "mainEntityOfPage": "https://openosint.tech/blog/phone-number-osint.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>PHONE NUMBER OSINT: WHAT INTELLIGENCE CAN BE GATHERED FROM A NUMBER</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>PHONE NUMBERS AS PERSISTENT IDENTIFIERS</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Phone Number OSINT: What Intelligence Can Be Gathered from a Number</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 7 min read</p>
+    <h2>Phone numbers as persistent identifiers</h2>
 <div class="indent">
 <p>Email addresses get burned and replaced — investigators regularly encounter subjects cycling through throwaway Gmail accounts. Usernames get abandoned when platforms ban accounts or personas shift. Phone numbers behave differently. Number portability means that changing carriers does not change the number. People keep the same mobile number for years, sometimes for the duration of an entire adult life. This persistence makes phone numbers high-value identity anchors in OSINT investigations.</p>
 
@@ -61,7 +89,7 @@
 <p>This persistence also makes phone OSINT sensitive. Unlike searching a username on a public platform, phone number lookups often query carrier infrastructure or crowdsourced databases built on contact sync. Understand the legal landscape in your jurisdiction before beginning any phone number investigation. Authorized investigation is the prerequisite, not an afterthought.</p>
 </div>
 
-<h2>WHAT E.164 FORMAT REVEALS STRUCTURALLY</h2>
+<h2>What E.164 format reveals structurally</h2>
 <div class="indent">
 <p>E.164 is the ITU-T standard for international phone number formatting: a plus sign, country code, and subscriber number with no spaces or dashes. Before making a single API call, the E.164 number itself encodes meaningful intelligence.</p>
 
@@ -81,7 +109,7 @@ print(phonenumbers.geocoder.description_for_number(n, "en"))</pre>
 <p>OpenOSINT's <code>search_phone</code> tool runs this local analysis as the first pass before any network queries.</p>
 </div>
 
-<h2>CARRIER AND LINE TYPE LOOKUP</h2>
+<h2>Carrier and line type lookup</h2>
 <div class="indent">
 <p>HLR (Home Location Register) lookups query carrier infrastructure databases. An HLR is the database within a GSM network that stores subscriber information. HLR queries were traditionally used by carriers to route calls and SMS — commercial HLR lookup services exposed this capability to external clients, making it useful for OSINT.</p>
 
@@ -99,11 +127,11 @@ print(phonenumbers.geocoder.description_for_number(n, "en"))</pre>
 <p>Commercial HLR APIs include Numverify, Twilio Lookup, and Telesign. These require API keys and incur per-lookup costs. phoneinfoga can use Numverify when the <code>NUMVERIFY_API_KEY</code> environment variable is configured.</p>
 </div>
 
-<h2>PHONEINFOGA IN DETAIL</h2>
+<h2>phoneinfoga in detail</h2>
 <div class="indent">
 <p>phoneinfoga is the primary open-source tool for phone number OSINT. It operates in two modes: local scan and remote scan.</p>
 
-<p>The local scan runs purely from the number structure using <code>libphonenumber</code>: format validation, country extraction, geocoding, and carrier assignment from number range databases. This never touches the network and produces results instantly. The remote scan queries multiple external sources: Google dork URLs generated for the number, Numverify (if key is configured), and the phoneinfoga REST API server (which can optionally be self-hosted).</p>
+<p>The local scan runs purely from the number structure using <code>libphonenumber</code>: format validation, country extraction, geocoding, and carrier assignment from number range databases. This should not need the network and produces results instantly. The remote scan queries multiple external sources: Google dork URLs generated for the number, Numverify (if key is configured), and the phoneinfoga REST API server (which can optionally be self-hosted). OpenOSINT's <code>search_phone</code> runs <code>phoneinfoga scan</code>; its network traffic has not been verified with a capture, so the tool is labeled unverified and is off unless you pass <code>--allow-active</code>.</p>
 
 <p>OpenOSINT's <code>search_phone</code> wraps phoneinfoga's output and structures it for the AI agent:</p>
 
@@ -123,7 +151,7 @@ Phone intelligence for '+14155552671':
 <p>phoneinfoga's remote scan requires caution: the full remote mode in phoneinfoga v2 uses a headless browser to scrape carrier lookup sites. Some of these lookups generate reverse query logs on the carrier side. For sensitive investigations, the local scan plus a manually-run HLR API call is preferable to the automated remote scan.</p>
 </div>
 
-<h2>SOCIAL MEDIA REVERSE LOOKUP AND LEGAL CONSTRAINTS</h2>
+<h2>Social media reverse lookup and legal constraints</h2>
 <div class="indent">
 <p>Several major platforms historically allowed or still allow reverse lookup of accounts by phone number. The mechanism varies: some platforms expose an API endpoint that accepts a phone number and returns whether an account exists; others allow account lookup when adding to contacts (exploited via contact sync enumeration); others return profile data directly in search results when queried with a phone number.</p>
 
@@ -139,7 +167,7 @@ Phone intelligence for '+14155552671':
 <p>Legal constraints are non-negotiable. GDPR (EU) prohibits processing personal data of EU residents without a lawful basis — legitimate interest may apply in authorized security investigations but requires documentation. The TCPA (US) governs commercial contact via phone but does not directly restrict lookup. Australia's Privacy Act, Canada's PIPEDA, and equivalent frameworks in other jurisdictions all impose constraints on collecting personal data tied to phone numbers. The rule: document your authorization before you begin, keep records of what queries were run and why, and restrict use of findings to the stated investigation purpose. <a href="/tools/">OpenOSINT's tools</a> are built for authorized research only — the same applies to every technique described here.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/email-osint-guide.html">Email OSINT Guide</a> &mdash; Parallel techniques for investigating email addresses with holehe and HIBP</li>
@@ -150,19 +178,44 @@ Phone intelligence for '+14155552671':
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

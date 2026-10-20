@@ -1,0 +1,88 @@
+---
+title: 'Running OSINT Locally with Ollama: No API Key Required'
+seo_title: Run OSINT locally with Ollama, no API key
+description: 'Run OpenOSINT against a local Ollama model instead of the Anthropic API: setup, model choice for tool use, tradeoffs, and when local is the right call.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>Why local inference matters for OSINT</h2>
+<div class="indent">
+<p>Most AI-assisted OSINT tools send the target identifier &mdash; an email address, IP, domain, or person's name &mdash; to a remote API for processing. For many investigations this is fine. For sensitive ones it is not. Investigators working on insider threat cases, due diligence for acquisitions, or security research involving vulnerable individuals have reasonable concerns about routing investigation targets through a third-party cloud provider's infrastructure. Even with strong data retention policies, the operational security posture of a fully local system is categorically different from one that phones home with every query.</p>
+<p>Ollama provides a clean solution: it runs large language models on your local hardware, exposing the same REST API surface that OpenOSINT uses. With a one-line flag change, OpenOSINT's agentic loop routes through your local Ollama instance instead of Anthropic's API. The tool execution &mdash; the actual OSINT calls to holehe, sherlock, ipinfo.io, and the rest &mdash; was always local. Now the reasoning layer is too.</p>
+<p>There is a capability tradeoff, covered below. But for workflows where local execution is required, the tradeoff is often acceptable.</p>
+</div>
+
+<h2>Setting up Ollama</h2>
+<div class="indent">
+<p>Ollama installs as a single binary on macOS, Linux, and Windows. On macOS: <code>brew install ollama</code>. On Linux: the install script at <code>ollama.com/install.sh</code>. Once installed, the daemon starts automatically or via <code>ollama serve</code>. Pull a model:</p>
+<pre>ollama pull llama3.2
+ollama pull mistral
+ollama pull qwen2.5:14b</pre>
+<p>Models are stored locally in <code>~/.ollama/models/</code>. After pulling, the REST API is available at <code>http://localhost:11434</code> by default. You can verify: <code>curl http://localhost:11434/api/tags</code> returns a JSON list of available models.</p>
+<p>For OSINT use with OpenOSINT, switch the provider at launch:</p>
+<pre># One-time session flag
+openosint --provider ollama
+
+# Or set in .env
+OPENOSINT_PROVIDER=ollama
+OPENOSINT_OLLAMA_MODEL=llama3.2</pre>
+<p>OpenOSINT's <code>--provider ollama</code> path uses the Ollama Python library to send the user message and tool definitions to the local model, dispatches tool calls to the same Python functions used in the Anthropic path, and feeds results back. The REPL interface and slash commands (<code>/history</code>, <code>/export</code>, <code>/model</code>) remain identical.</p>
+</div>
+
+<h2>Model selection for tool-use workflows</h2>
+<div class="indent">
+<p>Not all models handle structured tool calling well. The agentic loop in OpenOSINT requires the model to output valid JSON-formatted tool calls, parse structured tool results, and decide whether to chain further calls or return a final answer. Smaller models frequently fail at one or more of these steps.</p>
+<p>Models that perform reliably for OSINT tool-use workflows as of mid-2026:</p>
+<ul>
+<li><strong>llama3.2 (3B/11B)</strong>: Good balance of speed and tool-use accuracy. 3B runs on 8GB RAM; 11B needs 16GB. Recommended starting point.</li>
+<li><strong>qwen2.5:14b</strong>: Strong structured output fidelity. 16GB VRAM minimum for decent speed. Handles multi-hop tool chains reliably.</li>
+<li><strong>mistral:7b-instruct</strong>: Fast on CPU-only setups. Tool-use reliability is acceptable for single-tool queries; breaks down on complex chains.</li>
+<li><strong>codellama variants</strong>: Avoid for OSINT reasoning &mdash; optimized for code generation, not investigation synthesis.</li>
+</ul>
+<p>The practical test: ask the model to investigate a domain and see whether it calls <code>search_whois</code> followed by <code>search_ip</code> without prompting. If it returns a text response without calling any tools, the model lacks sufficient instruction-following for the agentic workflow.</p>
+<pre>$ openosint --provider ollama --model qwen2.5:14b
+openosint [ollama/qwen2.5:14b] &gt; investigate 8.8.8.8
+
+  &rarr; search_ip('8.8.8.8')
+    Org: Google LLC | Country: US | ASN: AS15169
+  &rarr; search_abuseipdb('8.8.8.8')
+    Abuse Confidence: 0% | Reports: 2 (not significant)
+
+  8.8.8.8 is Google's public DNS resolver operated from AS15169.
+  Clean reputation. No threat indicators.</pre>
+</div>
+
+<h2>Capability tradeoffs vs. Claude</h2>
+<div class="indent">
+<p>The capability gap between local models and Claude is real and should be stated plainly. Claude has substantially stronger cross-tool reasoning, better handling of ambiguous targets, and more reliable synthesis of multi-source findings into coherent investigative summaries. On a complex investigation &mdash; email to account enumeration to username to cross-platform profiles, with a breach pivot in the middle &mdash; Claude makes better decisions about what to chain and produces more actionable summaries.</p>
+<p>Concrete differences to expect with local models:</p>
+<ul>
+<li><strong>Missed pivots</strong>: Local models may fail to notice a GitHub username in holehe output and call <code>search_username</code> automatically. Claude does this reliably.</li>
+<li><strong>Weaker synthesis</strong>: The final report is shorter and less analytical. Local models describe what they found; Claude explains what it means.</li>
+<li><strong>Tool call formatting failures</strong>: Smaller local models occasionally produce malformed JSON tool calls. OpenOSINT catches and retries these, but it adds latency.</li>
+<li><strong>Speed</strong>: On CPU-only hardware, a 7B model running single-threaded is slower than the Anthropic API for complex chains. On a modern GPU, local inference is comparable.</li>
+</ul>
+<p>For simple lookups &mdash; a single IP, a single email, a WHOIS check &mdash; the capability gap is narrow. The Ollama path is entirely adequate. For multi-pivot investigations that need synthesis, the Anthropic backend produces better results.</p>
+</div>
+
+<h2>When local inference is the right call</h2>
+<div class="indent">
+<p>Use the Ollama provider when: the investigation targets are sensitive and should not leave your machine; you are in an air-gapped or restricted network environment; you need to run bulk automation without per-token API costs; or you are developing and testing OpenOSINT workflows and don't want to burn Anthropic credits on iteration cycles.</p>
+<p>Use the Anthropic provider when: investigation quality matters more than privacy for the reasoning layer; you need reliable multi-hop chaining; or you are producing a final report where synthesis quality affects the output's value.</p>
+<p>The provider flag makes switching trivial, so the decision can be per-investigation rather than a permanent configuration choice. A practical workflow: develop and iterate with Ollama, run the final investigation pass with Claude when quality is the priority.</p>
+<p>For more on the agentic architecture both providers share, see <a href="/blog/osint-ai-agents.html">How AI agents are changing OSINT</a>. For tool reference including the <code>--provider</code> flag, see the <a href="/tools/">tools reference</a>. For automating multi-target workflows regardless of provider, see the <a href="/blog/parallel-osint.html">parallel OSINT guide</a>.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/osint-ai-agents.html">How AI agents are changing OSINT</a> &mdash; the agentic loop architecture that both providers share</li>
+<li><a href="/blog/parallel-osint.html">Parallel OSINT</a> &mdash; running multiple targets without per-token API costs</li>
+<li><a href="/tools/">OpenOSINT tools reference</a> &mdash; the full tool set and provider configuration options</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

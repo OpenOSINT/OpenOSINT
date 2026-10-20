@@ -2,7 +2,7 @@
 """
 Persistent session history for OpenOSINT.
 
-Sessions are stored as JSON files in ~/.openosint/history/.
+Sessions are stored as JSON files in $OPENOSINT_HOME/history/ (default ~/.openosint/history/).
 At most 50 sessions are retained; oldest are deleted automatically.
 Sensitive data (raw tool output, API keys) is never stored — only metadata.
 """
@@ -15,9 +15,11 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from openosint.paths import home_dir
+
 logger = logging.getLogger(__name__)
 
-HISTORY_DIR = Path.home() / ".openosint" / "history"
+HISTORY_DIR = home_dir() / "history"
 MAX_SESSIONS = 50
 
 

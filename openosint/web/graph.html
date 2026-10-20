@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT — Entity Graph Store</title>
+<style>
+  :root{
+    --bg:#0d1117; --surface:#161b22; --border:#30363d; --border-50:#30363d80;
+    --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; --warn:#d29922;
+    --person:#58a6ff; --org:#d29922; --legal:#a371f7; --user:#3fb950;
+    --bridge:#6e7681; --unsure:#f0883e; --pos:#3fb950; --neg:#f85149;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;display:flex;flex-direction:column}
+  a{color:var(--accent)}
+  header{flex:none;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface)}
+  header h1{font-size:14px;font-weight:600;margin:0;white-space:nowrap}
+  header .spacer{flex:1}
+  input,select,button{font-family:var(--sans);font-size:13px;color:var(--text);
+    background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 8px}
+  input:focus,select:focus{outline:1px solid var(--accent)}
+  button{cursor:pointer;background:var(--surface)}
+  button.primary{background:var(--accent);color:#08111f;border-color:var(--accent);font-weight:600}
+  button:hover{border-color:var(--accent)}
+  label.inline{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:12px}
+  main{flex:1;display:flex;min-height:0}
+  .cywrap{position:relative;flex:1;min-width:0;display:flex}
+  #cy{flex:1;min-width:0;background:
+    radial-gradient(circle at 1px 1px, #ffffff08 1px, transparent 0) 0 0/22px 22px, var(--bg)}
+  #side{flex:none;width:340px;border-left:1px solid var(--border);background:var(--surface);
+    overflow-y:auto;padding:14px;display:none}
+  #side.open{display:block}
+  #side h2{font-size:13px;margin:0 0 2px;word-break:break-all}
+  #side .schema-chip{display:inline-block;font-size:11px;font-family:var(--mono);
+    padding:1px 6px;border-radius:4px;margin-bottom:10px;color:#08111f;font-weight:600}
+  #side .id{font-family:var(--mono);font-size:11px;color:var(--muted);word-break:break-all;margin-bottom:12px}
+  #side .close{float:right;color:var(--muted);cursor:pointer;border:none;background:none;font-size:16px}
+  .stmt{border:1px solid var(--border);border-radius:6px;padding:8px;margin-bottom:8px}
+  .stmt .prop{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .stmt .val{font-size:13px;word-break:break-word;margin:2px 0 6px}
+  .prov{font-size:11px;color:var(--muted);border-top:1px dashed var(--border-50);padding-top:5px;margin-top:5px}
+  .prov b{color:var(--text);font-weight:500}
+  .conf-bar{display:inline-block;height:6px;border-radius:3px;background:var(--user);vertical-align:middle;margin-left:4px}
+  .banner{position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    background:var(--surface);border:1px solid var(--warn);color:var(--warn);
+    border-radius:6px;padding:6px 12px;font-size:12px;z-index:5;box-shadow:0 4px 14px #0006}
+  #empty{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:24px}
+  #empty.show{display:flex}
+  #empty .card{max-width:460px;background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;padding:22px 24px;line-height:1.6}
+  #empty h3{margin:0 0 8px;font-size:15px}
+  #empty code{font-family:var(--mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+  #empty ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+  #legend{position:absolute;bottom:10px;left:10px;background:#161b22cc;border:1px solid var(--border);
+    border-radius:8px;padding:8px 10px;font-size:11px;color:var(--muted);z-index:4;backdrop-filter:blur(4px)}
+  #legend .row{display:flex;align-items:center;gap:6px;margin:2px 0}
+  #legend .sw{width:12px;height:12px;flex:none;border:1px solid #0006}
+  #legend .ln{width:20px;flex:none;border-top-width:2px;border-top-style:solid}
+  #status{font-size:12px;color:var(--muted)}
+
+  /* ---- review queue ---- */
+  #reviewBtn{position:relative}
+  #reviewBtn .badge{display:inline-block;min-width:16px;text-align:center;margin-left:4px;
+    background:var(--unsure);color:#08111f;border-radius:8px;font-size:11px;font-weight:700;padding:0 5px}
+  #review{flex:none;width:620px;max-width:100%;border-left:1px solid var(--border);background:var(--surface);
+    display:none;flex-direction:column;min-height:0}
+  #review.open{display:flex}
+  .rv-head{flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border)}
+  .rv-head .t{font-weight:600;font-size:13px}
+  .rv-head .pos{font-size:12px;color:var(--muted)}
+  .rv-head .spacer{flex:1}
+  #rv-body{flex:1;overflow-y:auto;padding:14px}
+  #rv-foot{flex:none;border-top:1px solid var(--border);padding:10px 14px;display:none}
+  #rv-foot.show{display:block}
+  .score-row{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+  .score-row .score{font-size:24px;font-weight:700;color:var(--unsure);font-family:var(--mono)}
+  .score-row .schema-chip{font-size:11px;font-family:var(--mono);padding:1px 6px;border-radius:4px;color:#08111f;font-weight:600}
+  .score-hint{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+  .feat{border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:12px;background:var(--bg)}
+  .feat h4{margin:0 0 6px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+  .feat .frow{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:2px 0}
+  .feat .fname{color:var(--text)}
+  .feat .fval{color:var(--muted);font-family:var(--mono);font-size:11px}
+  .feat .fscore{color:var(--unsure);font-family:var(--mono);font-weight:600}
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .cmp .col-head{font-size:12px;font-weight:600;padding:6px;border-radius:6px 6px 0 0;background:var(--bg);
+    border:1px solid var(--border);border-bottom:none;word-break:break-all}
+  .cmp .col-head .cid{display:block;font-family:var(--mono);font-size:10px;color:var(--muted);font-weight:400}
+  .cmp .prop-label{grid-column:1/3;font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:8px}
+  .cmp .cell{border:1px solid var(--border);border-radius:6px;padding:6px 8px;font-size:13px;word-break:break-word;min-height:34px}
+  .cmp .cell.match{border-color:var(--pos);background:#3fb95012}
+  .cmp .cell.diff{border-color:var(--warn);background:#d2992212}
+  .cmp .cell.absent{color:var(--muted);font-style:italic;background:transparent;border-style:dashed}
+  .cmp .cell .prov{font-size:10px;color:var(--muted);margin-top:3px;border:none;padding:0}
+  .cmp .match-tag{font-size:10px;color:var(--pos);float:right}
+  .cmp .diff-tag{font-size:10px;color:var(--warn);float:right}
+  .decide{display:flex;gap:8px}
+  .decide button{flex:1;padding:9px;font-weight:600;border-radius:6px;font-size:13px}
+  .decide .accept{background:var(--pos);color:#08111f;border-color:var(--pos)}
+  .decide .reject{background:var(--neg);color:#08111f;border-color:var(--neg)}
+  .decide .skip{background:var(--surface);color:var(--text)}
+  .decide button:disabled{opacity:.4;cursor:not-allowed}
+  .kbd{display:inline-block;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;
+    padding:0 5px;font-size:10px;font-family:var(--mono);color:var(--muted);margin-left:4px}
+  .rv-actions{display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:12px}
+  .undo-bar{flex:none;padding:8px 14px;background:var(--bg);border-top:1px solid var(--border);
+    display:flex;align-items:center;gap:10px;font-size:12px}
+  .undo-bar.err{color:var(--neg);border-top-color:var(--neg)}
+  .undo-bar button{padding:4px 10px;font-size:12px}
+  .rv-empty{color:var(--muted);line-height:1.6;font-size:13px}
+  .rv-empty h3{color:var(--text);font-size:15px;margin:0 0 8px}
+  .rv-empty code{font-family:var(--mono);font-size:12px;background:var(--bg);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>◇ Entity Graph Store</h1>
+  <input id="entity" placeholder="entity id (hash)" size="26" spellcheck="false" autocomplete="off">
+  <label class="inline">depth
+    <select id="depth"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select>
+  </label>
+  <label class="inline"><input type="checkbox" id="cross"> cross-layer</label>
+  <input id="dataset" placeholder="dataset filter (optional)" size="16" spellcheck="false" autocomplete="off">
+  <button class="primary" id="load">Load</button>
+  <button id="relayout" title="Re-run layout">Re-layout</button>
+  <button id="png" title="Export PNG">PNG</button>
+  <button id="reviewBtn" title="Human review queue for same_as candidates">Review<span class="badge" id="reviewCount">0</span></button>
+  <span class="spacer"></span>
+  <span id="status"></span>
+  <a href="/" title="Back to app">← app</a>
+</header>
+<main>
+  <div class="cywrap">
+    <div id="cy"></div>
+    <div class="banner" id="cap" style="display:none"></div>
+    <div id="empty"><div class="card">
+      <h3>No graph data yet</h3>
+      <p>The entity graph store is empty (or this entity isn't in it). The store is a
+         local, append-only SQLite file — nothing is shown until something writes to it.</p>
+      <p>To populate it:</p>
+      <ul>
+        <li>Run investigations whose results are mapped into the graph store (see <a href="/docs/graph.html">docs/graph.md</a>).</li>
+        <li>Point at an existing store with <code>OPENOSINT_GRAPH_DB=/path/to/graph.db</code>.</li>
+        <li>Then paste an <b>entity id</b> above and press Load. Traverse from there.</li>
+      </ul>
+    </div></div>
+    <div id="legend"></div>
+  </div>
+  <aside id="side"></aside>
+  <aside id="review">
+    <div class="rv-head">
+      <span class="t">Review queue</span>
+      <span class="pos" id="rv-pos"></span>
+      <span class="spacer"></span>
+      <button class="close" id="rv-close" title="Close review">✕</button>
+    </div>
+    <div id="rv-body"></div>
+    <div id="rv-foot">
+      <div class="decide">
+        <button class="accept" id="rv-accept">Accept<span class="kbd">A</span></button>
+        <button class="reject" id="rv-reject">Reject<span class="kbd">R</span></button>
+        <button class="skip" id="rv-skip">Skip<span class="kbd">S</span></button>
+      </div>
+      <div class="rv-actions">
+        <a href="#" id="rv-showgraph">Show both in graph</a>
+        <span>Accept asserts these are the <b>same</b> real entity.</span>
+      </div>
+    </div>
+    <div class="undo-bar" id="rv-undo" style="display:none"></div>
+  </aside>
+</main>
+<script src="/static/vendor/cytoscape/cytoscape.min.js"></script>
+<script src="/static/graph-store.js"></script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT troubleshooting: common errors and fixes</title>
+<meta name="description" content="Fixes for common OpenOSINT errors: missing API key, ANTHROPIC_API_KEY not set, disabled_in_passive_mode, port in use, Host not allowed, tool not installed.">
+<link rel="canonical" href="https://openosint.tech/docs/troubleshooting/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT troubleshooting: common errors and fixes">
+<meta property="og:description" content="Fixes for common OpenOSINT errors: missing API key, ANTHROPIC_API_KEY not set, disabled_in_passive_mode, port in use, Host not allowed, tool not installed.">
+<meta property="og:url" content="https://openosint.tech/docs/troubleshooting/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT troubleshooting: common errors and fixes">
+<meta name="twitter:description" content="Fixes for common OpenOSINT errors: missing API key, ANTHROPIC_API_KEY not set, disabled_in_passive_mode, port in use, Host not allowed, tool not installed.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Troubleshooting",
+      "item": "https://openosint.tech/docs/troubleshooting/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Troubleshooting</li>
+        </ol>
+      </nav>
+      <h1>Troubleshooting</h1>
+      <p>Each entry below is a message OpenOSINT really prints.</p>
+<h2 id="anthropic_api_key-is-not-set"><code>ANTHROPIC_API_KEY is not set.</code></h2>
+<p>The REPL needs an AI provider. Export a key (<code>export ANTHROPIC_API_KEY=sk-ant-...</code>), or start with <code>--provider ollama</code> or <code>--provider openai</code>. Direct commands such as <code>openosint dns example.com</code> need none.</p>
+<h2 id="scan-error-cannot-run-not-set-and-key_required"><code>Scan error: ... cannot run: ... not set.</code> and <code>[key_required]</code></h2>
+<p>A tool needs an API key you have not provided. The message names the variable and a link to get one. Set it as an environment variable, put it in <code>config.env</code> or <code>.env</code>, or save it in the web UI under Settings. See <a href="/docs/configuration/">Configuration</a>.</p>
+<h2 id="disabled_in_passive_mode"><code>disabled_in_passive_mode</code></h2>
+<p>The tool is active (it touches the target or is noisy) and active tools are off. Pass <code>--allow-active</code>, set <code>OPENOSINT_ALLOW_ACTIVE=1</code>, or use the web UI switch, after reading <a href="/docs/safety/">Safety</a>. A public or demo instance cannot enable them.</p>
+<h2 id="tool-call-limit-reached-n-calls-for-this-request"><code>Tool call limit reached (N calls for this request)</code></h2>
+<p>The per-request cap stopped the investigation. Send another message to continue, or raise <code>OPENOSINT_MAX_TOOL_CALLS</code>.</p>
+<h2 id="install-it-with-uv-tool-install-holehe-or-pip-install-holehe"><code>Install it with: uv tool install holehe (or: pip install holehe)</code></h2>
+<p><code>search_email</code>, <code>search_username</code> and <code>search_domain</code> call separate programs (holehe, sherlock, sublist3r). Install the one named and make sure it is on your <code>PATH</code>. See <a href="/docs/install/#external-programs">Install</a>.</p>
+<h2 id="port-8080-is-already-in-use"><code>Port 8080 is already in use.</code></h2>
+<p>Another program holds the port. Start the UI on another one: <code>openosint web --port 8081</code>.</p>
+<h2 id="refusing-to-bind-to-0000"><code>Refusing to bind to '0.0.0.0'</code></h2>
+<p><code>openosint web</code> only listens on loopback unless you opt in with <code>--allow-remote</code> (or <code>OPENOSINT_ALLOW_REMOTE=1</code>). That exposes every route to your network, so put it behind a firewall or reverse proxy.</p>
+<h2 id="host-not-allowed-add-it-to-openosint_allowed_hosts"><code>Host not allowed. Add it to OPENOSINT_ALLOWED_HOSTS.</code></h2>
+<p>You reached the web UI by a name other than <code>127.0.0.1</code>, <code>localhost</code> or <code>::1</code>. Add that name to <code>OPENOSINT_ALLOWED_HOSTS</code>, comma-separated.</p>
+<h2 id="model-not-found-check-anthropic_model"><code>Model '...' not found. Check ANTHROPIC_MODEL</code></h2>
+<p><code>ANTHROPIC_MODEL</code> names a model the API does not know. Fix it or unset it to use the default.</p>
+<h2 id="service_unavailable-search_gdelt_geo"><code>[service_unavailable] search_gdelt_geo</code></h2>
+<p>The GDELT news feed was down or returned a bad file. The globe shows a notice; try again later.</p>
+<h2 id="the-mcp-server-will-not-start-in-a-desktop-app">The MCP server will not start in a desktop app</h2>
+<p>The app launched with a minimal <code>PATH</code> and cannot find <code>uvx</code>. Use the absolute path from <code>which uvx</code> (macOS, Linux) or <code>where uvx</code> (Windows) as the <code>command</code>. See <a href="/docs/mcp/">MCP server</a>.</p>
+<h2 id="a-env-file-is-ignored">A <code>.env</code> file is ignored</h2>
+<p><code>.env</code> is searched upward from the directory you run <code>openosint</code> from. The MCP server has an unrelated working directory, so set <code>OPENOSINT_ENV_FILE=/absolute/path/to/.env</code> in the client's <code>env</code> block.</p>
+<h2 id="still-stuck">Still stuck</h2>
+<p>Run with <code>-v</code> for debug logging, then <a href="https://github.com/OpenOSINT/OpenOSINT/issues">open an issue</a> with the command and the message. Remove any keys first.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/entity-graph/" rel="prev"><small>Previous</small>Entity graph</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/troubleshooting.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

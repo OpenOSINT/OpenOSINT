@@ -1,79 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Google Dorks for Security Researchers: A Practical Reference</title>
-<meta name="description" content="Google Dorks use search operators to surface publicly indexed sensitive content. This reference covers core operators, recon patterns, automation with OpenOSINT, and infrastructure search alternatives.">
-<meta name="keywords" content="Google dorks, Google hacking, search operators, site operator, filetype operator, OSINT Google, security research dorks, indexed sensitive data">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Google dorks for security researchers</title>
+<meta name="description" content="A practical reference to Google dork operators, recon patterns for exposed files and logins, and how to generate dorks for a target automatically.">
 <link rel="canonical" href="https://openosint.tech/blog/google-dorks-guide.html">
-<meta property="og:title" content="Google Dorks for Security Researchers: A Practical Reference">
-<meta property="og:description" content="Google Dorks surface sensitive publicly indexed content using search operators. Covers core operators, recon patterns, automation, and infrastructure alternatives.">
-<meta property="og:url" content="https://openosint.tech/blog/google-dorks-guide.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Google dorks for security researchers">
+<meta property="og:description" content="A practical reference to Google dork operators, recon patterns for exposed files and logins, and how to generate dorks for a target automatically.">
+<meta property="og:url" content="https://openosint.tech/blog/google-dorks-guide.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Google Dorks for Security Researchers: A Practical Reference">
-<meta name="twitter:description" content="Core operators, recon patterns, automation with OpenOSINT, and infrastructure search alternatives for security-focused Google dorking.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Google dorks for security researchers">
+<meta name="twitter:description" content="A practical reference to Google dork operators, recon patterns for exposed files and logins, and how to generate dorks for a target automatically.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Google Dorks for Security Researchers: A Practical Reference",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "A practical reference to Google dork operators, recon patterns for exposed files and logins, and how to generate dorks for a target automatically.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/google-dorks-guide.html",
-  "description": "Google Dorks use search operators to surface publicly indexed sensitive content. This reference covers core operators, recon patterns, automation with OpenOSINT, and infrastructure search alternatives."
+  "mainEntityOfPage": "https://openosint.tech/blog/google-dorks-guide.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>GOOGLE DORKS FOR SECURITY RESEARCHERS</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>WHY SENSITIVE DATA ENDS UP INDEXED</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Google Dorks for Security Researchers: A Practical Reference</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <h2>Why sensitive data ends up indexed</h2>
 <div class="indent">
 <p>Misconfiguration, not malice, accounts for most indexed sensitive data. A Jenkins CI server deployed without a robots.txt gets crawled within days. An S3 bucket set to public serves its directory listing to Googlebot. A developer commits a config file to a public repository that references internal hostnames. A company migrates its internal wiki and accidentally removes the access controls during the cutover. Google doesn't distinguish between what should and shouldn't be publicly accessible &mdash; it indexes what it can reach. Dorks are filters that make that index useful for security research by narrowing results to specific file types, URL patterns, and content signatures.</p>
 <p>The key distinction: dorks don't expose data that wasn't already public. They surface data that is public but not prominently linked. This is entirely passive OSINT &mdash; no target systems are contacted, no authentication is bypassed, and no rate limits are triggered on the target's infrastructure. The only entity receiving requests is Google.</p>
 </div>
 
-<h2>THE CORE OPERATORS</h2>
+<h2>The core operators</h2>
 <div class="indent">
 <p>Five operators do most of the work in practice:</p>
-<table>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
 <tr><th>Operator</th><th>Function</th><th>Example</th></tr>
 <tr><td><code>site:</code></td><td>Restrict results to a domain</td><td><code>site:target.com</code></td></tr>
 <tr><td><code>filetype:</code> / <code>ext:</code></td><td>Restrict by file extension</td><td><code>filetype:sql</code></td></tr>
 <tr><td><code>inurl:</code></td><td>Match substring in URL path</td><td><code>inurl:admin</code></td></tr>
 <tr><td><code>intitle:</code></td><td>Match in page &lt;title&gt;</td><td><code>intitle:"index of"</code></td></tr>
 <tr><td><code>"phrase"</code></td><td>Exact phrase match</td><td><code>"internal use only"</code></td></tr>
-</table>
+</table></div>
 <p>Combinations multiply specificity. <code>site:target.com inurl:admin filetype:php</code> finds PHP admin panels on a specific domain. <code>site:target.com intitle:"index of" ext:bak</code> finds open directories containing backup files. The operators compose cleanly &mdash; combining four or five in a single query is standard practice.</p>
 <p>Less commonly documented but useful: <code>cache:</code> retrieves Google's cached version of a URL (useful when the live page has since been secured). <code>before:</code> and <code>after:</code> filter by indexing date &mdash; useful for correlating exposures with known deployment or breach windows.</p>
 </div>
 
-<h2>TARGET-SPECIFIC RECON PATTERNS</h2>
+<h2>Target-specific recon patterns</h2>
 <div class="indent">
 <p>Generic dorks find generic exposures. High-value recon adapts operators to what you already know about the target:</p>
 <pre># Exposed configuration files
@@ -99,7 +127,7 @@ site:target.com intext:"@target.com" filetype:pdf
 <p>Each pattern reveals a different exposure category. Configuration files contain API keys and database URLs. Open directories contain backups, logs, and deployment artifacts. Login panels on forgotten subdomains may be running outdated software versions. Paste site results link the domain to breach data or leaked credentials. The GitHub pattern surfaces secrets committed to public repositories &mdash; a consistently underestimated exposure vector.</p>
 </div>
 
-<h2>AUTOMATING DORK GENERATION WITH OPENOSINT</h2>
+<h2>Automating dork generation with OpenOSINT</h2>
 <div class="indent">
 <p>OpenOSINT's <code>generate_dorks</code> tool creates 12 targeted Google search URLs for any query string &mdash; email address, username, domain, or phrase. The patterns cover site-specific searches on major professional and social platforms, breach-focused queries (<code>leaked OR breach OR dump</code>), document-type searches (<code>filetype:pdf</code>, <code>filetype:csv</code>, <code>filetype:xlsx</code>), and forum/paste site queries.</p>
 <pre>openosint &gt; investigate target@example.com
@@ -114,14 +142,14 @@ site:target.com intext:"@target.com" filetype:pdf
 <p>In the OpenOSINT AI agent loop, <code>generate_dorks</code> is typically the first tool called for any investigation target. The agent notes the URLs in its working context and includes them in the final report. The analyst opens them as a separate step.</p>
 </div>
 
-<h2>BEYOND GOOGLE: INFRASTRUCTURE SEARCH ENGINES</h2>
+<h2>Beyond Google: Infrastructure search engines</h2>
 <div class="indent">
 <p>For infrastructure recon, Shodan and Censys outperform Google because they index services and certificates, not web pages. Shodan scans the internet for open ports and service banners. The query <code>ssl:"target.com"</code> finds every server presenting target.com in its TLS certificate &mdash; including servers that are never linked from a webpage. <code>http.title:"Admin Panel" org:"Target Company"</code> finds administrative interfaces by page title without needing to know the domain.</p>
 <p>Censys focuses on certificate transparency. Every subdomain that ever received a TLS certificate appears in Censys even if the subdomain is no longer DNS-resolvable. This catches decommissioned infrastructure that still has live services, which Google would never index.</p>
 <p>The combined approach for thorough coverage: use Google dorks for page-level content exposure, Shodan/Censys for infrastructure discovery, and GitHub code search for credential and configuration leakage. Each covers a different layer. For comprehensive attack surface mapping, start with <a href="/blog/subdomain-enumeration.html">subdomain enumeration</a> to build the domain inventory, then apply dorks and infrastructure search against each confirmed subdomain. See the <a href="/blog/osint-api-automation.html">OSINT API automation guide</a> for integrating Shodan and Censys programmatically into a pipeline.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/subdomain-enumeration.html">Subdomain enumeration</a> &mdash; build the target domain list before running dorks</li>
@@ -132,19 +160,44 @@ site:target.com intext:"@target.com" filetype:pdf
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

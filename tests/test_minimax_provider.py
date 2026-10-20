@@ -169,7 +169,7 @@ async def test_cli_repl_serialized_request(monkeypatch, region, source, model):
         monkeypatch.setattr(openai, "AsyncOpenAI", make_client)
         await _async_main()
 
-    assert responses[0].error is None
+    assert responses[0].error == ""
     assert responses[0].content == "done"
     assert len(requests) == 1
     assert str(requests[0].url) == MINIMAX_BASE_URLS[region] + "/chat/completions"
@@ -228,8 +228,8 @@ async def test_serialized_tool_and_reasoning_history_survives_followup(monkeypat
             base_url=agent.base_url, api_key="test-key", http_client=transport
         )
         monkeypatch.setattr(openai, "AsyncOpenAI", lambda **kwargs: client)
-        assert (await agent.run("Inspect example.com")).error is None
-        assert (await agent.run("Continue")).error is None
+        assert (await agent.run("Inspect example.com")).error == ""
+        assert (await agent.run("Continue")).error == ""
 
     execute.assert_awaited_once_with("search_dns", {"domain": "example.com"}, None)
     for payload in payloads[1:]:

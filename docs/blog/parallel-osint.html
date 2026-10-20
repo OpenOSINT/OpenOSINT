@@ -1,64 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Parallel OSINT: Investigating Multiple Targets Simultaneously</title>
-<meta name="description" content="Sequential OSINT investigations scale poorly. This guide covers asyncio-based parallel investigation patterns, OpenOSINT's multi-target runner, rate limit management, and result aggregation for bulk target lists.">
-<meta name="keywords" content="parallel OSINT, bulk OSINT, asyncio OSINT, multi-target investigation, OSINT automation, OSINT scaling, Python async OSINT">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel OSINT: investigate many targets at once</title>
+<meta name="description" content="Investigate many targets concurrently with asyncio: rate limit handling, OpenOSINT&#39;s multi-target runner, and merging and deduplicating the results.">
 <link rel="canonical" href="https://openosint.tech/blog/parallel-osint.html">
-<meta property="og:title" content="Parallel OSINT: Investigating Multiple Targets Simultaneously">
-<meta property="og:description" content="Asyncio-based parallel OSINT patterns, OpenOSINT's multi-target runner, rate limit management, and result aggregation for bulk target lists.">
-<meta property="og:url" content="https://openosint.tech/blog/parallel-osint.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Parallel OSINT: investigate many targets at once">
+<meta property="og:description" content="Investigate many targets concurrently with asyncio: rate limit handling, OpenOSINT&#39;s multi-target runner, and merging and deduplicating the results.">
+<meta property="og:url" content="https://openosint.tech/blog/parallel-osint.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Parallel OSINT: Investigating Multiple Targets Simultaneously">
-<meta name="twitter:description" content="Scale OSINT investigations with asyncio. Multi-target runner, rate limit management, and structured result aggregation patterns.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Parallel OSINT: investigate many targets at once">
+<meta name="twitter:description" content="Investigate many targets concurrently with asyncio: rate limit handling, OpenOSINT&#39;s multi-target runner, and merging and deduplicating the results.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Parallel OSINT: Investigating Multiple Targets Simultaneously",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Investigate many targets concurrently with asyncio: rate limit handling, OpenOSINT's multi-target runner, and merging and deduplicating the results.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/parallel-osint.html",
-  "description": "Sequential OSINT investigations scale poorly. This guide covers asyncio-based parallel investigation patterns, OpenOSINT's multi-target runner, rate limit management, and result aggregation for bulk target lists."
+  "mainEntityOfPage": "https://openosint.tech/blog/parallel-osint.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>PARALLEL OSINT: MULTIPLE TARGETS SIMULTANEOUSLY</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>THE SCALING PROBLEM WITH SEQUENTIAL INVESTIGATION</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Parallel OSINT: Investigating Multiple Targets Simultaneously</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <h2>The scaling problem with sequential investigation</h2>
 <div class="indent">
 <p>A single OSINT investigation against one target takes 30&ndash;90 seconds: WHOIS lookup, subdomain enumeration, IP reputation checks, breach lookup, username search. That is fine for individual investigations. It becomes a bottleneck at scale. A threat intelligence analyst reviewing 50 suspicious IPs from a SIEM alert, a security team auditing 200 contractor email addresses for breach exposure, or a researcher investigating a botnet's C2 infrastructure spanning 300 domains &mdash; all of them face the same problem. Sequential execution at 60 seconds per target means 50 minutes for 50 targets and 5 hours for 300.</p>
 <p>The solution is not faster tools. It is parallel execution: running investigations concurrently rather than one after another. The constraint is rate limits on the APIs being queried, not computation on the local machine. With proper concurrency control, the same 50-target investigation runs in under 5 minutes.</p>
 </div>
 
-<h2>ASYNCIO FUNDAMENTALS FOR OSINT PIPELINES</h2>
+<h2>Asyncio fundamentals for OSINT pipelines</h2>
 <div class="indent">
 <p>Python's <code>asyncio</code> is the right tool for I/O-bound OSINT work. All OpenOSINT tool functions are <code>async def</code> coroutines. To run multiple targets in parallel, wrap them with <code>asyncio.gather()</code>:</p>
 <pre>import asyncio
@@ -77,7 +105,7 @@ results = asyncio.run(bulk_investigate(['example.com', 'test.org', 'demo.net']))
 <p><code>return_exceptions=True</code> is critical in bulk runs: it prevents one failed target from canceling the entire gather. Each result is either a value or an exception instance, which you filter and log separately.</p>
 </div>
 
-<h2>RATE LIMIT MANAGEMENT</h2>
+<h2>Rate limit management</h2>
 <div class="indent">
 <p>Unbounded parallelism gets API keys suspended. The correct pattern uses a semaphore to cap concurrent requests per API:</p>
 <pre>import asyncio
@@ -98,7 +126,7 @@ async def bulk_ip_check(ips: list[str], lookup_fn) -> list[dict]:
 <p>For multi-API pipelines, run a separate semaphore per API. A domain investigation that hits Shodan, VirusTotal, and AbuseIPDB simultaneously needs three independent concurrency controls, each tuned to its API's limits.</p>
 </div>
 
-<h2>THE OPENOSINT MULTI-TARGET RUNNER</h2>
+<h2>The OpenOSINT multi-target runner</h2>
 <div class="indent">
 <p>OpenOSINT's built-in multi-target runner handles the concurrency and rate limiting automatically. Create a target list file, one per line:</p>
 <pre># targets.txt
@@ -115,7 +143,7 @@ openosint multi targets.txt --tool ip --json &gt; ip_results.json</pre>
 <p>The multi-target runner type-detects each target (IP vs domain vs email vs username), dispatches the appropriate tool set, runs concurrently with built-in rate limiting, and writes structured JSON results. Each result object contains the target, the tool outputs, any errors, and a timestamp. See the <a href="/tools/">tools reference</a> for the full result schema.</p>
 </div>
 
-<h2>RESULT AGGREGATION AND DEDUPLICATION</h2>
+<h2>Result aggregation and deduplication</h2>
 <div class="indent">
 <p>Parallel investigation produces a list of result objects. The next step is aggregation: identifying cross-target patterns that indicate related infrastructure or coordinated activity.</p>
 <pre>import json
@@ -137,7 +165,7 @@ for asn, targets in asn_groups.items():
 <p>The same pattern works for any shared attribute: registrar, nameserver, creation date window, or abuse report category. Finding 15 domains that registered on the same day through the same privacy-protected registrar service is a signal that no single-target investigation would surface. This is the analytical value of parallel investigation over sequential. For generating structured reports from aggregated results, see the <a href="/blog/osint-report-generation.html">OSINT report generation guide</a>. For the API-level details of each data source, see the <a href="/blog/osint-api-automation.html">OSINT API automation guide</a>.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/osint-api-automation.html">Automating OSINT with APIs</a> &mdash; per-API rate limits, authentication, and Python patterns</li>
@@ -148,19 +176,44 @@ for asn, targets in asn_groups.items():
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

@@ -20,9 +20,9 @@ Usage:
 
 from __future__ import annotations
 
-from dotenv import load_dotenv
+from openosint.env import load_env_or_exit
 
-load_dotenv()
+load_env_or_exit()
 
 import argparse  # noqa: E402
 import asyncio  # noqa: E402
@@ -38,6 +38,12 @@ from openosint.proxy import (  # noqa: E402
     get_proxy_url,
     redact_proxy_url,
     set_cli_proxy_url,
+)
+from openosint.tool_policy import (  # noqa: E402
+    ENV_ALLOW_ACTIVE,
+    disabled_result,
+    humanize,
+    is_tool_enabled,
 )
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
@@ -120,9 +126,18 @@ def _build_parser() -> argparse.ArgumentParser:
             "  openosint --provider minimax --minimax-region cn\n"
             "  openosint --proxy socks5://user:pass@host:1080 email target@example.com\n"
             "  openosint proxy-test                        # verify the configured proxy\n"
-            "\n"
-            "Learn the method: AI OSINT Operator's Playbook (paid guide, $39)\n"
-            "  https://tommasodev.gumroad.com/l/ai-osint-playbook?utm_source=cli&utm_medium=help&utm_campaign=operator_playbook\n"
+        ),
+    )
+    parser.add_argument(
+        "--allow-active",
+        action="store_true",
+        dest="allow_active",
+        help=(
+            "Enable active tools. Off by default: OpenOSINT runs passive tools only. Active tools "
+            "either touch the target (scrape_url, VirusTotal URL submission, DNS DKIM probes) or are "
+            "noisy (search_username, search_email, search_domain: hundreds of requests from your IP, "
+            "rate limits, WAF blocks, possible alerts to the account owner) or unverified (search_phone). "
+            "Same as OPENOSINT_ALLOW_ACTIVE=1."
         ),
     )
     parser.add_argument(
@@ -178,12 +193,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--openai-base-url",
         type=str,
-        default=os.environ.get("OPENAI_BASE_URL", "http://localhost:8080/v1"),
+        default=os.environ.get("OPENAI_BASE_URL", "http://localhost:4000/v1"),
         metavar="URL",
         help=(
-            "Base URL of an OpenAI-compatible endpoint (LiteLLM, llama-swap, vLLM, …).  "
-            "Used when --provider openai.  Default: $OPENAI_BASE_URL or "
-            "http://localhost:8080/v1."
+            "Base URL of a self-hosted OpenAI-compatible endpoint (LiteLLM, "
+            "llama-swap, vLLM, LM Studio, …).  Used when --provider openai.  "
+            "Default: $OPENAI_BASE_URL or http://localhost:4000/v1.  To reach "
+            "hosted OpenAI instead, pass https://api.openai.com/v1."
         ),
     )
     parser.add_argument(
@@ -388,6 +404,55 @@ def _build_parser() -> argparse.ArgumentParser:
         help="DNS query timeout (default: 10).",
     )
 
+    # exposure
+    exposure_cmd = subparsers.add_parser(
+        "exposure",
+        help="External exposure report graded A-F (no AI). Email and RDAP checks are DNS/registry only; "
+        "the TLS and HTTP-header checks contact the target directly (port 443).",
+    )
+    exposure_cmd.add_argument("domain", type=str, metavar="DOMAIN", help="Target domain (e.g. example.com).")
+    # default=SUPPRESS: a subparser default would overwrite the global --json given before the command
+    exposure_cmd.add_argument(
+        "--json", action="store_true", dest="json_output", default=argparse.SUPPRESS, help="Output structured JSON."
+    )
+    exposure_cmd.add_argument(
+        "--report",
+        type=str,
+        metavar="PATH.html",
+        default=None,
+        help="Also write a self-contained HTML report (prints cleanly to PDF from a browser).",
+    )
+    exposure_cmd.add_argument(
+        "--lookalikes",
+        action="store_true",
+        help="Also look for registered lookalike domains (typos, homoglyphs, TLD swaps). DNS only; "
+        "not part of the score or grade.",
+    )
+    exposure_cmd.add_argument(
+        "--resolver",
+        type=_ip_literal,
+        metavar="IP",
+        default=None,
+        help="Recursive DNS resolver for lookups outside the domain's own nameservers (default: system resolver).",
+    )
+    exposure_cmd.add_argument(
+        "--public-only",
+        action="store_true",
+        help="Refuse to connect to targets that resolve to non-public addresses (loopback, private, link-local, "
+        "CGNAT, ...) and vet every redirect hop. For hosted use; ignores proxy settings.",
+    )
+    exposure_cmd.add_argument(
+        "--checks",
+        type=_check_names,
+        metavar="NAMES",
+        default=None,
+        help="Comma-separated checks to run: email, registration, tls, http_headers (default: all). "
+        "email,registration never contact the target. A selection is not graded.",
+    )
+    exposure_cmd.add_argument(
+        "--lang", choices=("en", "it"), default="en", help="Report language (default: en). Used with --report."
+    )
+
     # abuseipdb
     abuseipdb_cmd = subparsers.add_parser(
         "abuseipdb",
@@ -566,12 +631,6 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Verify the configured upstream proxy by fetching your exit IP.",
     )
 
-    # prompts
-    subparsers.add_parser(
-        "prompts",
-        help="Show information about the AI OSINT Prompt Pack.",
-    )
-
     # history
     history_parser = subparsers.add_parser(
         "history",
@@ -630,7 +689,12 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 
+# Direct subcommands that run one non-passive tool; refused up front in passive mode.
+_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url"}
+
+
 def _print_result(result: str) -> None:
+    result = humanize(result)
     print(_DIVIDER)
     print(" SCAN RESULTS ".center(60, "="))
     print(_DIVIDER)
@@ -639,6 +703,7 @@ def _print_result(result: str) -> None:
 
 
 def _print_result_labeled(label: str, result: str) -> None:
+    result = humanize(result)
     print(_DIVIDER)
     print(f" {label} ".center(60, "="))
     print(_DIVIDER)
@@ -795,6 +860,62 @@ async def _handle_dns(
         _emit_json(format_tool_result("search_dns", domain, result))
     else:
         _print_result(result)
+
+
+def _check_names(value: str) -> tuple[str, ...]:
+    from openosint.exposure.runner import select_checks
+
+    try:
+        return select_checks([n.strip() for n in value.split(",") if n.strip()])
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from None
+
+
+def _ip_literal(value: str) -> str:
+    from openosint.exposure.dns_auth import parse_ip
+
+    try:
+        return parse_ip(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not an IP address (e.g. 1.1.1.1)") from None
+
+
+async def _handle_exposure(
+    domain: str,
+    json_output: bool = False,
+    report_path: str | None = None,
+    lang: str = "en",
+    lookalikes: bool = False,
+    resolver: str | None = None,
+    public_only: bool = False,
+    checks: tuple[str, ...] | None = None,
+) -> None:
+    from openosint.exposure import run_exposure
+    from openosint.exposure.render import render
+
+    print(f"[*] Exposure report: {domain}", file=sys.stderr)
+    try:
+        extra = {"public_only": True} if public_only else {}  # the call is identical to before unless a flag is given
+        if checks:
+            extra["checks"] = checks
+        report = await run_exposure(domain, lookalikes, resolver, **extra)
+    except ValueError as exc:
+        print(f"[!] {exc}", file=sys.stderr)
+        sys.exit(2)
+    if json_output:
+        _emit_json(report.to_dict())
+    else:
+        print(render(report))
+    if report_path:
+        from openosint.exposure.report import render_html
+
+        try:
+            with open(report_path, "w", encoding="utf-8") as fh:
+                fh.write(render_html(report, lang))
+        except OSError as exc:
+            print(f"[!] Could not write report to {report_path}: {exc.strerror or exc}", file=sys.stderr)
+            sys.exit(1)
+        print(f"[*] Report written: {report_path}", file=sys.stderr)
 
 
 async def _handle_ip2location(
@@ -985,12 +1106,18 @@ async def _handle_web(
 
     from openosint.web_server import serve_async
 
-    if not no_browser:
+    def open_browser() -> None:
         display = "localhost" if host in ("0.0.0.0", "") else host
-        url = f"http://{display}:{port}"
-        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+        timer = threading.Timer(1.0, lambda: webbrowser.open(f"http://{display}:{port}"))
+        timer.daemon = True
+        timer.start()
 
-    await serve_async(host=host, port=port, allow_remote=allow_remote)
+    await serve_async(
+        host=host,
+        port=port,
+        allow_remote=allow_remote,
+        on_started=None if no_browser else open_browser,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1051,6 +1178,12 @@ async def _async_main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
     _configure_logging(args.verbose)
+    if args.allow_active:
+        os.environ[ENV_ALLOW_ACTIVE] = "1"
+    disabled_tool = _COMMAND_TOOLS.get(args.command or "")
+    if disabled_tool and not is_tool_enabled(disabled_tool):
+        print(humanize(disabled_result(disabled_tool)), file=sys.stderr)
+        sys.exit(2)
 
     set_cli_proxy_url(getattr(args, "proxy", None))
     try:
@@ -1098,7 +1231,7 @@ async def _async_main() -> None:
             provider=getattr(args, "provider", "anthropic"),
             ollama_model=getattr(args, "ollama_model", "llama3.2"),
             ollama_host=getattr(args, "ollama_host", "http://localhost:11434"),
-            openai_base_url=getattr(args, "openai_base_url", "http://localhost:8080/v1"),
+            openai_base_url=getattr(args, "openai_base_url", "http://localhost:4000/v1"),
             openai_model=getattr(args, "openai_model", "gpt-4o-mini"),
             openai_api_key=getattr(args, "openai_api_key", None),
             minimax_model=getattr(args, "minimax_model", MINIMAX_MODELS[0]),
@@ -1131,6 +1264,11 @@ async def _async_main() -> None:
         await _handle_github(args.query, args.timeout, json_output=json_output)
     elif args.command == "dns":
         await _handle_dns(args.domain, args.timeout, json_output=json_output)
+    elif args.command == "exposure":
+        await _handle_exposure(
+            args.domain, json_output=json_output, report_path=args.report, lang=args.lang, lookalikes=args.lookalikes, resolver=args.resolver,
+            public_only=args.public_only, checks=args.checks,
+        )
     elif args.command == "abuseipdb":
         await _handle_abuseipdb(args.ip, args.timeout, json_output=json_output)
     elif args.command == "ip2location":
@@ -1170,15 +1308,6 @@ async def _async_main() -> None:
         _handle_sponsors()
     elif args.command == "proxy-test":
         _handle_proxy_test()
-    elif args.command == "prompts":
-        print(
-            "AI OSINT Prompt Pack — 30+ structured prompts for AI-assisted OSINT.\n"
-            "Covers email, username, domain, IP, phone, company due diligence,\n"
-            "image clues, verification, and reporting.\n"
-            "Follows a real process: scope → collect → pivot → verify → document.\n"
-            "\n"
-            "  https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?ref=cli"
-        )
     else:
         parser.print_help()
         sys.exit(1)

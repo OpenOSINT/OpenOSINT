@@ -1,58 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Subdomain Enumeration: Attack Surface Mapping for Security Researchers</title>
-<meta name="description" content="Subdomain enumeration reveals forgotten staging servers, admin panels, and legacy endpoints that never got the same security attention as the main domain. Here's how it works technically.">
-<meta name="keywords" content="subdomain enumeration, sublist3r, amass, DNS brute force, certificate transparency, attack surface, subdomain OSINT, subdomains security">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Subdomain enumeration for attack surface mapping</title>
+<meta name="description" content="Find forgotten staging servers and admin panels: passive enumeration via certificate transparency, DNS brute force, and a comparison of common tools.">
 <link rel="canonical" href="https://openosint.tech/blog/subdomain-enumeration.html">
-<meta property="og:title" content="Subdomain Enumeration: Attack Surface Mapping for Security Researchers">
-<meta property="og:description" content="Subdomain enumeration reveals forgotten staging servers, admin panels, and legacy endpoints that never got the same security attention as the main domain. Here's how it works technically.">
-<meta property="og:url" content="https://openosint.tech/blog/subdomain-enumeration.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Subdomain enumeration for attack surface mapping">
+<meta property="og:description" content="Find forgotten staging servers and admin panels: passive enumeration via certificate transparency, DNS brute force, and a comparison of common tools.">
+<meta property="og:url" content="https://openosint.tech/blog/subdomain-enumeration.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Subdomain Enumeration: Attack Surface Mapping for Security Researchers">
-<meta name="twitter:description" content="Subdomain enumeration reveals forgotten staging servers, admin panels, and legacy endpoints that didn't get the same security attention as the main domain.</meta>
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Subdomain enumeration for attack surface mapping">
+<meta name="twitter:description" content="Find forgotten staging servers and admin panels: passive enumeration via certificate transparency, DNS brute force, and a comparison of common tools.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Subdomain Enumeration: Attack Surface Mapping for Security Researchers",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Find forgotten staging servers and admin panels: passive enumeration via certificate transparency, DNS brute force, and a comparison of common tools.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/subdomain-enumeration.html",
-  "description": "Subdomain enumeration reveals forgotten staging servers, admin panels, and legacy endpoints that never got the same security attention as the main domain. Here's how it works technically."
+  "mainEntityOfPage": "https://openosint.tech/blog/subdomain-enumeration.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>SUBDOMAIN ENUMERATION: ATTACK SURFACE MAPPING FOR SECURITY RESEARCHERS</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>WHY SUBDOMAINS EXPAND ATTACK SURFACE</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Subdomain Enumeration: Attack Surface Mapping for Security Researchers</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 6 min read</p>
+    <h2>Why subdomains expand attack surface</h2>
 <div class="indent">
 <p>The main domain gets hardened. The forgotten ones don't. Every organization that has operated for more than a few years has accumulated subdomains that were created for specific projects, infrastructure needs, or developer convenience and never received the same security lifecycle management as the primary application. This is not negligence in the usual sense — it's organizational entropy. The engineer who set up <code>dev.target.com</code> in 2021 for a sprint demo left the company in 2022. The subdomain remained in DNS. Nobody owns it now.</p>
 
@@ -69,7 +97,7 @@
 <p>The attack surface isn't what's at <code>target.com</code>. It's everything in DNS under <code>target.com</code>. Enumeration maps the full scope before an attacker does.</p>
 </div>
 
-<h2>PASSIVE ENUMERATION VIA CERTIFICATE TRANSPARENCY</h2>
+<h2>Passive enumeration via certificate transparency</h2>
 <div class="indent">
 <p>Certificate transparency is the most powerful passive subdomain enumeration technique available. Since 2018, browsers require all publicly trusted TLS certificates to be logged in CT logs — public, append-only records maintained by Google, Cloudflare, DigiCert, and others. When a company provisions a certificate for <code>admin.target.com</code>, that subdomain appears in at least two public CT logs within minutes of issuance. The records are permanent and publicly queryable.</p>
 
@@ -96,7 +124,7 @@ for n in sorted(names):
 <p>DNS aggregators like SecurityTrails, VirusTotal Passive DNS, and CIRCL's passive DNS service complement CT logs by logging subdomains observed in DNS query traffic. These catch subdomains using self-signed certificates (invisible to CT) and provide historical resolution data showing which IPs each subdomain pointed to over time.</p>
 </div>
 
-<h2>ACTIVE ENUMERATION: DNS BRUTE FORCE</h2>
+<h2>Active enumeration: DNS brute force</h2>
 <div class="indent">
 <p>Passive sources cover what's been publicly logged. Active enumeration covers what exists in DNS right now, including subdomains that have never had a TLS certificate issued. The technique: construct candidate subdomain strings by combining a wordlist with the target domain, query a DNS resolver for each, and record which ones resolve.</p>
 
@@ -115,7 +143,7 @@ openosint domain target.com
 <p>Active DNS enumeration is generally considered lower-risk from a legal/ethical standpoint than active web probing: DNS queries go to public resolvers (8.8.8.8, 1.1.1.1) rather than to the target's infrastructure. You are asking public DNS servers whether a subdomain exists, not sending requests to the target's servers. That said, in authorized penetration testing engagements, you should still enumerate from the documented scope.</p>
 </div>
 
-<h2>TOOL COMPARISON: SUBLIST3R, AMASS, SUBFINDER, DNSX</h2>
+<h2>Tool comparison: Sublist3r, amass, subfinder, dnsx</h2>
 <div class="indent">
 <p>Different tools have different design priorities. Choosing the right one depends on your environment, access to API keys, and required depth.</p>
 
@@ -130,7 +158,7 @@ openosint domain target.com
 <p>For the OpenOSINT <a href="/tools/">tool suite</a>, sublist3r provides the right balance of coverage and integration simplicity. The architecture is designed for extensibility — swapping in amass or subfinder as the underlying enumeration engine is a contained change in the <code>search_domain</code> tool wrapper.</p>
 </div>
 
-<h2>PROCESSING RESULTS: FROM SUBDOMAIN LIST TO ATTACK SURFACE MAP</h2>
+<h2>Processing results: From subdomain list to attack surface map</h2>
 <div class="indent">
 <p>Raw subdomain lists are the input to analysis, not the output. What to do with the results:</p>
 
@@ -145,7 +173,7 @@ openosint domain target.com
 <p>This analysis pipeline — from domain to subdomains to HTTP probe to IP clustering — is the foundation of attack surface mapping for <a href="/blog/osint-for-bug-bounty.html">bug bounty reconnaissance</a>. Combined with <a href="/blog/google-dorks-guide.html">Google dork generation</a> for each discovered subdomain, it produces a comprehensive picture of externally accessible infrastructure. OpenOSINT can chain these steps automatically through its AI agent loop.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/google-dorks-guide.html">Google Dorks Guide</a> &mdash; Search operator techniques for finding indexed sensitive content on discovered subdomains</li>
@@ -156,19 +184,44 @@ openosint domain target.com
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

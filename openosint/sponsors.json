@@ -1,0 +1,25 @@
+[
+  {
+    "name": "IP2Location.io",
+    "tagline": "Enhanced IP geolocation, ISP, VPN/Proxy/Tor, and datacenter detection",
+    "url": "https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location",
+    "logo": "https://img.shields.io/badge/IP2Location.io-sponsored-FF6B35?style=flat-square",
+    "html_logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/ip2location-logo.png",
+    "tier": "featured",
+    "tool": "search_ip2location",
+    "category": "IP Geolocation & Threat Intelligence",
+    "contact": "sales@ip2location.com",
+    "integration_doc": "docs/integrations/ip2location.md"
+  },
+  {
+    "name": "TestMu AI",
+    "tagline": "TestMu AI (formerly LambdaTest) is an AI-native testing cloud platform built for modern engineering teams. It covers everything from autonomous test creation and fast execution to testing AI agents, chatbots and voice assistants.",
+    "url": "https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab",
+    "logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg",
+    "html_logo": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai.svg",
+    "html_logo_dark": "https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/sponsors/testmu-ai-white.svg",
+    "logo_width": 353,
+    "tier": "featured",
+    "category": "AI-Native Testing Platform"
+  }
+]

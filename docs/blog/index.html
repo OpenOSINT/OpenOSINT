@@ -1,232 +1,210 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OpenOSINT Blog — OSINT Guides, Tutorials &amp; Research</title>
-<meta name="description" content="Tutorials, guides, and research on OSINT investigations using OpenOSINT. Topics: email enumeration, IP analysis, AI agent tooling, AI-powered intelligence gathering.">
-<meta name="keywords" content="OSINT blog, open source intelligence tutorials, OSINT tools guide, AI OSINT, MCP server OSINT, email investigation">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSINT guides and tutorials | OpenOSINT Blog</title>
+<meta name="description" content="22 OSINT guides on email, username, IP, WHOIS and subdomain work, MCP, AI agents and report automation, for security researchers.">
 <link rel="canonical" href="https://openosint.tech/blog/">
-<meta property="og:title" content="OpenOSINT Blog — OSINT Guides, Tutorials &amp; Research">
-<meta property="og:description" content="Tutorials and guides on OSINT investigations: email enumeration, IP reputation analysis, MCP integration, and AI-powered intelligence gathering.">
-<meta property="og:url" content="https://openosint.tech/blog/">
-<meta property="og:type" content="website">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OSINT guides and tutorials | OpenOSINT Blog">
+<meta property="og:description" content="22 OSINT guides on email, username, IP, WHOIS and subdomain work, MCP, AI agents and report automation, for security researchers.">
+<meta property="og:url" content="https://openosint.tech/blog/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OpenOSINT Blog — OSINT Guides, Tutorials &amp; Research">
-<meta name="twitter:description" content="Tutorials and guides on OSINT investigations using OpenOSINT's intelligence tool suite.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="OSINT guides and tutorials | OpenOSINT Blog">
+<meta name="twitter:description" content="22 OSINT guides on email, username, IP, WHOIS and subdomain work, MCP, AI agents and report automation, for security researchers.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/cloud/" style="color:#f0a732;font-weight:bold;">CLOUD API</a>
-<a href="/learn/" style="color:#58a6ff;">LEARN</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
+<main id="main">
+<div class="wrap page">
+  <div class="prose">
+    <h1>Blog</h1>
+    <p class="lead">Guides and tutorials on OSINT investigations, MCP, and AI-assisted research.</p>
+  </div>
+  <ul class="post-list">
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/whois-lookup-automation.html">Automating WHOIS Lookups: Domain Intelligence at Scale</a>
+      <p>Automate WHOIS at scale: what records contain, why RDAP replaces plaintext WHOIS, bulk lookups in Python, and what redacted records still reveal.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/what-is-osint.html">What Is OSINT? A Technical Guide for Developers and Security Researchers</a>
+      <p>OSINT is collecting public information for intelligence. Covers the information tiers, passive versus active collection, tooling and the legal limits.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/username-search-300-platforms.html">Username Search Across 300+ Platforms: How It Works</a>
+      <p>How sherlock checks a username on 300+ sites without logging in: response classification, false positives, rate limits and what platform clusters reveal.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/subdomain-enumeration.html">Subdomain Enumeration: Attack Surface Mapping for Security Researchers</a>
+      <p>Find forgotten staging servers and admin panels: passive enumeration via certificate transparency, DNS brute force, and a comparison of common tools.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/phone-number-osint.html">Phone Number OSINT: What Intelligence Can Be Gathered from a Number</a>
+      <p>What a phone number reveals: E.164 structure, carrier and line type lookups, phoneinfoga scanners, reverse lookups and the legal limits by jurisdiction.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/pastebin-osint.html">Pastebin OSINT: Why Leaked Data Always Ends Up There First</a>
+      <p>Paste sites collect breach dumps and leaked configs within hours. Search psbdmp, recognise useful pastes, and correlate them with other findings.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/parallel-osint.html">Parallel OSINT: Investigating Multiple Targets Simultaneously</a>
+      <p>Investigate many targets concurrently with asyncio: rate limit handling, OpenOSINT&#39;s multi-target runner, and merging and deduplicating the results.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/osint-report-generation.html">Generating Structured OSINT Reports: JSON, PDF, and Markdown</a>
+      <p>Turn raw OSINT tool output into JSON, Markdown and PDF reports with OpenOSINT&#39;s export options, and build a repeatable report pipeline in Python.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/osint-for-bug-bounty.html">OSINT for Bug Bounty Hunters: Recon Before the First Request</a>
+      <p>Passive recon for bug bounty targets: subdomain inventory, WHOIS and ASN mapping, certificate transparency and GitHub dorking, all before active testing.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/osint-cli-tools.html">The Best OSINT CLI Tools in 2025: A Developer&#39;s Comparison</a>
+      <p>Compare holehe, sherlock, sublist3r, phoneinfoga and others: what each finds, how to choose, and how to unify them in one interface.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/osint-api-automation.html">Automating OSINT with APIs: Shodan, VirusTotal, Censys and More</a>
+      <p>Compare Shodan, VirusTotal, Censys and AbuseIPDB APIs: authentication, rate limits, Python patterns, and combining them into one investigation pipeline.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/osint-ai-agents.html">How AI Agents Are Changing OSINT</a>
+      <p>How an agentic loop picks tools and chains them on findings, why tool results must come from real execution, and where today&#39;s agents still fall short.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/ollama-osint.html">Running OSINT Locally with Ollama: No API Key Required</a>
+      <p>Run OpenOSINT against a local Ollama model instead of the Anthropic API: setup, model choice for tool use, tradeoffs, and when local is the right call.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/mcp-protocol-explained.html">Model Context Protocol Explained: MCP for OSINT</a>
+      <p>How MCP connects AI assistants to tools over JSON-RPC on stdio, what a tool schema looks like, and how OpenOSINT exposes its tools as an MCP server.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/ip-intelligence-guide.html">IP Intelligence: What an IP Address Actually Reveals</a>
+      <p>Five questions an IP address can answer: location, network owner, infrastructure type, abuse history and anonymization. Includes accuracy limits.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/google-dorks-guide.html">Google Dorks for Security Researchers: A Practical Reference</a>
+      <p>A practical reference to Google dork operators, recon patterns for exposed files and logins, and how to generate dorks for a target automatically.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/email-osint-guide.html">Email OSINT: Enumeration, Breach Detection, and What You Can Find</a>
+      <p>Investigate an email address with holehe account enumeration, HaveIBeenPwned breach lookups and generated Google dorks, then chain the results.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/claude-code-osint.html">Using Claude Code for OSINT: Investigations from Your Terminal</a>
+      <p>Add OpenOSINT to Claude Code as an MCP server, run an example investigation, script repeatable workflows, and know when the REPL is the better tool.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/breach-check-open-source.html">Open Source Breach Check Tools: Verifying Credentials Without Third-Party Risk</a>
+      <p>Check passwords against breaches without sending them anywhere: how HIBP k-anonymity works, with a Python example and offline database options.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-24">2026-05-24</time>
+      <a href="/blog/ai-hallucination-osint.html">Why AI Hallucination Is Dangerous for OSINT — and What Tool Execution Does and Doesn&#39;t Fix</a>
+      <p>Models invent plausible OSINT results. Running tools in code stops fabricated output but not wrong conclusions. What to verify by hand.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-18">2026-05-18</time>
+      <a href="/blog/ip-reputation-osint.html">IP Reputation OSINT: AbuseIPDB &amp; IP2Location Guide</a>
+      <p>Combine AbuseIPDB confidence scores with IP2Location VPN, proxy and Tor detection to judge an IP address, with a two-step workflow.</p>
+    </li>
+    <li>
+      <time datetime="2026-05-15">2026-05-15</time>
+      <a href="/blog/osint-with-mcp.html">OpenOSINT MCP Server — Integrate OSINT into Claude</a>
+      <p>Install the OpenOSINT MCP server, configure it in Claude Desktop and Claude Code, and run an example investigation from your AI assistant.</p>
+    </li>
+  </ul>
 </div>
 
-<div id="content">
+</main>
 
-<h2>BLOG</h2>
-<div class="indent">
-<p>Guides, tutorials, and research on OSINT investigations with OpenOSINT.</p>
-</div>
-
-<hr>
-
-<h2>ARTICLES</h2>
-<div class="indent">
-
-<p>
-  <b><a href="/blog/what-is-osint.html">What Is OSINT? A Technical Introduction for Security Practitioners</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  Information tiers, passive vs active collection, the tool landscape, and how AI changes the analyst's role.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/osint-ai-agents.html">How AI Agents Are Changing OSINT: From Lookup to Investigation</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  The shift from manual tool chaining to agentic loops: how OpenOSINT's AI layer decides which tools to call and in what order.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/mcp-protocol-explained.html">Model Context Protocol Explained: How AI Agents Use External Tools</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  JSON-RPC over stdio, host/client/server architecture, and how OpenOSINT exposes its tools to AI clients.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/osint-with-mcp.html">OpenOSINT as MCP Server: Integrate OSINT into Claude</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-15 &mdash; 4 min read</span><br>
-  Step-by-step guide to configuring OpenOSINT as an MCP server for Claude Desktop and Claude Code.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/claude-code-osint.html">Using Claude Code for OSINT: Investigations from Your Terminal</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  MCP setup, example investigation session transcripts, and custom Python workflow generation with Claude Code.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/email-osint-guide.html">Email OSINT: Enumeration, Breach Detection, and What You Can Find</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-21 &mdash; 5 min read</span><br>
-  How email anchors digital identities: holehe account enumeration, HaveIBeenPwned breach lookup, and dork-based investigation.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/username-search-300-platforms.html">Username Search Across 300+ Platforms: How Sherlock Works</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 4 min read</span><br>
-  sherlock's YAML config, three detection methods, rate limiting, and platform cluster analysis for identity correlation.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/ip-reputation-osint.html">IP Reputation Analysis: AbuseIPDB &amp; IP2Location Guide</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-18 &mdash; 5 min read</span><br>
-  Layered IP intelligence: AbuseIPDB confidence scores, IP2Location VPN/proxy/Tor detection, and combined investigation patterns.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/ip-intelligence-guide.html">IP Intelligence: Geolocation, ASN, and Threat Context</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  Five dimensions of IP intelligence, geolocation accuracy limits, ASN lookup, and combining multiple sources for full threat context.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/breach-check-open-source.html">Breach Check with Open Source Tools: HIBP, k-Anonymity, and Local DBs</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  HIBP API, k-anonymity design for password queries, offline breach databases, and what breach data actually reveals.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/subdomain-enumeration.html">Subdomain Enumeration: Certificate Transparency, DNS, and Tool Comparison</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  CT logs via crt.sh, DNS brute-force, sublist3r vs amass vs subfinder, and what to do with discovered subdomains.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/whois-lookup-automation.html">WHOIS Lookup Automation: RDAP, Bulk Queries, and NS Analysis</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 4 min read</span><br>
-  RDAP as the modern WHOIS replacement, Python bulk lookup patterns, nameserver clustering for infrastructure mapping.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/pastebin-osint.html">Pastebin and Paste Site OSINT: Finding Leaked Data</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 4 min read</span><br>
-  Paste site anatomy, psbdmp API queries, pattern recognition in dumps, and correlating paste findings with other OSINT data.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/phone-number-osint.html">Phone Number OSINT: Carrier Lookup, HLR, and Reverse Search</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 4 min read</span><br>
-  E.164 structural analysis, carrier and HLR lookup, phoneinfoga scan engines, and legal constraints on phone OSINT.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/google-dorks-guide.html">Google Dorks for Security Researchers: A Practical Reference</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  Core operators, target-specific recon patterns, generate_dorks automation, and infrastructure search alternatives.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/osint-cli-tools.html">The Best OSINT CLI Tools in 2025: A Developer's Comparison</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  holehe, sherlock, sublist3r, phoneinfoga, Shodan CLI &mdash; selection criteria, performance, and the case for a unified layer.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/osint-for-bug-bounty.html">OSINT for Bug Bounty Hunters: Recon Before the First Request</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  CT logs, passive subdomain enumeration, WHOIS infrastructure mapping, and GitHub secret dorking before active scanning.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/osint-api-automation.html">Automating OSINT with APIs: Shodan, VirusTotal, Censys and More</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  Authentication, rate limits, and Python integration patterns for the four major OSINT REST APIs.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/parallel-osint.html">Parallel OSINT: Investigating Multiple Targets Simultaneously</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  asyncio gather patterns, semaphore-based rate limiting, and the OpenOSINT multi-target runner for bulk investigations.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/osint-report-generation.html">Generating Structured OSINT Reports: JSON, PDF, and Markdown</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  OpenOSINT's --json flag, /export slash command, PDF generation with reportlab, and building a git-backed report pipeline.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/ollama-osint.html">Running OSINT Locally with Ollama: No API Key Required</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 4 min read</span><br>
-  Local LLM inference for privacy-sensitive investigations: model selection, provider switching, and capability tradeoffs vs Claude.
-</p>
-
-<hr>
-
-<p>
-  <b><a href="/blog/ai-hallucination-osint.html">Why AI Hallucination Is Dangerous for OSINT &mdash; and How to Prevent It</a></b><br>
-  <span style="font-family:monospace;font-size:12px;">2026-05-24 &mdash; 5 min read</span><br>
-  Why LLMs fabricate OSINT data, how OpenOSINT's hard-stop tool execution prevents it, and what still requires manual verification.
-</p>
-
-</div>
-
-<hr>
-
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
-</div>
-
-</div>
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

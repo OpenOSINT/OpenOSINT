@@ -37,7 +37,7 @@ Fiscal host: Open Collective / Open Source Collective — [opencollective.com/op
 - Sponsor badge in the README badge row
 - "Featured (sponsored)" label, listed first in the Integrations table
 - CLI startup banner on every `openosint` invocation
-- Tool documentation page, sponsor-labeled, with a direct API-key sign-up link — see [docs/integrations/](docs/integrations/index.md) for the live examples (IP2Location.io, RapidProxy)
+- Tool documentation page, sponsor-labeled, with a direct API-key sign-up link — see [docs/integrations/](docs/integrations/index.md) for the live examples (IP2Location.io)
 - Web UI settings panel — Featured integrations list
 - `openosint sponsors` CLI subcommand output
 - MCP Registry listing credit
@@ -60,7 +60,6 @@ This is the core mechanic: **one sponsor per category, full stop.** A taken cate
 | Breach / Compromised-Credential Data | **OPEN** |
 | Email / Identity Lookup | **OPEN** |
 | IP Geolocation & Threat Intelligence | TAKEN — IP2Location.io |
-| Residential Proxies | TAKEN — RapidProxy |
 
 Your product doesn't map to a category above? Email us — new categories get created alongside a new live tool integration, not as a naming exercise.
 
@@ -76,13 +75,13 @@ Your product doesn't map to a category above? Email us — new categories get cr
 2. Custom terms, multi-year contracts, or invoicing: email [commercial@openosint.tech](mailto:commercial@openosint.tech?subject=OpenOSINT%20Sponsorship%20Inquiry).
 3. Once payment is confirmed we'll ask for a logo, tagline, sign-up URL, and API-key docs — placement typically ships within a few days.
 
-Current sponsors: **[IP2Location.io](https://www.ip2location.io)** (IP Geolocation & Threat Intelligence) · **[RapidProxy](https://www.rapidproxy.io/?ref=openosint)** (Residential Proxies)
+Current sponsors: **[IP2Location.io](https://www.ip2location.io)** (IP Geolocation & Threat Intelligence)
 
 ---
 
 ## For maintainers: adding or updating a sponsor
 
-All sponsor data lives in [`sponsors.json`](sponsors.json) — a one-file change:
+All sponsor data lives in [`openosint/sponsors.json`](openosint/sponsors.json) — a one-file change:
 
 ```json
 {
@@ -102,8 +101,11 @@ All sponsor data lives in [`sponsors.json`](sponsors.json) — a one-file change
 Then regenerate README and the media kit from that single file:
 
 ```bash
-python scripts/render_sponsors.py --docs-html docs/sponsors.html
+python scripts/render_sponsors.py --docs-html site/content/pages/sponsors.html
+python scripts/build_site.py
 ```
+
+`docs/sponsors.html` is generated from `site/content/pages/sponsors.html`; never edit it by hand.
 
 CLI banner, Web UI, and `openosint sponsors` update automatically at runtime from the same file — nothing else to touch.
 

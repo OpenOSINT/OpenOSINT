@@ -14,14 +14,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from contextvars import ContextVar
 
 from mcp.server.fastmcp import FastMCP
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from cloud import db, rate_limit, tools
+from openosint.tool_policy import is_tool_enabled
 from cloud.config import TOOL_TIMEOUT_SECONDS
 from cloud.key_sources import get_credit_cost, is_platform_pool_tool, resolve_key
+from cloud.routes.enrich import _log_outcome
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +36,15 @@ _ERROR_PREFIXES = ("Scan error", "Internal error", "Error:")
 # ── FastMCP instance ──────────────────────────────────────────────────────────
 # streamable_http_path="/" because FastAPI mounts this at /mcp and Starlette
 # strips the /mcp prefix before passing the request to the sub-app.
-_mcp = FastMCP(
+class _PassiveFirstMCP(FastMCP):
+    """Lists only the tools the current mode enables, so a client LLM never sees
+    the active ones (e.g. search_domain) unless the operator opted in."""
+
+    async def list_tools(self):  # type: ignore[override]
+        return [t for t in await super().list_tools() if is_tool_enabled(t.name)]
+
+
+_mcp = _PassiveFirstMCP(
     "OpenOSINT Cloud",
     streamable_http_path="/",
 )
@@ -76,15 +87,19 @@ async def _run_mcp_tool(tool_name: str, target: str) -> str:
     if customer.credits < cost:
         return _credits_error(customer.plan)
 
+    start = time.monotonic()
     try:
         result = await asyncio.wait_for(
             tools.dispatch(tool_name, target.strip(), api_key=upstream_key),
             timeout=float(TOOL_TIMEOUT_SECONDS),
         )
     except asyncio.TimeoutError:
+        _log_outcome(tool_name, customer.api_key, "timeout", time.monotonic() - start)
         return f"Error: Tool '{tool_name}' timed out after {TOOL_TIMEOUT_SECONDS}s."
     except ValueError as exc:
+        _log_outcome(tool_name, customer.api_key, "error", time.monotonic() - start)
         return f"Error: {exc}"
+    elapsed = time.monotonic() - start
 
     lines: list[str] = result.get("results", [])
     first_line = lines[0] if lines else (result.get("error") or "")
@@ -94,7 +109,11 @@ async def _run_mcp_tool(tool_name: str, target: str) -> str:
         new_credits = await db.decrement_credits(customer.api_key, cost)
         if new_credits is None:
             # Race condition: concurrent request drained the last credit
+            _log_outcome(tool_name, customer.api_key, "credits_exhausted", elapsed)
             return _credits_error(customer.plan)
+        _log_outcome(tool_name, customer.api_key, "ok", elapsed)
+    else:
+        _log_outcome(tool_name, customer.api_key, "upstream_error", elapsed)
 
     return "\n".join(lines) if lines else (result.get("error") or "No results.")
 
@@ -137,7 +156,8 @@ async def search_dns(target: str) -> str:
 
 
 @_mcp.tool(description=(
-    "Enumerate subdomains for a target domain via passive DNS intelligence sources."
+    "Enumerate subdomains by scraping search engines and aggregators. Noisy: "
+    "listed only when the operator has enabled active tools."
 ))
 async def search_domain(target: str) -> str:
     """target: Apex domain name (e.g. example.com)"""

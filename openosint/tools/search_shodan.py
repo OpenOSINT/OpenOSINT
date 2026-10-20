@@ -15,6 +15,7 @@ import logging
 import os
 import re
 
+from openosint.settings_catalog import missing_keys_message
 from openosint.proxy import get_requests_proxies
 from openosint.tools.exceptions import OSINTError
 
@@ -96,10 +97,7 @@ async def run_shodan_osint(query: str, timeout_seconds: int = _DEFAULT_TIMEOUT, 
     """
     resolved_key = api_key or os.environ.get("SHODAN_API_KEY", "")
     if not resolved_key:
-        return (
-            "Scan error: SHODAN_API_KEY environment variable is not set. "
-            "Get a free key at https://account.shodan.io"
-        )
+        return missing_keys_message("search_shodan", ["SHODAN_API_KEY"])
 
     try:
         import shodan  # type: ignore

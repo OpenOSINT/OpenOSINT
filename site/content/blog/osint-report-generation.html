@@ -1,0 +1,107 @@
+---
+title: 'Generating Structured OSINT Reports: JSON, PDF, and Markdown'
+seo_title: 'Structured OSINT reports: JSON, Markdown and PDF'
+description: Turn raw OSINT tool output into JSON, Markdown and PDF reports with OpenOSINT's export options, and build a repeatable report pipeline in Python.
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>Why output format matters</h2>
+<div class="indent">
+<p>An investigation that produces only terminal output has a short half-life. The findings exist in the scrollback buffer of a single session. They can't be searched programmatically, diffed against a previous investigation of the same target, ingested by a SIEM, or handed to a colleague who wasn't present. Structured output transforms a one-time lookup into a persistent record that can feed downstream systems, support a chain of custody, or serve as the basis for a client-facing report.</p>
+<p>The right output format depends on the consumer. JSON is the right format when downstream automation will process the results &mdash; SIEM ingestion, database storage, diff analysis. Markdown is the right format when a human will read the output in a terminal, editor, or document system that renders it. PDF is the right format when the report needs to be attached to a ticket, sent to a client, or archived with a legal hold. OpenOSINT supports all three export paths, plus the REPL's <code>/export</code> command for on-the-fly Markdown export during interactive sessions.</p>
+</div>
+
+<h2>JSON output: Structured machine-readable results</h2>
+<div class="indent">
+<p>The <code>--json</code> flag on any OpenOSINT command produces a structured JSON object instead of Rich-rendered terminal output:</p>
+<pre># Single target, JSON output
+openosint email target@example.com --json &gt; result.json
+
+# Multi-target, JSON output
+openosint multi targets.txt --json &gt; bulk_results.json</pre>
+<p>The JSON schema for a single investigation result:</p>
+<pre>{
+  "target": "target@example.com",
+  "target_type": "email",
+  "timestamp": "2026-05-24T14:23:01Z",
+  "tools_run": ["search_email", "search_breach", "generate_dorks"],
+  "results": {
+    "search_email": {
+      "accounts_found": ["GitHub", "Spotify", "WordPress"],
+      "services_tested": 312
+    },
+    "search_breach": {
+      "breaches": [
+        {"name": "LinkedIn", "date": "2016-05-21", "data_classes": ["Emails", "Passwords"]},
+        {"name": "Adobe", "date": "2013-10-04", "data_classes": ["Emails", "Passwords", "Usernames"]}
+      ]
+    }
+  },
+  "summary": "2 breach exposures found. GitHub account confirmed."
+}</pre>
+<p>The <code>timestamp</code> field is ISO 8601 UTC. For multi-target output, results is an array of these objects. The schema is stable across OpenOSINT versions from v2.0 onward; breaking changes are versioned.</p>
+</div>
+
+<h2>Markdown export: The /export slash command</h2>
+<div class="indent">
+<p>During an interactive REPL session, <code>/export</code> writes the current session's findings to a Markdown file:</p>
+<pre>openosint &gt; investigate target@example.com
+[... investigation runs ...]
+openosint &gt; /export investigation_2026-05-24.md
+[+] Exported 4 tool results to investigation_2026-05-24.md</pre>
+<p>The exported Markdown includes: the target, investigation timestamp, each tool's output as a formatted section with headers, and the agent's synthesis as a conclusion section. The file is readable in any Markdown renderer and can be committed to a git repository for version-controlled investigation records.</p>
+<p>For programmatic Markdown generation outside the REPL, OpenOSINT's <code>json_output.py</code> module provides <code>results_to_markdown()</code> which takes a structured result dict and returns a Markdown string. This is the same function the REPL uses internally:</p>
+<pre>from openosint.json_output import results_to_markdown
+import json
+
+with open('results.json') as f:
+    results = json.load(f)
+
+md = results_to_markdown(results)
+with open('report.md', 'w') as f:
+    f.write(md)</pre>
+</div>
+
+<h2>PDF report generation</h2>
+<div class="indent">
+<p>PDF generation requires the <code>reportlab</code> optional dependency: <code>pip install openosint[pdf]</code> or <code>pip install reportlab</code>. Once installed, the <code>--pdf</code> flag generates a formatted PDF report:</p>
+<pre>openosint email target@example.com --pdf report.pdf</pre>
+<p>The PDF output includes: a cover page with the investigation target, timestamp, and tool inventory; one section per tool with findings formatted as tables or bullet lists; and a conclusions section containing the agent's synthesis. The page layout uses a monospace font and includes page numbers and a footer with the OpenOSINT version and generation timestamp.</p>
+<p>For custom PDF layouts, <code>pdf_report.py</code> exposes the <code>generate_pdf(results: dict, output_path: str)</code> function directly. The <code>results</code> parameter is the same structured dict produced by <code>--json</code> output. To add custom sections or modify the layout, subclass the <code>ReportBuilder</code> class and override the section rendering methods.</p>
+<p>PDF reports are appropriate for any investigation that will be reviewed by someone outside the terminal environment: a security team reviewing a threat actor profile, a compliance team auditing contractor background checks, or a client receiving a deliverable from a security engagement.</p>
+</div>
+
+<h2>Building a report pipeline</h2>
+<div class="indent">
+<p>For recurring investigations &mdash; weekly threat intelligence reports on a watchlist of domains, monthly breach exposure audits of an employee email list &mdash; the recommended pattern is: run the investigation in JSON mode, commit the JSON to a git repository, generate human-readable output from JSON on demand.</p>
+<pre>#!/bin/bash
+DATE=$(date +%Y-%m-%d)
+# Run investigation, save structured output
+openosint multi watchlist.txt --json &gt; "reports/raw/${DATE}.json"
+
+# Generate Markdown report from JSON
+python3 -c "
+from openosint.json_output import results_to_markdown
+import json, sys
+data = json.load(open(sys.argv[1]))
+print(results_to_markdown(data))
+" "reports/raw/${DATE}.json" &gt; "reports/md/${DATE}.md"
+
+# Commit both
+git add reports/ &amp;&amp; git commit -m "Weekly OSINT run ${DATE}"</pre>
+<p>This gives you a queryable history of investigation results, diff-able to track changes in target state week over week. Combined with the <a href="/blog/parallel-osint.html">parallel investigation patterns</a>, this pipeline handles hundreds of targets in a single scheduled run. For the full tool output schemas that the JSON exporter relies on, see the <a href="/tools/">tools reference</a>. For AI-assisted investigation that writes findings directly to disk, see the <a href="/blog/claude-code-osint.html">Claude Code OSINT guide</a>.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/parallel-osint.html">Parallel OSINT</a> &mdash; generating bulk JSON results to feed into report pipelines</li>
+<li><a href="/blog/claude-code-osint.html">Using Claude Code for OSINT</a> &mdash; AI-assisted investigation that writes files directly to disk</li>
+<li><a href="/tools/">OpenOSINT tools reference</a> &mdash; JSON output schemas for the full tool set</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

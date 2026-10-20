@@ -1,0 +1,127 @@
+---
+title: 'Model Context Protocol Explained: MCP for OSINT'
+seo_title: Model Context Protocol (MCP) explained for OSINT
+description: How MCP connects AI assistants to tools over JSON-RPC on stdio, what a tool schema looks like, and how OpenOSINT exposes its tools as an MCP server.
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<div class="indent">
+<p>Model Context Protocol (MCP) is an open standard that defines how AI assistants communicate with external tools and data sources. It was designed to solve a specific fragmentation problem: every AI platform previously had its own proprietary integration format, forcing developers to implement the same tool multiple times for different AI clients. MCP standardizes the contract so a single server implementation works with any compliant client.</p>
+</div>
+
+<h2>The problem before MCP</h2>
+<div class="indent">
+<p>Before MCP, AI tool integration was entirely platform-specific. OpenAI had plugins — a custom format that described tools via OpenAPI specs and required hosting an HTTPS endpoint with specific headers. Anthropic had its own tool use specification, defined inline in each API request. Google had its own function calling format. If you wanted the same WHOIS lookup tool available in ChatGPT, Claude Desktop, and Claude Code, you wrote three separate integration layers.</p>
+
+<p>This was not just an inconvenience for developers — it created an ecosystem lock-in problem. Tools built for one AI client couldn't be reused in another without porting work. This friction meant most tools were built once, for one platform, and stayed there. The result was a fragmented landscape where a powerful tool like a real-time breach lookup was available in Claude but not in a custom AI assistant built on GPT-4, or vice versa.</p>
+
+<p>MCP changes the economics: build the server once, and it works with every MCP-compliant client. Claude Desktop, Claude Code, and any other host that implements the MCP client protocol can call the same server with no changes on the server side. This is a meaningful shift for infrastructure-level tools like OSINT frameworks that benefit from being available everywhere an analyst might be working.</p>
+</div>
+
+<h2>The architecture</h2>
+<div class="indent">
+<p>MCP involves three actors in every interaction:</p>
+
+<p><strong>The host</strong> is the AI application the user interacts with — Claude Desktop, Claude Code, or a custom application embedding an MCP client. The host is responsible for managing the user conversation and launching MCP servers.</p>
+
+<p><strong>The client</strong> is a component running inside the host that implements the MCP client protocol. It establishes the connection to MCP servers, sends requests, and relays responses back to the host. In Claude Desktop, the client is built in. In custom applications, you instantiate it from the MCP SDK.</p>
+
+<p><strong>The server</strong> is the external process that exposes tools, resources, and prompts. It receives JSON-RPC requests over the established transport, executes the requested operations, and returns results. The server knows nothing about the host — it only knows MCP. OpenOSINT's <code>mcp_server.py</code> is an MCP server.</p>
+
+<p>Transport is stdio by default: the host launches the server as a subprocess, writes JSON-RPC messages to its stdin, and reads responses from its stdout. This is the simplest possible IPC — no sockets, no port negotiation, no authentication tokens. The host manages the subprocess lifecycle. HTTP with Server-Sent Events is also supported for networked deployments where the server cannot be a local subprocess.</p>
+
+<p>The session lifecycle follows a handshake: the client sends an <code>initialize</code> request with its protocol version and capabilities, the server responds with its own version and capabilities, and the client sends an <code>initialized</code> notification to confirm. After that, the session is active and tool calls can proceed.</p>
+</div>
+
+<h2>Tool schemas</h2>
+<div class="indent">
+<p>Tools are the primary unit of functionality in an MCP server. Each tool is described by three fields: a machine-readable name, a natural-language description, and a JSON Schema for its input parameters.</p>
+
+<p>The name is what appears in the tool call — it must be stable and unique within the server. The description is what the AI model reads to decide when to use the tool. A vague description produces misuse; a precise description produces correct tool selection. The inputSchema is a standard JSON Schema object that specifies parameters, their types, which are required, and what each one means. The model uses the schema to construct valid parameter objects without hallucinating parameter names or types.</p>
+
+<p>A well-written tool definition for an IP lookup looks like this in the server implementation:</p>
+
+<pre>Tool(
+    name="search_ip",
+    description=(
+        "Look up geolocation, ASN, and hostname data for an IPv4 or IPv6 address. "
+        "Returns country, region, city, ISP, organization, and coordinates. "
+        "Use for any IP address found during an investigation."
+    ),
+    inputSchema={
+        "type": "object",
+        "properties": {
+            "ip": {
+                "type": "string",
+                "description": "The IP address to look up (IPv4 or IPv6)"
+            }
+        },
+        "required": ["ip"]
+    }
+)</pre>
+
+<p>Bad descriptions lead to the model calling <code>search_ip</code> when it should call <code>search_abuseipdb</code>, or vice versa. Every word in the description is model-facing documentation, not human-facing documentation. Write it accordingly.</p>
+</div>
+
+<h2>MCP vs. direct function calling</h2>
+<div class="indent">
+<p>When you use Anthropic's API directly — as OpenOSINT does in its standalone REPL — you define tools inline in each API request. The tool definitions are part of the request payload. This works well for a controlled application where the set of tools is fixed and you control the full stack.</p>
+
+<p>With MCP, tools are defined once in the server and advertised to any connecting client via the <code>tools/list</code> method. The client fetches the list at session start. If the server adds a new tool, clients automatically see it on the next session without any code changes on the client side.</p>
+
+<p>The tradeoff: direct tool use requires less setup (no subprocess, no protocol negotiation) and gives you full control over the request. MCP requires running a server process but enables multi-client reuse and decoupling of tool development from client development. For a framework like <a href="/">OpenOSINT</a> where the same modular tool suite should be accessible from multiple AI clients, MCP is the right choice for the server component while direct tool use remains the right choice for the standalone agentic REPL.</p>
+
+<p>The <a href="/blog/osint-with-mcp.html">OSINT with MCP</a> article covers the practical setup steps for connecting OpenOSINT to Claude Desktop.</p>
+</div>
+
+<h2>OpenOSINT as an MCP server</h2>
+<div class="indent">
+<p><code>openosint/mcp_server.py</code> instantiates <code>mcp.Server</code> and registers two handlers: one for <code>tools/list</code> (returns the full list of tool definitions) and one for <code>tools/call</code> (executes the named tool with the provided arguments).</p>
+
+<p>The <code>tools/call</code> handler maps each tool name to its corresponding async Python function. When a client calls <code>search_email</code>, the handler calls <code>run_email_osint(email=args["email"])</code>, awaits the result, and returns it as a <code>TextContent</code> object. The entire MCP transport layer — JSON-RPC framing, stdio management, session negotiation — is handled by the <code>mcp</code> Python SDK. The server code focuses on the tool mapping, not the protocol.</p>
+
+<p>An example JSON-RPC exchange for an IP lookup over the stdio transport:</p>
+
+<pre>
+Request (client → server):
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "search_ip",
+    "arguments": {"ip": "8.8.8.8"}
+  }
+}
+
+Response (server → client):
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "IP: 8.8.8.8\nHostname: dns.google\nOrg: AS15169 Google LLC\nCountry: US\nCity: Mountain View\n..."
+      }
+    ]
+  }
+}
+</pre>
+
+<p>To use OpenOSINT as an MCP server in Claude Desktop, add it to the <code>mcpServers</code> block in Claude Desktop's configuration file with the command <code>python -m openosint.mcp_server</code>. Claude Desktop will launch the subprocess, negotiate the session, and expose all 14 OSINT tools to the Claude model running in the desktop client. See the <a href="/tools/">tools reference</a> for the complete tool list and parameter documentation, and the <a href="/blog/osint-ai-agents.html">AI agents article</a> for how the agentic loop works when tools are invoked.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/osint-with-mcp.html">OSINT with MCP</a> &mdash; practical setup guide for connecting OpenOSINT to Claude Desktop</li>
+<li><a href="/blog/claude-code-osint.html">Claude Code for OSINT</a> &mdash; using Claude Code as an MCP client for OSINT workflows</li>
+<li><a href="/blog/osint-ai-agents.html">How AI Agents Are Changing OSINT</a> &mdash; agentic loops, tool chaining, and hallucination prevention</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

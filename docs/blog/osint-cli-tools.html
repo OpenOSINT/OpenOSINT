@@ -1,64 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Best OSINT CLI Tools in 2025: A Developer's Comparison</title>
-<meta name="description" content="Holehe, sherlock, sublist3r, phoneinfoga, and others form the OSINT CLI ecosystem. This comparison covers selection criteria, tool performance, and how OpenOSINT unifies them under one AI-driven interface.">
-<meta name="keywords" content="OSINT CLI tools, holehe, sherlock, sublist3r, phoneinfoga, OSINT tools 2025, best OSINT tools, security CLI tools">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OSINT CLI tools compared: holehe, sherlock and more</title>
+<meta name="description" content="Compare holehe, sherlock, sublist3r, phoneinfoga and others: what each finds, how to choose, and how to unify them in one interface.">
 <link rel="canonical" href="https://openosint.tech/blog/osint-cli-tools.html">
-<meta property="og:title" content="The Best OSINT CLI Tools in 2025: A Developer's Comparison">
-<meta property="og:description" content="Comparing the best OSINT CLI tools: holehe, sherlock, sublist3r, phoneinfoga, Shodan CLI, and how OpenOSINT wraps them into a unified AI-driven interface.">
-<meta property="og:url" content="https://openosint.tech/blog/osint-cli-tools.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OSINT CLI tools compared: holehe, sherlock and more">
+<meta property="og:description" content="Compare holehe, sherlock, sublist3r, phoneinfoga and others: what each finds, how to choose, and how to unify them in one interface.">
+<meta property="og:url" content="https://openosint.tech/blog/osint-cli-tools.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="The Best OSINT CLI Tools in 2025: A Developer's Comparison">
-<meta name="twitter:description" content="Comparing holehe, sherlock, sublist3r, phoneinfoga, and Shodan CLI with OpenOSINT as a unified layer.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="OSINT CLI tools compared: holehe, sherlock and more">
+<meta name="twitter:description" content="Compare holehe, sherlock, sublist3r, phoneinfoga and others: what each finds, how to choose, and how to unify them in one interface.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "The Best OSINT CLI Tools in 2025: A Developer's Comparison",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Compare holehe, sherlock, sublist3r, phoneinfoga and others: what each finds, how to choose, and how to unify them in one interface.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/osint-cli-tools.html",
-  "description": "Holehe, sherlock, sublist3r, phoneinfoga, and others form the OSINT CLI ecosystem. This comparison covers selection criteria, tool performance, and how OpenOSINT unifies them under one AI-driven interface."
+  "mainEntityOfPage": "https://openosint.tech/blog/osint-cli-tools.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>THE BEST OSINT CLI TOOLS IN 2025</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>THE FRAGMENTED ECOSYSTEM PROBLEM</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>The Best OSINT CLI Tools in 2025: A Developer&#39;s Comparison</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <h2>The fragmented ecosystem problem</h2>
 <div class="indent">
 <p>There are hundreds of OSINT tools on GitHub. Most are single-purpose Python scripts written for a specific investigation need and then abandoned. The challenge isn't finding tools &mdash; it's filtering for ones that still work, don't silently leak queries to third parties, have acceptable false positive rates, produce parseable output, and integrate into a larger workflow without requiring a GUI. This article covers the ones that pass that bar in 2025, organized by investigation category.</p>
 <p>Selection criteria: actively maintained (commit within 12 months), no mandatory registration before running, installable via pip or a single binary, stdout output, and a documented false positive profile.</p>
 </div>
 
-<h2>EMAIL: HOLEHE AND BREACH CHECKING</h2>
+<h2>Email: Holehe and breach checking</h2>
 <div class="indent">
 <p><strong>holehe</strong> is the current standard for email-based account enumeration. It covers 300+ services using password-reset probes &mdash; not login attempts. Install: <code>pip install holehe</code>. The site list is maintained as platforms change their reset flows. False positive rate is low; most false positives come from platforms that return 200 for all reset requests regardless of account existence.</p>
 <pre>$ holehe target@example.com --only-used
@@ -69,7 +97,7 @@
 <p>For breach exposure, the HIBP v3 API is the standard. No local binary &mdash; query via REST. OpenOSINT's <code>search_breach</code> wraps the API with error handling and timeout control. Requires <code>HIBP_API_KEY</code>. The <a href="/blog/email-osint-guide.html">email OSINT guide</a> covers combining holehe and HIBP in a single investigation workflow.</p>
 </div>
 
-<h2>USERNAME SEARCH: SHERLOCK VS. MAIGRET</h2>
+<h2>Username search: Sherlock vs. maigret</h2>
 <div class="indent">
 <p><strong>sherlock</strong> searches 400+ platforms for a username. Each platform entry in its YAML config specifies the URL pattern and detection method (status code, response body string, or redirect destination). Concurrent requests with configurable timeout. Install: <code>pip install sherlock-project</code>.</p>
 <pre>$ sherlock johndoe99 --timeout 10
@@ -80,20 +108,20 @@
 <p>Important: verify high-value hits manually. Both tools produce false positives on platforms that return non-404 responses for missing users.</p>
 </div>
 
-<h2>NETWORK AND IP TOOLS</h2>
+<h2>Network and IP tools</h2>
 <div class="indent">
 <p><strong>Shodan CLI</strong>: <code>pip install shodan</code>. <code>shodan host 8.8.8.8</code> returns open ports, service banners, and TLS certificate data for an IP. Best for understanding what services are running on infrastructure. Supports the full Shodan query language via <code>shodan search</code>.</p>
 <p>For passive IP intelligence without touching target systems, three API-based tools cover the key questions: ipinfo.io (ASN, basic geolocation), OpenOSINT's <code>search_ip2location</code> (enriched geo plus VPN/proxy/Tor/datacenter classification via IP2Location.io), and <code>search_abuseipdb</code> (abuse confidence score and report history). These answer geolocation, infrastructure type, and threat context for any IP. See the <a href="/blog/ip-intelligence-guide.html">IP intelligence guide</a> for details on combining these sources.</p>
 <p>nmap is out of scope for passive OSINT &mdash; it touches target infrastructure and is only appropriate for authorized engagements.</p>
 </div>
 
-<h2>DOMAIN AND SUBDOMAIN TOOLS</h2>
+<h2>Domain and subdomain tools</h2>
 <div class="indent">
-<p><strong>sublist3r</strong>: passive subdomain enumeration using search engines and DNS aggregators. Install: <code>pip install sublist3r</code>. Combines Google, Bing, VirusTotal, and DNSdumpster results. Good starting point; supplement with amass or subfinder for broader coverage. OpenOSINT's <code>search_domain</code> wraps sublist3r.</p>
+<p><strong>sublist3r</strong>: subdomain enumeration by scraping search engines and DNS aggregators. It does not touch the target, but it sends many requests to third parties from your IP, so expect captchas and blocks; OpenOSINT therefore keeps <code>search_domain</code> off unless you pass <code>--allow-active</code>. Install: <code>pip install sublist3r</code>. Combines Google, Bing, VirusTotal, and DNSdumpster results. Good starting point; supplement with amass or subfinder for broader coverage. OpenOSINT's <code>search_domain</code> wraps sublist3r.</p>
 <p><strong>python-whois</strong>: WHOIS data retrieval with Python parsing. <code>pip install python-whois</code>. Returns registrar, creation date, name servers, and registrant fields (when not privacy-redacted). OpenOSINT's <code>search_whois</code> uses this library with timeout enforcement. The <a href="/blog/whois-lookup-automation.html">WHOIS automation guide</a> covers bulk lookup patterns.</p>
 </div>
 
-<h2>THE CASE FOR A UNIFIED LAYER</h2>
+<h2>The case for a unified layer</h2>
 <div class="indent">
 <p>Fragmented tools create two investigation bottlenecks. First, context switching: you run holehe, read the output, decide to check HIBP, read that, notice a GitHub username, run sherlock. Each step requires you to manually carry context from the previous one. Second, no cross-tool correlation: holehe finding GitHub and sherlock confirming the same username on 12 other platforms are connected facts, but no individual tool surfaces that connection.</p>
 <p>OpenOSINT solves both by wrapping best-in-class tools for each category under a single AI-driven loop. The AI receives each tool's real output and decides what to run next. If holehe returns a GitHub username, the model calls <code>search_username</code> immediately. If an IP appears in output, it calls <code>search_ip</code> and <code>search_abuseipdb</code>. The analyst states the target once; the AI produces a correlated report.</p>
@@ -108,7 +136,7 @@ openosint &gt; investigate target@example.com</pre>
 <p>The unified approach is most valuable for multi-pivot investigations where findings from one tool should trigger follow-up queries in another. For single-tool lookups, direct CLI invocation is faster. See the <a href="/blog/parallel-osint.html">parallel OSINT guide</a> for running multiple targets simultaneously.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/osint-api-automation.html">Automating OSINT with APIs</a> &mdash; Shodan, VirusTotal, Censys integration patterns</li>
@@ -119,19 +147,44 @@ openosint &gt; investigate target@example.com</pre>
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

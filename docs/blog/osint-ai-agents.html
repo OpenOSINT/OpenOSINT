@@ -1,62 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>How AI Agents Are Changing OSINT | OpenOSINT</title>
-<meta name="description" content="AI agents replace the manual decision loop in OSINT investigations. This article explains agentic loops, tool use, chaining, and the structural constraints needed to prevent hallucinated results.">
-<meta name="keywords" content="AI OSINT agent, agentic investigation, tool use, autonomous OSINT, Anthropic tool use, AI security research">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How AI agents are changing OSINT</title>
+<meta name="description" content="How an agentic loop picks tools and chains them on findings, why tool results must come from real execution, and where today&#39;s agents still fall short.">
 <link rel="canonical" href="https://openosint.tech/blog/osint-ai-agents.html">
-<meta property="og:title" content="How AI Agents Are Changing OSINT | OpenOSINT">
-<meta property="og:description" content="AI agents replace the manual decision loop in OSINT investigations. This article explains agentic loops, tool use, chaining, and the structural constraints needed to prevent hallucinated results.">
-<meta property="og:url" content="https://openosint.tech/blog/osint-ai-agents.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How AI agents are changing OSINT">
+<meta property="og:description" content="How an agentic loop picks tools and chains them on findings, why tool results must come from real execution, and where today&#39;s agents still fall short.">
+<meta property="og:url" content="https://openosint.tech/blog/osint-ai-agents.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="How AI Agents Are Changing OSINT | OpenOSINT">
-<meta name="twitter:description" content="AI agents replace the manual decision loop in OSINT investigations. This article explains agentic loops, tool use, chaining, and the structural constraints needed to prevent hallucinated results.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="How AI agents are changing OSINT">
+<meta name="twitter:description" content="How an agentic loop picks tools and chains them on findings, why tool results must come from real execution, and where today&#39;s agents still fall short.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
-  "headline": "How AI Agents Are Changing OSINT | OpenOSINT",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "headline": "How AI Agents Are Changing OSINT",
+  "description": "How an agentic loop picks tools and chains them on findings, why tool results must come from real execution, and where today's agents still fall short.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/osint-ai-agents.html",
-  "description": "AI agents replace the manual decision loop in OSINT investigations. This article explains agentic loops, tool use, chaining, and the structural constraints needed to prevent hallucinated results."
+  "mainEntityOfPage": "https://openosint.tech/blog/osint-ai-agents.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>HOW AI AGENTS ARE CHANGING OSINT</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<div class="indent">
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>How AI Agents Are Changing OSINT</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 7 min read</p>
+    <div class="indent">
 <p>OSINT investigations have always been bottlenecked not by data availability but by analyst bandwidth. The data is out there — enumerable from public APIs, DNS registries, breach aggregates, and social platforms. The problem is that each data source requires a separate tool, a separate command, and a human decision about what to do with the output before moving to the next step. AI agents are restructuring this at the loop level: the AI makes the sequential decisions, the analyst reviews the compiled result.</p>
 </div>
 
-<h2>THE MANUAL OSINT BOTTLENECK</h2>
+<h2>The manual OSINT bottleneck</h2>
 <div class="indent">
 <p>Before AI agents, a standard email investigation looked like this: run holehe against the target email, wait 30–90 seconds, read 40 lines of output identifying which platforms have an account. Decide manually whether any of those usernames are worth pivoting to. Run sherlock against a discovered username, wait another 60 seconds, read another block of output. Decide whether to check breach databases. Run an HIBP API call, parse the JSON, check which breach categories are represented. Decide whether any breach metadata suggests a platform worth querying.</p>
 
@@ -65,7 +93,7 @@
 <p>The bottleneck is not research skill — it is context switching between tools and keeping state across steps. An experienced analyst running this process manually and an inexperienced one differ mainly in which follow-up pivots they recognize, not in how fast they can run tools. The mechanical execution part was always a solved problem that required human attention.</p>
 </div>
 
-<h2>HOW AN AGENTIC LOOP WORKS</h2>
+<h2>How an agentic loop works</h2>
 <div class="indent">
 <p>The agentic loop replaces the human decision engine for mechanical steps while keeping the analyst in control of the question framing and result verification.</p>
 
@@ -74,7 +102,7 @@
 <p>The analyst receives a structured report rather than a sequence of raw tool outputs. <a href="/">OpenOSINT</a>'s agentic loop is implemented in <code>openosint/agent.py</code>: it builds the tool definitions from the 14 available tools, sends them to the Anthropic API, and dispatches each <code>tool_use</code> block to the corresponding <code>run_*_osint()</code> Python function. Real output. No simulation.</p>
 </div>
 
-<h2>TOOL USE VS. FUNCTION CALLING</h2>
+<h2>Tool use vs. function calling</h2>
 <div class="indent">
 <p>Anthropic's tool use protocol has a structural property that matters for security research: it is a mandatory stop. When the model generates a <code>tool_use</code> content block, the completion halts. The API does not return a continuation — it returns the message with the tool use block and waits for the client to provide a <code>tool_result</code>. The model cannot generate text that follows the tool call without first receiving real output.</p>
 
@@ -85,7 +113,7 @@
 <p>For a detailed look at how this integrates with the Model Context Protocol, see the <a href="/blog/mcp-protocol-explained.html">MCP protocol explainer</a>.</p>
 </div>
 
-<h2>CHAINING TOOLS BASED ON FINDINGS</h2>
+<h2>Chaining tools based on findings</h2>
 <div class="indent">
 <p>The qualitative difference between an AI agent and a bash pipeline is adaptive branching. A pipeline runs a fixed sequence. An agent reads each result and decides what runs next based on what was found.</p>
 
@@ -100,7 +128,7 @@
 <p>None of these pivot decisions are hardcoded. The model makes them by reading tool output and applying judgment based on what it knows about each data source. The analyst reviewing the final report sees the reasoning chain — which tools ran, in what order, and what each returned.</p>
 </div>
 
-<h2>CURRENT LIMITATIONS</h2>
+<h2>Current limitations</h2>
 <div class="indent">
 <p>AI agents are good at a specific subset of the OSINT problem: executing known tool sequences, tracking findings across steps, and surfacing connections that would require the analyst to hold a lot of intermediate context simultaneously. They are not a replacement for analyst expertise, and several limitations are structural.</p>
 
@@ -115,7 +143,7 @@
 <p>The practical impact of AI agents in OSINT is a significant reduction in mechanical work and a modest improvement in finding connections that a human might miss due to fatigue. The expertise requirement for the analyst — understanding what findings mean, verifying identity, making authorization decisions — does not decrease. Read more about how hallucination risks are managed in the <a href="/blog/ai-hallucination-osint.html">AI hallucination in OSINT</a> article.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/ai-hallucination-osint.html">AI Hallucination in OSINT</a> &mdash; how fabricated results happen and structural approaches to preventing them</li>
@@ -126,19 +154,44 @@
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

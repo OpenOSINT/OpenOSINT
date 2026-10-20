@@ -7,367 +7,356 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [2.25.0] — 2026-07-13
+## [Unreleased]
+
+## [2.36.1] — 2026-10-19
+
+### Changed
+
+- The Bright Data referral link now appears where Bright Data is named without a link: the README tool and CLI tables, the site tools table, the configuration page (with a one-line referral disclosure) and `llms.txt`. The "invalid API key" errors of `scrape_url`, `search_footprint` and `search_dorks_live` end with `Get a key: <link>`. Links carry UTM parameters; tool behaviour, arguments and return values are unchanged.
+
+## [2.36.0] — 2026-10-15
+
+### Added
+
+- `run_exposure(..., checks=...)` and `openosint exposure --checks email,registration`: run only some of the four checks. `PASSIVE_CHECKS` (`email`, `registration`) never connect to the target, so a hosted service can stay strictly passive; `CHECK_NAMES` lists all four. Both are part of `openosint.exposure.api`. An unknown name, an empty selection or a bare string raises `ValueError` before any network call. The default (`checks=None`) is unchanged.
+- `ExposureReport.not_run` (and `"not_run"` in `to_dict()`): the checks left out by a selection. It is empty for a normal run.
+
+### Changed
+
+- A report from a selection is **not graded**: `grade` and `score` are `None` and the terminal and HTML reports say "Not graded" (EN and IT). A letter computed from some checks would read like a full result. A run that selects all four checks is graded exactly as before.
+
+## [2.35.0] — 2026-10-13
+
+### Added
+
+- `openosint.exposure.api`: the supported library API of the exposure engine (`run_exposure`, `ExposureReport`, `render_html`, `normalize_domain`, `registrable_domain`, `DomainNotRegistered`).
+- `openosint exposure --public-only` (and `run_exposure(..., public_only=True)`), for hosted use. The TLS and header checks resolve the host once, refuse it when any answer is non-public (loopback, private, link-local, CGNAT, multicast, reserved, IPv6 ULA, and IPv4-mapped forms), and connect to the vetted IP with SNI and certificate verification against the hostname. Redirects are followed by hand (at most 3, https on port 443 only) and every hop is vetted and pinned the same way. A refused target is reported as a skipped check. Environment proxy settings are ignored in this mode. Off by default; behaviour without the flag is unchanged.
+
+## [2.34.0] — 2026-10-11
+
+### Added
+
+- `openosint exposure DOMAIN`: a passive, point-in-time external exposure report graded A-F (beta, no AI provider needed). Checks email authentication (SPF, DMARC, DKIM, MX), TLS, domain registration (age, expiry, DNSSEC via RDAP) and security headers. Email and RDAP checks use DNS or the registry only; the TLS and header checks contact the target on port 443. It does not scan ports, log in or collect personal data, and the grade is not a compliance certification.
+- `--json` for structured output, `--report FILE.html --lang it|en` for a self-contained, printable HTML report with top priorities, passed checks and a glossary, and `--resolver IP` to choose the recursive DNS resolver.
+- `--lookalikes`: DNS-only search for registered typo, homoglyph and TLD-swap domains. Never part of the score or grade.
+- DNS lookups for the domain's own email records (MX, SPF, DMARC, DKIM) go to its authoritative nameservers, with retries and a recursive fallback, so the grade does not depend on stale resolver caches. Lookalikes and third-party SPF includes use the recursive resolver. Common provider DKIM selectors are probed concurrently.
+
+### Changed
+
+- The report format is beta and may change; the HTML report footer shows its `report_version`.
+
+### Fixed
+
+- DNSSEC evidence reads "DNSSEC: not signed" instead of a Python dict repr; a test now scans all evidence for dict and list reprs.
+
+## [2.33.1] — 2026-10-10
+
+### Fixed
+
+- Web UI: the "Tools & noise level" section, including the "Enable active tools" toggle, is now in the main Settings panel in both local and demo mode. In local mode it was hidden inside the collapsed "Use only for this browser session" section. In demo mode the toggle stays locked with its existing message.
+- The `search_virustotal` noise note is now self-contained: "URL submission is a separate active mode, off by default: it makes VirusTotal fetch the URL and makes it visible to the VirusTotal community." It no longer says "see the next row", which made no sense in the web UI, tool descriptions and MCP clients. The README table and a new drift test keep it in sync.
+
+## [2.33.0] — 2026-10-10
+
+OpenOSINT is now passive by default. Agents and MCP clients are only offered tools that query third-party data sources or compute locally; noisy and target-touching tools are an explicit opt-in. Every agent loop has a per-request tool-call cap, every tool carries a noise label (web UI, tool descriptions, README table), and the docs no longer claim that hallucination is impossible.
+
+> ### ⚠ Behavior changes
+>
+> **OpenOSINT is now passive by default, everywhere** (CLI, REPL, web UI, MCP server, Cloud gateway, playbooks, `investigate_graph`).
+> Agents and MCP clients are only offered tools that query third-party data sources or compute locally. These tools are **off until you opt in**:
+> `search_username`, `search_email`, `search_domain` (noisy), `scrape_url` (touches the target), `search_phone` (unverified), VirusTotal **URL submission** (VirusTotal fetches the URL and the community can see it), and the 9 DKIM selector probes inside `search_dns`.
+>
+> **To restore the old behavior:** pass `--allow-active` (CLI/REPL/web/MCP server), set `OPENOSINT_ALLOW_ACTIVE=1`, or use Settings → "Enable active tools" in the web UI. A public or demo instance can never enable them.
+>
+> Direct CLI subcommands (`openosint username …`, `email`, `scrape`) now exit with code 2 and a message unless `--allow-active` is given.
+>
+> **Every agent loop is now capped at 15 tool calls per user request** (`OPENOSINT_MAX_TOOL_CALLS`; each new message resets it), and `investigate_multi` shares one cap of 30 across all targets (`OPENOSINT_MAX_TOOL_CALLS_MULTI`). When the cap is reached the investigation stops with an explicit message. Before this, the Anthropic, Ollama and OpenAI-compatible agent loops had no limit.
+
+### Added
+
+- `openosint/tool_policy.py`: one classification per tool (`passive` / `touches target` / `noisy` / `unverified` / `inherits`) with an honest one-line note, used by every surface. A test fails if a registered tool has no label.
+- Noise labels in the web UI Settings tool list, in tool descriptions sent to agents and MCP clients, and in a generated README table.
+- `--allow-active` (CLI, `openosint-mcp`), `OPENOSINT_ALLOW_ACTIVE`, `POST /api/policy` and a Settings toggle.
+- Disabled tools return a structured `disabled_in_passive_mode` result explaining how to enable them.
+- `GET /api/policy` (mode, cap, list of active tools).
+
+### Changed
+
+- `search_dns` no longer runs DKIM selector probes in passive mode and says so in its output.
+- `investigate_graph` routes only to passive tools in passive mode and spends the same per-request cap.
+- README, docs and the hallucination article no longer claim that hallucination is "structurally impossible". The accurate claim: tool results come from real executions and every finding is shown with the tool call that produced it; the model can still misread or misattribute them, and AI output is a lead, not proof.
+- `search_domain` is no longer described as "passive": it scrapes search engines and aggregators from your IP.
+
+### Removed
+
+- RapidProxy is no longer listed as a sponsor (README, SPONSORSHIP.md, docs pages, `sponsors.json`); its integration page and logo assets are deleted.
+
+### Fixed
+
+- The Ollama and OpenAI-compatible agent loops (CLI/REPL and web chat) could loop on tool calls with no bound.
+- Upstream banners, social and donation lines (sherlock's OSINTSearch promotion, holehe's Twitter/GitHub/donation lines, sublist3r's banner) no longer appear in `search_username`, `search_email` and `search_domain` results. The credit is OpenOSINT's own line: results now end with "Results via sherlock / holehe / sublist3r (project URL)".
+- In demo mode on a loopback bind (`OPENOSINT_DEMO_MODE`), `restriction_reason` no longer says "this instance is not bound to loopback"; it reports the real reason, in `/api/health`, `/api/policy` and the Settings UI.
+
+## [2.32.0] — 2026-10-09
+
+Live geolocated news is back on the globe, via GDELT's 15-minute GKG feed (the GDELT GEO API was retired). Headlines now show on globe points, results accumulate across searches, the globe flies to new results, and the Globe nav shows an "N places" badge. Also fixes the news-before-globe race, the blank coverage pill, the dropped bounding box, and the Alpine warning on user messages.
+
+> **New environment variables** (all optional): `OPENOSINT_GDELT_WINDOW_HOURS` (default `6`, max `24`), `OPENOSINT_GDELT_MAX_ARTICLES` (default `30000`), `OPENOSINT_GDELT_USE_PROXY` (default off).
+
+### Changed
+- `search_gdelt_geo` works again: the GDELT GEO 2.0 API it called was retired (HTTP 404), so it now reads GDELT's 15-minute GKG article feed (`data.gdeltproject.org`, keyless) and keeps a rolling window in memory (default 6 hours; `OPENOSINT_GDELT_WINDOW_HOURS`, hard cap `OPENOSINT_GDELT_MAX_ARTICLES`, oldest dropped first). Same tool name, same GeoJSON point shape and `[service_unavailable]` result. Query matching is against headlines and URLs (`"phrases"`, `OR`, `*`), country-level mentions are dropped, and points now carry `title`, `url`, `domain` and `tone`.
+- Lazy and polite: nothing is downloaded until the tool is first used. The first search loads only the newest file; older files load on one background thread, one download at a time. Upstream load is one file per 15 minutes regardless of how many searches run. The result and the globe say how far back they cover ("News: last 15 min — older articles still loading").
+- Downloads are fail-closed: https `data.gdeltproject.org` only, no redirects, compressed and decompressed size caps, per-field length caps, URL validation; any violation returns the structured service-unavailable result.
+- The globe shows the headline and domain of a news point as plain text; box-select now asks for query `"*"` in the selected area, and a search with no matches clears the previous search's dots.
+
+- Globe: news accumulates per conversation across searches, the camera flies to new results, and the Globe nav shows an "N places" badge (cleared with the trash icon).
+
+### Fixed
+- News that arrived before the globe was first opened was lost; the coverage pill could render blank; the Alpine warning on every user message (`msg.parts` on messages without parts) is gone.
+- `POST /api/run/search_gdelt_geo` dropped the selected bounding box; `RunRequest` now accepts an optional 4-number `bbox` (HTTP 422 if malformed) and passes it to the tool.
+
+### Added
+- Opt-in live check: `OPENOSINT_LIVE=1 pytest tests/test_gdelt_geo_live.py`.
+
+## [2.31.0] — 2026-10-06
+
+Keys saved on this computer from the web UI, a first-run panel, clear messages for tools that need a key, the graph store and MCP graph tools without native builds, a new `search_rdap` tool, and a graceful fallback when the GDELT GEO service is down.
+
+> **Behavior changes**
+> - Keys saved from the web UI now go to `$OPENOSINT_HOME/config.env` (default `~/.openosint/config.env`, user-only permissions) instead of `<package root>/.env`. Precedence is real environment > `config.env` > legacy `.env`. A legacy package-root `.env` that would have been loaded is copied once, with a stderr notice (keys named, never values); the old file stays and keeps working.
+> - A key saved in the UI while a real environment variable of the same name is set is stored but reported as not active (the environment wins on every start).
+> - `/api/setup` now throttles repeated non-loopback attempts (HTTP 429) and its 403 explains the Docker case. The loopback / `OPENOSINT_SETUP_TOKEN` rules are unchanged.
+> - Tool count is 21 (`search_rdap`).
+
+### Added
+- Graph store without native builds: `openosint.graph.ftm_compat` re-exports followthemoney when it imports and otherwise uses vendored `make_entity_id` / `Statement` / property types that produce byte-identical ids (enforced by a CI parity job against the real library). The `/graph` page, `/api/graph/*`, `graph_neighbors` and `graph_review_candidates` now work on a plain `uvx openosint web`; `graph_export` and dedup still need the `graph` / `graph-dedup` extras and say so.
+- `search_rdap`: keyless RDAP domain registration lookup (registrar, dates, name servers, status) in the agent, MCP server and web UI.
+- `GET /api/setup/status`, a settings catalog, a first-run panel (dismissible; what works with no keys, one-step AI provider, Ollama as the free local option) and a key form that lists every supported key, grouped, with where to get each.
+- `OPENOSINT_SETUP_TOKEN` is passed through `docker-compose.yml`; the UI has a token field.
+- CI: vendored-id parity job (`REQUIRE_FTM=1`, fails instead of skipping), key-survives-restart check on the `uvx` path, and Docker checks for the blocked-setup message and the token path.
+
+### Changed
+- Web UI Settings on a local install now leads with "Save on this computer" (all keys, grouped, including the OpenAI-compatible endpoint), which writes through `/api/setup` to `config.env`; the browser-only provider and tool-key fields moved behind "Use only for this browser session (not saved)". Each key shows whether it is configured (never its value) and whether an environment variable overrides a saved value. The public demo keeps browser-only keys and its copy unchanged.
+
+### Fixed
+- "Save to server" in the web UI did nothing: it iterated `this.apiKeys`, which was never defined. A 403 now shows the server's explanation instead of "Save failed".
+- Every credentialed tool now returns one structured message when its key is missing (`Scan error` line, `[key_required] VAR, VAR`, a link per key, where to put it) and names all missing variables at once (Censys ID+secret, Bright Data key+zone). Sponsor and referral links carry UTM parameters.
+- The keyless rate limiter now covers `search_github`, `search_email`, `search_username` and `search_domain`, and also guards `/api/stream/{tool}`, which bypassed it.
+- The web UI reported holehe/sherlock/sublist3r as unavailable when installed next to OpenOSINT (the `uvx` case) because it searched only `PATH`; it now uses the same lookup as the tools. Missing-binary messages give the exact `uv tool install` command.
+- Tests no longer read or write the developer's real `~/.openosint`.
+- `search_gdelt_geo` now returns a clear "service unavailable" result when the GDELT GEO API fails (404, 429, 5xx, timeouts, malformed responses), and the globe shows a notice instead of failing silently.
+
+## [2.30.0] — 2026-10-01
+
+One-command install (`uvx openosint web`), Docker fixes, and CI that now runs on Ubuntu, macOS and Windows.
+
+> **Behavior changes**
+> - Docker now publishes the web UI on `127.0.0.1:8080` by default instead of all host interfaces. To expose it deliberately, run `OPENOSINT_BIND=0.0.0.0 docker compose up` (see the README Docker section for the security note).
+> - `openosint web` exits with a clear message when the port is busy instead of printing a URL and then a raw uvicorn error.
+
+### Added
+- One-command web UI install: `uvx openosint web` (after installing [uv](https://docs.astral.sh/uv/)). The README Installation section now leads with it; `pip install openosint && openosint web` remains the documented fallback.
+- `OPENOSINT_HOME` environment variable to relocate the data directory (`graph.db`, session history). Defaults to `~/.openosint`, so existing installs are unchanged; `OPENOSINT_GRAPH_DB` still takes precedence for `graph.db`.
+- `openosint web` banner now prints the data directory and, when no AI provider is configured, a one-line notice. No network probe is made to print it.
+- CI workflow `install-check`: tests and lint on Python 3.10 and 3.12, a clean `uvx` install (no keys, isolated HOME) with web and MCP health checks on Ubuntu, macOS and Windows, the graph extra on Ubuntu, and `docker compose up` on a fresh checkout with no `.env`.
+
+### Changed
+- `openosint web` binds its port before printing the URL or opening the browser. If the port is busy it exits with `Port N is already in use. Pick another one with: openosint web --port N+1` instead of printing a URL and then a raw uvicorn error.
+- Docker: `.env` is now optional in `docker-compose.yml` (a fresh clone previously failed or created a directory named `.env`). The image installs the `graph` extra instead of `web` (which only added `playwright`), stores `graph.db` and history in an `openosint-data` volume via `OPENOSINT_HOME=/data`, and keeps UI-saved keys in that volume. A new `.dockerignore` keeps a local `.env` and `.venv` out of the image.
+- **Behavior change:** `docker-compose.yml` now publishes the web UI on `127.0.0.1:8080` instead of all host interfaces. The setup endpoint accepts API keys, so LAN exposure should be deliberate: run `OPENOSINT_BIND=0.0.0.0 docker compose up` (see the README Docker section for the security note). Anyone reaching the container from another machine must set `OPENOSINT_BIND`.
+- The MCP server's `serverInfo.version` now reports the OpenOSINT version (it reported the `mcp` library's version).
+- 7 graph tests that exercise unimplemented `NotImplementedError` stubs are marked `xfail` (non-strict) so the suite is green.
+- Package description says 20 tools, matching the tool catalog.
+- Docker: `docker-compose.yml` sets `OPENOSINT_PUBLISHED_BIND` (derived from `OPENOSINT_BIND`) so a port published on loopback only is no longer treated as network-exposed, and defaults `OPENOSINT_ALLOWED_HOSTS=localhost,127.0.0.1` so the `Host` check is active. Only an exact `127.0.0.1`, `localhost` or `::1` lifts the restriction; unset, empty or anything else keeps it. The banner says when it is lifted. Never set it by hand when the port is reachable from other interfaces.
+- Docker: `/app/.env` is a symlink to `/data/.env` that is no longer pre-created empty, so a fresh container logs no `Loaded .env` line until a key is saved.
+
+### Fixed
+- `/api/sponsors` returned 500 on pip/wheel installs because `sponsors.json` was not packaged. The file now lives at `openosint/sponsors.json` (still the single source of truth, also read by `scripts/render_sponsors.py`) and ships in the wheel; a missing file falls back to an empty list.
+- `.mcp/server.json` described 16 tools; it now says 20, and the docs-consistency test checks it.
+
+### Removed
+- `.do/app.yaml` (DigitalOcean App Platform spec, unused).
+
+## [2.29.1] — 2026-10-01
 
 ### Security
-- **[GHSA-cqr4-hcfp-m6m4, CVSS 10.0]** `POST /api/setup` was reachable by any
-  network caller and wrote arbitrary key/value pairs straight into
-  `os.environ` and `.env` — including `OPENAI_BASE_URL`, letting a remote
-  attacker redirect outbound chat traffic (and its auth header) to attacker
-  infrastructure.
-  - `/api/setup` now requires the caller be loopback, or present a token
-    matching `OPENOSINT_SETUP_TOKEN` (unset by default — remote setup is
-    off unless an operator opts in).
-  - Replaced arbitrary key writes with an explicit allowlist; unknown keys
-    are dropped and reported back.
-  - `OPENAI_BASE_URL` is validated as a well-formed `http(s)` URL before
-    being applied.
-  - CLI/web server now default to a `127.0.0.1` bind and refuse `0.0.0.0`
-    (or any non-loopback host) without `--allow-remote` /
-    `OPENOSINT_ALLOW_REMOTE=1`.
-  - Thanks to **@avishaigo-commits** and **@yotampe-pluto** for the report.
+- Fixed: the local web server could be driven by any website open in the same browser while `openosint web` was running (advisory: [GHSA-2wrv-jxxj-r2xc](https://github.com/OpenOSINT/OpenOSINT/security/advisories/GHSA-2wrv-jxxj-r2xc)). The server now validates the `Host` header and refuses cross-site browser requests to every `/api/*` endpoint except `/api/health`, and `/api/setup` requires `Content-Type: application/json`. All users of the web UI should upgrade. The MCP server, CLI and REPL are not affected.
+- New settings: `OPENOSINT_ALLOWED_HOSTS` (extra hostnames the server answers to; also the way to turn on `Host` checking on `--allow-remote` and Docker binds) and `OPENOSINT_ALLOWED_ORIGINS` (extra browser origins allowed to call the API). See the README Web UI section.
+- Behavior change: reaching the UI through a name other than `localhost` or `127.0.0.1` on a loopback bind now needs `OPENOSINT_ALLOWED_HOSTS`. A browser-based front end on another origin needs `OPENOSINT_ALLOWED_ORIGINS`.
+
+## [2.29.0] — 2026-09-17
 
 ### Added
-- **Web UI: live entity-graph panel** — client-side graph view of
-  investigation results (Cytoscape-based renderer), with a BYOK settings
-  panel, browser-side agent loop, and provider adapters for
-  Anthropic/OpenAI-compatible/Ollama backends.
-- **Deterministic investigation playbooks** — `domain`, `ip`, and `person`
-  recipes that chain tool calls into a repeatable, formatted report without
-  relying on the AI agent's judgment for step ordering.
-- **Global upstream-proxy support** — HTTP/SOCKS5 proxy configuration for
-  all web-facing tools.
+- `openosint/tools/search_rdap.py`: RDAP (RFC 7482/9083) domain lookup tool — the structured-JSON replacement for WHOIS used by the `openosint-domain-recon` Apify Actor. Unlike legacy WHOIS, gTLD RDAP is required by ICANN policy to redact registrant PII by default, and nothing prints a terms-of-service banner to stdout.
+- `openosint/tools/search_dns.py`: `mailProfile` classification (`"no-mail"` / `"sending"` / `"unknown"`) for `analyze_email_security()`, plus the `GRADING_RUBRIC` constant documenting the full A-F rubric. A confirmed non-mail domain (RFC 7505 null MX, or no MX at all, with a strict `-all` SPF authorizing no sender — `example.com` is the canonical case) is no longer capped for "missing DKIM"; DKIM isn't required for a domain that can't send mail in the first place.
+- Structured (non-text) helper functions across the OSINT tools — `run_username_osint_structured()`, `build_sherlock_site_data()`, `collect_dns_records()`, `parse_rdap_domain()` — returning machine-readable dicts/dataclasses instead of formatted strings, for Apify Actors and other callers that need structured output rather than CLI display text.
 
----
-
-## [2.20.0] — 2026-06-11
-
-### Added
-- **Bright Data integration** — two new optional tools backed by the [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=changelog) API. Both tools require `BRIGHTDATA_API_KEY` and gracefully degrade (descriptive error string, no exception) when the key is absent. Free tier: 5,000 requests/month.
-  - `search_dorks_live` — executes the same Google dork templates as `generate_dorks` through the Bright Data SERP API, returning structured results (title, URL, snippet) for each query. Runs up to 5 dorks by default; each is a separate billable call. `generate_dorks` is unchanged and remains fully offline.
-  - `scrape_url` — fetches any public URL through the Bright Data Web Unlocker API (bypasses Cloudflare/CAPTCHA) and returns clean Markdown via the API's native `data_format: "markdown"` conversion. A general primitive the AI agent can chain after other tools.
-- Both tools are wired into all four interfaces: **REPL** (agent tool-use), **CLI** (`openosint search-dorks-live <target>`, `openosint scrape <url>`), **MCP server** (`search_dorks_live`, `scrape_url` tools), and **Web UI** (tool catalog with availability indicator).
-- New env vars: `BRIGHTDATA_API_KEY`, `BRIGHTDATA_SERP_ZONE`, `BRIGHTDATA_UNLOCKER_ZONE` — added to `.env.example` and README Configuration table.
-- Unit tests (`tests/test_brightdata.py`): success, failure, and missing-key cases for both tools, all HTTP calls mocked.
-
----
-
-## [2.19.1] — 2026-06-09
+### Changed
+- `openosint-username-recon` Actor: monetization switched from per-(username, platform)-hit charging (`username-found`) to per-username charging (`username-scanned`, once per username that produces at least a partial result set). Fixes unpredictable run cost — a popular username matching 100+ sites previously cost over $1 at $0.01/hit; the new model is a flat $0.04/username. The Actor now checks the remaining charge budget before starting each username and stops cleanly if the next username wouldn't fit, and reports the number of sites skipped due to timeouts per username in both the run status message and a new `SUMMARY` key-value-store record.
 
 ### Fixed
-- Use absolute `raw.githubusercontent.com` URLs for logo and terminal demo images so they render correctly on the PyPI project page (PyPI's renderer does not resolve relative paths).
+- `openosint-domain-recon` Actor: a domain with a correctly locked-down non-mail posture (null MX, `SPF -all`, `DMARC p=reject`) was previously capped at grade C for "missing DKIM," even though a domain that can't send mail has no use for DKIM.
 
----
-
-## [2.19.0] — 2026-06-05
-
-### Added
-- **OpenAI-compatible backend** (`--provider openai`). OpenOSINT can now drive any
-  endpoint that speaks the OpenAI `/v1/chat/completions` protocol — LiteLLM,
-  llama-swap, vLLM, LM Studio, etc. — via the new `OpenAICompatibleAgent`.
-  - CLI flags: `--openai-base-url`, `--openai-model`, `--openai-api-key`.
-  - Env vars: `OPENAI_BASE_URL`, `OPENAI_API_KEY`, `OPENAI_MODEL`. When
-    `OPENAI_BASE_URL` is set (and no `ANTHROPIC_API_KEY`), it takes precedence
-    over Ollama.
-  - Web UI: new "OpenAI API" backend option with base-URL/model/key fields and a
-    connection test; streaming tool-use via the new `_stream_openai` handler.
-  - The target model must support tool/function calling (for llama.cpp behind
-    llama-swap, launch with `--jinja`).
-  - 68 unit tests covering all new code paths (100% on `OpenAICompatibleAgent`,
-    `_select_chat_backend`, `_stream_openai`, and CLI/REPL routing).
+## [2.28.2] — 2026-09-14
 
 ### Fixed
-- `OpenAICompatibleAgent`: empty `choices` server response now returns a descriptive
-  error instead of a bare `"list index out of range"` exception.
+- **With `--provider openai`, gpt-4o refused to run tools that use API keys**, reporting the credentials as missing even when correctly configured. Tool descriptions said "Requires <VAR>", which the model treated as a precondition it had to verify and could not. Tools are now always called, and whatever error they return is reported.
+- README: optional features install via extras, e.g. `pip install "openosint[openai]"`.
 
-## [2.18.1] — 2026-06-02
+## [2.28.0] — 2026-09-13
+
+### Changed — BREAKING
+- **Web UI: locally-held provider keys are now gated by bind address, not an
+  env var.** Previously, whether a request could use a key from your `.env`
+  depended on `OPENOSINT_DEMO_MODE`, which defaulted to off — meaning a
+  server bound to a non-loopback interface used your keys for any caller
+  unless you remembered to set that variable. It's now a network-exposure
+  invariant: bound to `127.0.0.1`/`localhost`, keys work as before, no
+  change needed. Bound to anything else (`--host 0.0.0.0` with
+  `--allow-remote`, or an undeterminable bind address) — your keys are
+  never used to serve a request; callers must supply their own, and
+  `search_breach` is disabled outright regardless of key source.
+  `OPENOSINT_DEMO_MODE` still exists but can now only add restriction, never
+  remove it. **If you were exposing the web UI on your LAN and relying on
+  your own `.env` keys with no other authentication in front of it, that no
+  longer works** — see the README's Web UI section.
+- **Cloud API: request logs no longer contain the target you queried.**
+  `cloud/main.py`'s INFO-level root logger was letting every tool module's
+  free-text log line (built for CLI/MCP debugging, and including the raw
+  target) through. Cloud logging is now limited to a redacted customer
+  identifier, tool name, elapsed time, and outcome status.
+- **Web UI: a loopback bind behind a reverse proxy is no longer silently
+  trusted.** A request carrying proxy-forwarding headers
+  (`X-Forwarded-For`/`-Proto`/`-Host`, `Forwarded`, `CF-Connecting-IP`) is
+  now treated the same as a non-loopback bind — local keys withheld, breach
+  blocked — unless the new `OPENOSINT_TRUSTED_PROXY=true` is set. This is a
+  separate variable from `TRUSTED_PROXY` (rate-limit IP attribution only,
+  a lower-stakes setting some self-hosters already have on) — see the
+  README before setting it, including the note that doing so makes you the
+  controller for anyone the proxy relays to this instance.
+
+### Deprecated
+- `OPENOSINT_MODEL` is deprecated in favor of `ANTHROPIC_MODEL`, consistent with `OPENAI_MODEL`. The old name still works and logs a one-time warning.
 
 ### Fixed
+- **`.env` was ignored with a regular `pip install openosint`.** The CLI and web server looked for `.env` inside site-packages instead of the directory the command runs from. All entry points now share one loader:
+  - CLI and web UI: `$OPENOSINT_ENV_FILE`, then `.env` searching upward from the current directory, then the repo root (source checkouts).
+  - MCP server: `$OPENOSINT_ENV_FILE`, then the repo root, then the current directory, because MCP clients start it from an arbitrary directory.
 
-- Fix: resolve binaries installed in the same venv/uv-tool bin so co-installed tools
-  (`holehe`, `phoneinfoga`, `sherlock`, `sublist3r`) are found instead of throwing a spurious
-  `ToolNotFoundError`. `run_subprocess()` now prepends the running interpreter's `bin/` directory
-  to `PATH` before exec. Fix by [@consocio](https://github.com/consocio) ([#6](https://github.com/OpenOSINT/OpenOSINT/pull/6)).
+  Real environment variables always win. `[*] Loaded .env: <path>` is printed to stderr. If `OPENOSINT_ENV_FILE` points to a missing file, OpenOSINT prints one error line and exits with code 2. Missing-key errors now say when no `.env` was found.
+- **`search_dorks_live`: Bright Data failures showed a `JSONDecodeError`
+  traceback instead of the actual error.** Bright Data returns HTTP 200 at
+  the API level even when the fetch failed, reporting the real outcome in
+  `x-brd-*` response headers. These are now read and turned into a clear
+  message, e.g. `Bright Data 502 captcha: redirect location was rejected`.
+  Rate-limit and CAPTCHA failures add a hint about the 15-second block.
+  There is no automatic retry: Bright Data blocks a repeated identical
+  query for at least 15 seconds, and cataloged errors are not billed.
+- A failed dork no longer stops the scan or prints a traceback: it logs a
+  warning, the remaining dorks run, and if all fail the summary lists the
+  distinct error codes.
+- 401/403 responses now include Bright Data's own redacted body, with a
+  specific hint when the API key has expired.
+- Result URLs are normalized: opaque Google `/goto?url=...` redirect
+  tokens and snippet text leaking into the URL field are no longer shown
+  as links. Unresolvable links render as `(unresolved)`.
+- The Twitter dork is now grouped as `("{target}") (site:x.com OR
+  site:twitter.com)`; the previous form let Google match either the
+  quoted term or a site independently, returning unrelated results.
 
-### Changed
-
-- Version bumped to 2.18.1.
-
----
-
-## [2.15.0] — 2026-05-25
-
-### Added
-
-- **DNS intelligence** (`openosint/tools/search_dns.py`): new tool `search_dns` that performs
-  comprehensive DNS record enumeration (A, AAAA, MX, NS, TXT, CNAME, SOA) using dnspython.
-  Automatically highlights email security misconfigurations: absent or permissive SPF policy,
-  missing or unenforced DMARC, absent DKIM records across common selectors. No external API
-  or credentials required. Available as CLI subcommand `openosint dns DOMAIN [-t SECONDS]`,
-  in the AI agent tool loop, and as an MCP tool.
-- **GitHub OSINT** (`openosint/tools/search_github.py`): new tool `search_github` that queries
-  the GitHub REST API for a username, email, or keyword. For direct username matches returns
-  full profile data (bio, location, company, follower counts, public repos/gists), the most
-  recently updated repositories with language and star counts, and email addresses discovered
-  from public commit history. For other queries returns the top 5 matching user accounts.
-  Optional `GITHUB_TOKEN` environment variable raises the unauthenticated rate limit from
-  60 to 5000 requests per hour. Available as CLI subcommand `openosint github QUERY [-t SECONDS]`,
-  in the AI agent tool loop, and as an MCP tool.
-
-### Changed
-
-- Version bumped to 2.15.0.
-- `dnspython>=2.6.0` added to core dependencies.
-- Agent SYSTEM_PROMPT updated: domain investigations now suggest `search_dns` alongside
-  `search_whois` and `search_domain`; GitHub username lookups use `search_github`.
-- MCP server docstring updated to reflect 16 tools.
-- README: tools table, CLI synopsis, and FILES section updated.
-
----
-
-## [2.14.0] — 2026-05-24
+## [2.27.0] — 2026-08-26
 
 ### Added
+- **Local graph visualization in the web UI** — a new `/graph` explorer renders
+  the FollowTheMoney entity graph store (Cytoscape.js, vendored offline) with
+  node color/shape by schema, solid confirmed edges, dashed `same_as` candidate
+  edges labeled with their score, canonical-cluster grouping, and a node side
+  panel showing every statement with full provenance. Includes a **human review
+  queue** for `same_as` candidates: two entities aligned property-by-property
+  with provenance, the rule-based match score (labeled as such, not a
+  probability), and Accept / Reject / Skip / Undo — one pair at a time, no bulk
+  actions. New read-only, localhost-only endpoints (`/api/graph/subgraph`,
+  `/api/graph/entity`, `/api/graph/review/candidates`, `/api/graph/review/decide`)
+  read the local SQLite store only and make no outbound network calls.
 
-- **AbuseIPDB integration** (`openosint/tools/search_abuseipdb.py`): new tool
-  `search_abuseipdb` that checks an IP address against the AbuseIPDB v2 API.
-  Returns abuse confidence score (0–100%), total reports, country, ISP, domain,
-  and last reported timestamp. Displays a prominent ⚠️ HIGH ABUSE CONFIDENCE
-  warning when score exceeds 50%. Validates IPv4/IPv6 input before calling the
-  API; returns a descriptive error string for invalid input or missing credentials.
-  Requires `ABUSEIPDB_API_KEY` environment variable. Available as CLI subcommand
-  `openosint abuseipdb IP_ADDRESS [-t SECONDS]`, in the AI agent tool loop, and
-  as an MCP tool.
+### Fixed
+- **A fresh install got a broken MCP server — the `mcp` dependency is now
+  pinned to `>=1.0.0,<2`.** The previous requirement (`mcp>=1.0.0`) let a
+  clean install resolve mcp 2.x, whose breaking API changes (`Server.list_tools`
+  and `mcp.server.fastmcp` were removed) make `openosint.mcp_server` crash on
+  import. **This affects 2.26.0: a fresh `pip install openosint==2.26.0` today
+  installs a non-functional MCP server.** Existing environments that already
+  had mcp 1.x are unaffected. Upgrade to 2.27.0, or in an affected 2.26.0
+  environment run `pip install "mcp<2"`.
+- **The web UI loaded Cytoscape from a CDN, and one of those tags was already
+  broken in production.** `index.html` pulled `cytoscape` and `cytoscape-fcose`
+  from third-party CDNs; the `cytoscape-fcose` tag never actually worked (its
+  `cose-base`/`layout-base` dependencies were never loaded, so it silently fell
+  back to the built-in layout), and any CDN request leaks that the tool is
+  running to a third party. Cytoscape.js is now vendored into the repo and
+  served locally; the dead `cytoscape-fcose` CDN tag was removed.
+- **The web UI no longer contacts any third-party CDN.** The remaining
+  runtime CDN dependencies — Alpine.js (jsdelivr), Tailwind
+  (`cdn.tailwindcss.com`, the browser JIT build Tailwind itself says is not
+  for production), and the Inter / JetBrains Mono fonts (Google Fonts, which
+  transmits the visitor's IP to Google on every page load) — are now served
+  locally: Alpine.js 3.14.1 is vendored, Tailwind 3.4.17 is a prebuilt CSS
+  file committed to the repo (regenerated with the standalone CLI, no Node
+  toolchain required), and the fonts are self-hosted woff2 files with their
+  SIL OFL 1.1 licenses recorded alongside. Loading the web UI now makes zero
+  external requests.
 
-### Changed
-
-- Version bumped to 2.14.0 in `pyproject.toml`, `README.md`, MCP server docstring.
-- `aiohttp>=3.9.0` added to core dependencies.
-
----
-
-## [2.13.0] — 2026-05-21
-
-### Changed
-
-- Bumped version to 2.13.0
-
----
-
-## [2.12.0] — 2026-05-21
-
-### Added
-
-- Web interface (`openosint web`) — browser-based AI chat UI
-- Light/dark theme toggle in web UI
-- Ollama support in web UI for local inference
-- Demo recording script (`python media/record_demo.py`)
-- Web demo GIF and MP4
-
-### Changed
-
-- README: added web interface demo at top, restructured header with tagline and centered layout
-- Docs: added demo section with web and CLI demos side by side
-
----
-
-## [2.11.0] — 2026-05-19
+## [2.26.0] — 2026-08-25
 
 ### Added
-
-- **IP2Location integration** (`openosint/tools/search_ip2location.py`): new tool `search_ip2location` that queries the IP2Location.io API for enhanced IP intelligence. Returns geolocation (country, region, city, lat/lon, ZIP), ISP, domain, ASN, and security flags: VPN, proxy, Tor exit node, and datacenter hosting. Adds a prominent `⚠️  FLAGGED: VPN/Proxy/Tor detected` warning line when any flag is active. Validates IPv4 and IPv6 input with regex before calling the API; returns `"Invalid IP address format."` for non-IP strings. Requires `IP2LOCATION_API_KEY` environment variable; returns a descriptive error string if absent. Available as CLI subcommand `openosint ip2location IP_ADDRESS [-t SECONDS]`, in the AI agent tool loop, and as an MCP tool. Sponsored integration.
-- **.env file support** (`python-dotenv`): `openosint/cli.py` now calls `load_dotenv()` at startup so users can store API keys in a `.env` file at the project root instead of exporting environment variables manually. `python-dotenv>=1.0.0` added to core dependencies in `pyproject.toml`.
-- **.env.example template**: new `.env.example` file at the project root documents all supported environment variables with placeholder values. Copy to `.env` and fill in keys.
-
-### Changed
-
-- `.gitignore`: added `!.env.example` so the example template is tracked while `.env` and `*.env.*` remain excluded.
-- README: tools table, optional env vars, and Integrations section updated to include `search_ip2location` and `IP2LOCATION_API_KEY`. Sponsored note added for IP2Location.
-
-### Chore
-
-- Version bumped to `2.10.0` in `pyproject.toml`, `README.md`, MCP server docstring.
-
----
-
-## [2.9.0] — 2026-05-18
-
-### Added
-
-- **Censys integration** (`openosint/tools/search_censys.py`): new tool `search_censys` that queries the Censys Search API for internet-facing infrastructure data. Auto-detects input type: IPv4 address → `CensysHosts().view()` returning open ports, services, ASN, and country; domain → `CensysCerts().search()` with `parsed.names` filter returning certificate count, issuer, SANs, and first/last seen dates. Returns descriptive error strings for missing credentials, rate limits, and network errors. Requires `CENSYS_API_ID` and `CENSYS_SECRET` environment variables. Available as CLI subcommand `openosint censys TARGET [-t SECONDS]`, in the AI agent tool loop, and as an MCP tool.
-- **Auto-detection of IP vs domain for Censys queries**: IPv4 pattern → host view; everything else → certificate search.
-
-### Changed
-
-- Version bumped to `2.9.0` in `pyproject.toml`, `README.md`, MCP server docstring.
-- Agent `SYSTEM_PROMPT` updated to mention `search_censys` for IP and domain infrastructure investigations.
-- README: tools table, optional env vars, optional packages, FILES section, and CLI synopsis updated to include `search_censys`.
-- `pyproject.toml`: added `censys>=2.2.0` as optional dependency under `[project.optional-dependencies]` `censys` and `all` extras.
-
-### Docs
-
-- Updated `README.md` tools table and env vars with `search_censys`, `CENSYS_API_ID`, `CENSYS_SECRET`.
-- Added Integrations table to `README.md`.
-
----
-
-## [2.8.0] — 2026-05-17
-
-### Refactor
-
-- Full clean code pass across the entire codebase: consistent naming conventions (`is_/has_/can_` booleans, verb-prefixed functions, no abbreviations), extracted module-level constants, split functions exceeding 20 lines into focused helpers, added type hints to every public signature.
-- Extracted shared subprocess execution logic into `openosint/utils.py` (`run_subprocess`, `SubprocessResult`) — eliminates duplication across four tool modules.
-- `agent.py`: extracted `_AgentRunContext` dataclass, `_extract_first_text`, `_execute_tool`, `_process_tool_turn`, `_process_ollama_tool_turn`, and `_build_ollama_assistant_message` helpers; `_MAX_TOKENS = 4096` constant; both agent `run()` methods reduced to ≤25 lines.
-- `pdf_report.py`: split `_generate_pdf_sync` (~100 lines) into `_build_pdf_styles`, `_build_pdf_story`, `_create_footer_callback`.
-- `search_whois.py`: synchronous WHOIS call now wrapped in `asyncio.wait_for` + `run_in_executor` for real timeout support; `timeout_seconds` parameter added to `run_whois_osint`.
-- All tools: explicit `timeout_seconds` propagated through agent `_TOOL_MAP` and MCP `_HANDLERS`.
-- `repl.py`, `cli.py`, `mcp_server.py`, `multi_target.py`: `no_pdf` → `is_pdf_disabled`; `parallel` → `is_parallel`; silent `except Exception: pass` blocks replaced with `logger.debug(..., exc_info=True)`.
-
-### Chore
-
-- All health checks passing: ruff, pytest (99+ tests), pip check, bandit.
-- Version bumped to `2.8.0` in `pyproject.toml`, `README.md`, banner, MCP server docstring.
-- `asyncio_default_fixture_loop_scope = "function"` added to `[tool.pytest.ini_options]`.
-
----
-
-## [2.7.0] — 2026-05-16
-
-### Added
-
-- **VirusTotal integration** (`openosint/tools/search_virustotal.py`): new tool `search_virustotal` that checks IP addresses, domains, URLs, and file hashes (MD5/SHA-1/SHA-256) against VirusTotal's 70+ antivirus engines using the VirusTotal API v3. Auto-detects input type and calls the appropriate endpoint (`/ip_addresses`, `/domains`, `/urls` + `/analyses` polling, `/files`). Returns country, ASN, registrar, file type, analysis stats (malicious/suspicious/harmless/undetected votes), and a prominent warning line when `malicious > 0`. Requires `VIRUSTOTAL_API_KEY` environment variable; returns a descriptive error string if absent. Available as CLI subcommand `openosint virustotal TARGET [-t SECONDS]`, in the AI agent tool loop, and as an MCP tool.
-- **Auto-detection of input type for VirusTotal queries**: IPv4 pattern → IP lookup, `^[0-9a-fA-F]{32|40|64}$` → file hash lookup, `http(s)://` prefix → URL scan (submit + poll), everything else → domain lookup.
-
-### Changed
-
-- Version bumped to `2.7.0` in `pyproject.toml`, `README.md`.
-
-### Chore
-
-- `pyproject.toml` description updated to reflect 11 tools.
-
----
-
-## [2.6.0] — 2026-05-15
-
-### Added
-
-- **Persistent session history** (`openosint/session_history.py`): each REPL session is automatically saved to `~/.openosint/history/<timestamp>_session.json` when the session ends (normal exit, Ctrl-D, or crash). Each file records the timestamp, duration, prompts typed, tools used, targets investigated, and report path — no raw tool output or API keys are ever stored. At most 50 sessions are retained; the oldest file is deleted when the limit is exceeded.
-- **`openosint history` CLI command**: lists the last 10 sessions in a Rich table (columns: #, date, duration, targets, tools used, report). Supports `--all` to show all sessions, `--last N` to show the last N, `openosint history open N` to view the full session JSON plus report contents in a Rich panel, and `openosint history clear` to delete all history with a confirmation prompt.
-- **Session count hint in REPL banner**: if saved sessions exist, a one-line hint is shown at startup — `💾 N sessions saved — type 'history' to browse`. The `history` REPL command displays the last 10 sessions inline.
-
-### Changed
-
-- Version bumped to `2.6.0` in `pyproject.toml`, `README.md`, and REPL banner.
-
----
-
-## [2.5.0] — 2026-05-13
-
-### Added
-
-- **Star prompt in REPL banner**: the welcome banner now prints a one-time star prompt to stderr — `⭐ If OpenOSINT is useful, star it → https://github.com/OpenOSINT/OpenOSINT` — using Rich with a yellow star emoji and dim URL. Printed to stderr only; never appears in CLI subcommand output or MCP server responses.
-
-### Changed
-
-- Version bumped to `2.5.0` in `pyproject.toml`, `README.md`, and REPL banner.
-
-### Chore
-
-- Removed AI model attribution from contributor metadata so only the human author appears in the GitHub contributor graph.
-
----
-
-## [2.4.0] — 2026-05-13
-
-### Added
-
-- **Shodan integration** (`openosint/tools/search_shodan.py`): new tool `search_shodan` that performs host lookups (`api.host()`) for IP addresses or keyword banner searches (`api.search()`) for any other query. Requires `SHODAN_API_KEY` environment variable; returns a descriptive error string if absent. Available as CLI subcommand `openosint shodan QUERY [-t SECONDS]`, in the AI agent tool loop, and as an MCP tool.
-- **Ollama support** (`--provider ollama`): the AI agent loop now works with local Ollama models — no Anthropic API key required. Use `--provider ollama` (default: `llama3.2`), `--ollama-model MODEL`, and `--ollama-host URL`. The `OllamaAgent` in `agent.py` follows the same tool-use loop as the Anthropic agent: tool call → execute real binary → feed real output back → repeat until done. Requires `pip install ollama` (optional dependency).
-- **PDF report export** (`openosint/pdf_report.py`): every investigation that auto-saves a Markdown report now also generates a matching PDF (`reports/YYYY-MM-DD_HH-MM-SS_report.pdf`) using `reportlab`. The PDF includes a branded header, clean body text with monospace tool output sections, and a footer with page numbers. Generation is non-blocking (runs in a thread executor). Use `--no-pdf` to disable. Falls back silently with a log warning if `reportlab` is not installed.
-- **Multi-target investigation** (`openosint/multi_target.py`): new `openosint multi TARGETS` CLI subcommand and `investigate_multi` MCP tool. Accepts a comma-separated list of targets or a path to a file with one target per line. All targets are investigated in parallel via `asyncio.gather()`. Each gets its own report file (`reports/YYYY-MM-DD_target_report.md`); a consolidated summary is written to `reports/YYYY-MM-DD_summary.md`. Maximum 10 targets per run.
-- **New CLI flags**: `--provider`, `--ollama-model`, `--ollama-host`, `--no-pdf`.
-- **REPL**: banner now shows the active provider and model. `config` command shows provider, Ollama host, and PDF status.
-- **Test suite** (`tests/test_v240.py`): tests covering missing Shodan API key, IP detection helper, multi-target 10-target limit, target parsing from files and inline strings, and PDF file creation.
-
-### Changed
-
-- Version bumped to `2.4.0` in `pyproject.toml`, `README.md`, REPL banner, and MCP server header.
-- Agent tool definitions and `_TOOL_MAP` updated to include `search_shodan`.
-- `[project.optional-dependencies]` in `pyproject.toml` now includes `shodan`, `ollama`, `pdf`, and `all` extras.
-
----
-
-## [2.3.0] — 2026-05-12
-
-### Added
-
-- **Parallel tool execution** (`--parallel` CLI flag): independent complementary tools now run concurrently via `asyncio.gather()`. For the `email` subcommand, `search_email` and `search_breach` execute in parallel. For the `username` subcommand, `search_username` and `search_paste` execute in parallel. Sequential execution remains the default for backward compatibility.
-- **JSON export** (`--json` CLI flag): all direct CLI commands can now output results as structured JSON instead of formatted text. Each result follows a consistent schema: `{ "tool", "target", "timestamp", "results", "error" }`.
-- **MCP JSON output parameter**: each MCP tool now accepts an optional `json_output` boolean parameter. When `true`, the tool response is returned in the same structured JSON schema used by the CLI.
-- **`openosint/json_output.py`**: new internal module exposing `format_tool_result()` and `to_json()` helpers, importable by both CLI and MCP server.
-- **Docker support**: added `Dockerfile` (based on `python:3.12-slim`) and `docker-compose.yml` to the repository root. The image installs `holehe`, `sherlock-project`, and `sublist3r` via pip, and mounts `./reports/` as a volume.
-- **Test suite** (`tests/test_json_export.py`): pytest tests covering the JSON export schema for all 9 tool names, line splitting, blank-line filtering, error field handling, and ISO-8601 timestamp format.
-
-### Changed
-
-- Version bumped to `2.3.0` in `pyproject.toml`, `README.md`, `repl.py` banner, `mcp_server.py` header, and `search_breach.py` user-agent string.
-- CLI status/progress messages now go to `stderr` so that `--json` stdout output is clean and pipeable.
-
----
-
-## [2.2.0] — 2026-05-11
-
-### Added
-
-- Project documentation website (`docs/`) with landing page, logo, sitemap, and robots.txt.
-- `docs/CNAME` for custom domain support on GitHub Pages.
-
-### Changed
-
-- README rewritten in man-page style with full per-tool documentation, architecture table, and example output blocks.
-- `index.html` iteration with improved layout and copy.
-
----
-
-## [2.1.0] — 2026-05-10
-
-### Added
-
-- Interactive REPL (`openosint/repl.py`) powered by `prompt_toolkit` and `Rich` — the default mode when running `openosint` with no arguments.
-- Auto-save: structured reports with a `##` header longer than 300 characters are automatically written to `reports/<timestamp>_report.md`.
-- REPL built-in commands: `clear`, `save`, `tools`, `config`, `help`, `exit`.
-- `search_paste` tool: searches Pastebin dumps via psbdmp.ws API.
-- `search_phone` tool: wraps the `phoneinfoga` binary for carrier and country intelligence.
-- `generate_dorks` tool: generates 12 targeted Google dork URLs locally (no network calls).
-- Agent system prompt with explicit investigation strategy and chaining rules.
-- `openosint/exceptions.py`: shared exception hierarchy (`OSINTError`, `ToolNotFoundError`, `ToolExecutionError`, `ToolTimeoutError`).
-- MCP server (`openosint/mcp_server.py`) exposing all 9 tools to Claude Code and Claude Desktop.
-
-### Changed
-
-- Model updated to `claude-sonnet-4-20250514`.
-- All tool modules return descriptive error strings on failure rather than raising — callers (CLI, MCP, agent) never need to catch tool-level exceptions.
-
----
-
-## [2.0.0] — 2026-05-08
-
-### Added
-
-- Initial public release of OpenOSINT v2.
-- Core tool set: `search_email` (holehe), `search_username` (sherlock), `search_breach` (HIBP v3 API), `search_whois` (python-whois), `search_ip` (ipinfo.io), `search_domain` (sublist3r).
-- AI agent loop (`openosint/agent.py`) using the Anthropic native tool use API.
-- Direct CLI subcommands: `email`, `username`.
-- `pyproject.toml` PEP 621 build configuration with `openosint` entry point.
-- MIT license.
-
-[2.9.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.9.0
-[2.7.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.7.0
-[2.6.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.6.0
-[2.5.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.5.0
-[2.4.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.4.0
-[2.3.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.3.0
-[2.2.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.2.0
-[2.1.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.1.0
-[2.0.0]: https://github.com/OpenOSINT/OpenOSINT/releases/tag/v2.0.0
+- **Graph module (`openosint.graph`), an additive FollowTheMoney entity
+  graph** — turns scan results into FollowTheMoney (FtM) entities with
+  statement-level provenance, an append-only SQLite store, non-destructive
+  same_as deduplication, and a human review queue. It sits alongside the
+  existing Entity Correlation Graph without changing anything about it, and
+  is entirely opt-in behind two new extras. See
+  [docs/graph.md](docs/graph.md) for the full guide.
+  - `pip install "openosint[graph]"` (Python 3.10+) enables entity mapping,
+    the append-only store, and two new MCP tools: `graph_export` (streams
+    the graph as newline-delimited FtM entity JSON, with support for
+    excluding whole datasets — e.g. omitting all HaveIBeenPwned-derived
+    breach data) and `graph_neighbors` (traverses the graph from one entity
+    out to a given depth, with per-edge provenance).
+  - `pip install "openosint[graph-dedup]"` **requires Python 3.11+** — this
+    is nomenklatura's own requirement, not a choice made by this project;
+    `openosint` itself still supports Python 3.10+. It adds non-destructive
+    same_as candidate scoring and the third new MCP tool,
+    `graph_review_candidates`: nothing in this module ever auto-merges
+    entities — a human must explicitly accept or reject every suggested
+    match, and a rejected pair is never re-suggested.
+
+### Fixed
+- **Breach findings never actually expanded an investigation.** The internal
+  parser that turns `search_breach` (HaveIBeenPwned) results into pivotable
+  entities had a regex bug that meant a breach name was never recognized,
+  even when breaches were found and reported to the user. This silently
+  disabled breach-triggered pivoting in the auto-pivot investigation engine
+  (`investigate_graph`) — an investigation that found breaches never chased
+  the breach name any further. No prior test exercised this path. Past
+  investigations that relied on auto-pivoting from a breached email may have
+  missed connections the breach data would have revealed. Fixed.
+
+## [2.25.1] — 2026-08-24
+
+### Breaking
+- Client-supplied AI backend destinations (a request-supplied `openai_base_url`
+  or a non-default `ollama_host` sent to `POST /api/chat` or
+  `POST /api/openai/test`) are now **rejected by default** — see
+  **GHSA-q6cw-g86h-m2cq** below. The shipped web UI does not currently send
+  either field with a real value: its "OpenAI-compat" BYOK panel talks to
+  providers directly from the browser and never reaches these endpoints, so
+  this should not affect normal use of the bundled UI. If you have custom
+  client code (browser extension, direct API integration, or a modified
+  build) that relies on sending these fields to your own server, set
+  `OPENOSINT_ALLOW_CLIENT_BACKEND=1` there to keep it working.
+
+### Security
+- **[GHSA-q6cw-g86h-m2cq]** `POST /api/chat` and `POST /api/openai/test`
+  filled a missing `openai_api_key` from the server's `OPENAI_API_KEY`
+  environment variable even when the destination `openai_base_url` came from

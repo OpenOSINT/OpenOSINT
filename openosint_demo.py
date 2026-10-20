@@ -13,6 +13,8 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 
+from openosint.agent import default_anthropic_model
+
 console = Console(highlight=False)
 
 _TOOLS: list[tuple[str, str, str, bool]] = [
@@ -38,7 +40,7 @@ def _banner() -> None:
     console.print(
         Panel.fit(
             "[bold #00ff88]OpenOSINT[/] [dim]v2.18.1[/]  [dim]·[/]"
-            "  [dim]Provider: Anthropic (claude-sonnet-4-20250514)[/]",
+            f"  [dim]Provider: Anthropic ({default_anthropic_model()})[/]",
             border_style="#1e293b",
             padding=(0, 2),
         )

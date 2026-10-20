@@ -1,0 +1,133 @@
+---
+title: 'Automating WHOIS Lookups: Domain Intelligence at Scale'
+seo_title: Automating WHOIS lookups with RDAP and Python
+description: 'Automate WHOIS at scale: what records contain, why RDAP replaces plaintext WHOIS, bulk lookups in Python, and what redacted records still reveal.'
+date: '2026-05-24'
+modified: '2026-05-24'
+---
+<h2>What WHOIS returns in 2025</h2>
+<div class="indent">
+<p>GDPR enforcement beginning in 2018 and subsequent ICANN policy changes gutted the registrant data available in most gTLD WHOIS records. Before that, a single WHOIS query on a .com domain would return the registrant's name, organization, street address, phone number, and email. Today, the same query on most .com, .net, .org, and other ICANN-managed TLDs returns a stripped record.</p>
+
+<p>What you reliably get: registrar name and IANA ID, creation date, expiration date, last-updated timestamp, name servers, and domain status codes. What is almost always redacted: registrant name, organization, email, physical address, and phone number. The privacy proxy email provided (like <code>contact@withheldforprivacy.com</code>) is a forwarding address managed by the registrar's privacy service, not the actual registrant contact.</p>
+
+<p>Country-code TLDs operate under their own registries and follow their own rules. Many ccTLDs — .de, .nl, .ru, .cn and others — still expose registrant information, or expose it selectively based on the registrant type (individual vs. business). If the target owns infrastructure under a ccTLD, the WHOIS record may contain the full registration detail that gTLDs no longer provide.</p>
+
+<p>Despite redaction, the remaining fields contain more intelligence than they appear to. A domain created 28 days before a phishing campaign, registered through a registrar known for bulk registrations, using nameservers associated with bulletproof hosting, and expiring in 1 year reads very differently from a 15-year-old domain registered through a corporate registrar account with custom authoritative nameservers. Registration metadata tells a story about intent and infrastructure even without registrant identity.</p>
+</div>
+
+<h2>RDAP: The modern replacement for plaintext WHOIS</h2>
+<div class="indent">
+<p>WHOIS is a plaintext TCP protocol from 1982. It returns unstructured text with inconsistent field names across different registrars and TLD operators — some write "Creation Date:", others write "Registered:", others write "Domain Name Commencement Date:". Parsing it reliably requires regex soup and constant maintenance.</p>
+
+<p>RDAP (Registration Data Access Protocol) is the JSON-native successor, standardized in RFC 7483 (2015). RDAP returns structured JSON with consistent field semantics, handles authentication for tiered access (allowing registrars to return full data to credentialed law enforcement or registrant-self-queries while restricting public access), and uses HTTPS rather than raw TCP. Most TLDs now support RDAP, and ICANN mandates it for all gTLD operators.</p>
+
+<p>Query RDAP directly without any library:</p>
+
+<pre>
+import requests
+
+def rdap_lookup(domain: str) -> dict:
+    """Query RDAP bootstrap for structured domain registration data."""
+    resp = requests.get(
+        f"https://rdap.org/domain/{domain}",
+        timeout=10,
+        headers={"Accept": "application/rdap+json"},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+data = rdap_lookup("example.com")
+
+# Extract events (registration, expiration, last changed)
+for event in data.get("events", []):
+    print(f"{event['eventAction']}: {event['eventDate']}")
+
+# Extract nameservers
+for ns in data.get("nameservers", []):
+    print(f"NS: {ns['ldhName']}")
+</pre>
+
+<p>The <code>rdap.org</code> bootstrap service handles RDAP server discovery automatically — you don't need to know which RDAP server handles .com vs .io vs .de. For production use, implement the bootstrap lookup yourself using IANA's RDAP bootstrap registry to avoid the single-point dependency.</p>
+</div>
+
+<h2>Bulk WHOIS automation with Python</h2>
+<div class="indent">
+<p>For investigations involving multiple domains — a threat actor's infrastructure cluster, a company's registered assets, a lookalike domain set — bulk WHOIS automation is essential. The <code>python-whois</code> library handles the majority of gTLDs and provides Python-native parsed output:</p>
+
+<pre>
+import whois
+import time
+from datetime import datetime
+
+domains = [
+    "target.com",
+    "target.net",
+    "target-security.com",
+    "target-login.com",
+]
+
+results = []
+for domain in domains:
+    try:
+        w = whois.whois(domain)
+        created = w.creation_date
+        # creation_date can be a list for some TLDs
+        if isinstance(created, list):
+            created = created[0]
+        results.append({
+            "domain": domain,
+            "registrar": w.registrar,
+            "created": created.isoformat() if isinstance(created, datetime) else str(created),
+            "nameservers": w.name_servers,
+        })
+        print(f"[+] {domain}: {w.registrar}, created {created}")
+    except Exception as e:
+        print(f"[-] {domain}: {e}")
+    time.sleep(2)  # WHOIS servers rate-limit aggressively; respect them
+</pre>
+
+<p>Rate limiting is non-negotiable. Most WHOIS servers enforce hard throttles of 10–20 queries per minute per IP. Exceeding these limits results in temporary bans or TCP connection resets. For large-scale lookups (hundreds of domains), spread queries across sessions with a 2–3 second delay minimum, and consider rotating through multiple query paths (direct WHOIS + RDAP bootstrap) to distribute load.</p>
+
+<p><a href="/tools/">OpenOSINT's search_whois tool</a> wraps python-whois with enforced timeouts, error handling for malformed records, and output formatting for terminal readability. The AI agent invokes it as part of domain investigation chains where the raw data feeds into Claude's reasoning about infrastructure age and registrar patterns.</p>
+</div>
+
+<h2>Reading between the lines of redacted records</h2>
+<div class="indent">
+<p>When registrant identity is fully redacted, the remaining metadata contains correlatable signals that privacy protection does not hide.</p>
+
+<p><strong>Nameserver patterns:</strong> Custom nameservers (ns1.targetcorp.com) indicate direct infrastructure ownership. Shared nameservers (ns1.cloudflare.com, ns1.digitalocean.com) indicate infrastructure providers. Certain nameservers are strongly associated with specific hosting ecosystems — recognizing these patterns lets you cluster domains that use the same infrastructure even without shared registrant data.</p>
+
+<p><strong>Registrar clustering:</strong> Bulk domain buyers tend to register through the same registrar for volume discounts or API access. If 30 lookalike domains all show Namecheap as registrar with privacy protection enabled, that's a different infrastructure signature than 30 domains through different enterprise registrars. GoDaddy, Namecheap, NameSilo, and Porkbun each have distinct user populations.</p>
+
+<p><strong>Registration date density:</strong> A cluster of similar domains (target-login.com, target-secure.com, target-account.com) all registered within a 48-hour window, all expiring in 1 year, all using the same nameservers — this pattern is strong evidence of coordinated infrastructure even with all registrant data hidden.</p>
+
+<p><strong>Privacy proxy attribution:</strong> The specific privacy proxy service used is not anonymous. "Withheld for Privacy ehf" (an Icelandic company) is distinct from "Contact Privacy Inc. Customer" (Tucows/OpenSRS) which is distinct from GoDaddy's proxy service. Some privacy proxy providers have been more cooperative with legal process than others — this matters for law enforcement cases.</p>
+</div>
+
+<h2>When WHOIS is completely hidden: Fallback sources</h2>
+<div class="indent">
+<p>Some registrars provide effectively nothing beyond nameservers and dates. For these cases, orthogonal data sources often recover the information WHOIS no longer provides.</p>
+
+<p><strong>Certificate Transparency:</strong> Every TLS certificate issued for a domain is logged in public CT logs. The certificate subject and SAN fields contain the domain names, and historical certs may have been issued before privacy protection was applied. Query crt.sh for a target domain and look at certificates issued years ago — many pre-GDPR certs contain organization names in the subject. Also see <a href="/blog/subdomain-enumeration.html">subdomain enumeration via CT logs</a> for the secondary benefit of certificate data.</p>
+
+<p><strong>Passive DNS:</strong> Services like PassiveTotal, SecurityTrails, and VirusTotal Passive DNS log which IP addresses a domain has historically resolved to. Correlating historical IP addresses across multiple domains can reveal shared infrastructure even when WHOIS is empty. If three domains with redacted registrants all pointed to the same IP range in 2022, that's a cluster signal.</p>
+
+<p><strong>Historical WHOIS snapshots:</strong> ViewDNS.info, DomainTools (commercial), and domain.glass maintain historical WHOIS snapshots. Domains registered before GDPR-era redaction often have complete registrant records in historical snapshots. The privacy protection your target applied in 2019 doesn't erase the 2015 record from archives.</p>
+
+<p>The IP address a domain currently resolves to is always queryable via DNS — that's outside WHOIS scope entirely. Resolving the domain and feeding the IP into <a href="/blog/ip-intelligence-guide.html">IP intelligence tools</a> frequently recovers organization attribution even when the domain registration is fully anonymized.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/blog/subdomain-enumeration.html">Subdomain Enumeration</a> &mdash; Attack surface mapping using certificate transparency and DNS brute force</li>
+<li><a href="/blog/ip-intelligence-guide.html">IP Intelligence Guide</a> &mdash; Five dimensions of IP address analysis including ASN, geolocation, and abuse history</li>
+<li><a href="/tools/">OpenOSINT Tools</a> &mdash; Full tool reference including search_whois, search_domain, and search_ip</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
+</aside>

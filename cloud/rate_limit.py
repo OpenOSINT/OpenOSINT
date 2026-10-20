@@ -15,7 +15,12 @@ import time
 from collections import deque
 from typing import Protocol
 
-from cloud.config import PLATFORM_BURST_MAX_CALLS, PLATFORM_BURST_WINDOW_SECS
+from cloud.config import (
+    PLATFORM_BURST_MAX_CALLS,
+    PLATFORM_BURST_WINDOW_SECS,
+    WAITLIST_RATE_MAX_CALLS,
+    WAITLIST_RATE_WINDOW_SECS,
+)
 
 
 class BurstLimiter(Protocol):
@@ -61,4 +66,12 @@ class InProcessSlidingWindowLimiter:
 platform_pool_limiter: BurstLimiter = InProcessSlidingWindowLimiter(
     window_secs=PLATFORM_BURST_WINDOW_SECS,
     max_calls=PLATFORM_BURST_MAX_CALLS,
+)
+
+# Shared instance guarding the public, unauthenticated POST /v1/waitlist route.
+# Keyed by client IP (see cloud/routes/waitlist.py) since there's no api_key
+# to key on yet.
+waitlist_limiter: BurstLimiter = InProcessSlidingWindowLimiter(
+    window_secs=WAITLIST_RATE_WINDOW_SECS,
+    max_calls=WAITLIST_RATE_MAX_CALLS,
 )

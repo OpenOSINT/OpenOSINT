@@ -24,7 +24,9 @@ import re
 
 import requests
 
+from openosint.settings_catalog import missing_keys_message
 from openosint.proxy import get_requests_proxies
+from openosint.tool_policy import disabled_result, is_tool_enabled
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
 logger = logging.getLogger(__name__)
@@ -279,13 +281,16 @@ async def run_virustotal_osint(target: str, timeout_seconds: int = _DEFAULT_TIME
     """
     resolved_key = api_key or os.environ.get("VIRUSTOTAL_API_KEY", "")
     if not resolved_key:
-        return (
-            "Scan error: VIRUSTOTAL_API_KEY environment variable is not set. "
-            "Get a free key at https://www.virustotal.com/gui/my-apikey"
-        )
+        return missing_keys_message("search_virustotal", ["VIRUSTOTAL_API_KEY"])
 
     target = target.strip()
     input_type = _detect_input_type(target)
+    if input_type == "url" and not is_tool_enabled("search_virustotal_url"):
+        return disabled_result(
+            "search_virustotal_url",
+            "Submitting a URL makes VirusTotal fetch it and makes it visible to the VirusTotal "
+            "community, which can reveal your investigation. IP, domain and hash lookups still work.",
+        )
     logger.info("Starting VirusTotal lookup for: %s (type: %s)", target, input_type)
 
     try:

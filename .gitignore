@@ -165,3 +165,14 @@ openosint.tape
 
 # _leadmagnet/ source is tracked; only ignore the local build artifact
 _leadmagnet/openosint-free-prompts.pdf
+
+# Internal legal working notes — intentionally not published, never remove this rule
+legal/INCIDENT-NOTES.md
+legal/REVIEW-QUESTIONS.md
+
+# Apify Actors — local `apify run` output, never committed
+actors/*/storage/
+actors/*/.venv/
+
+# Apify Actors — local Docker-build wheel (see actors/build-local.sh), never committed
+actors/*/local-wheels/*.whl

@@ -1,0 +1,105 @@
+---
+title: OpenOSINT MCP Server — Integrate OSINT into Claude
+seo_title: OpenOSINT MCP server for Claude Desktop and Code
+description: Install the OpenOSINT MCP server, configure it in Claude Desktop and Claude Code, and run an example investigation from your AI assistant.
+date: '2026-05-15'
+modified: '2026-05-15'
+---
+<div class="indent">
+<p><b>Integrate OSINT into Claude Desktop and Claude Code</b></p>
+</div>
+
+<h2>Introduction</h2>
+<div class="indent">
+<p>Model Context Protocol (MCP) lets AI assistants call external tools in real time. OpenOSINT ships a full MCP server that exposes all 14 OSINT tools over stdio, letting Claude Desktop or Claude Code run live intelligence lookups on your behalf &mdash; no terminal switching required.</p>
+<p>When an investigation is underway, the AI decides which tools to chain based on your question, executes them in Python, and feeds the real output back. Tool results come from real executions on your machine; the model can still misread or misattribute them, so check the raw output before acting on a conclusion.</p>
+</div>
+
+<h2>What you get</h2>
+<div class="indent">
+<ul>
+<li>The full tool set is available in Claude's tool palette &mdash; see the <a href="/tools/">full tools reference</a></li>
+<li>Investigations happen inline in your chat, no separate terminal</li>
+<li>The AI decides which tools to chain based on your question</li>
+<li>Results are real: tools execute in Python, not simulated by the model</li>
+<li>Session context is preserved across tool calls within one conversation</li>
+</ul>
+</div>
+
+<h2>Installation</h2>
+<div class="indent">
+<p>Requires Python 3.10+.</p>
+<pre>git clone https://github.com/OpenOSINT/OpenOSINT.git
+cd OpenOSINT
+pip install -e .</pre>
+<p>Set your API key:</p>
+<pre>export ANTHROPIC_API_KEY=sk-ant-...</pre>
+<p>Optional keys for additional tools:</p>
+<pre>export IP2LOCATION_API_KEY=...   # IP2Location geolocation + VPN detection
+export ABUSEIPDB_API_KEY=...     # IP abuse reputation scoring
+export HIBP_API_KEY=...          # HaveIBeenPwned breach lookup</pre>
+</div>
+
+<h2>Configure Claude desktop</h2>
+<div class="indent">
+<p>Edit <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> (macOS) or <code>%APPDATA%\Claude\claude_desktop_config.json</code> (Windows). Requires <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>:</p>
+<pre>{
+  "mcpServers": {
+    "openosint": {
+      "command": "uvx",
+      "args": ["--from", "openosint", "openosint-mcp"]
+    }
+  }
+}</pre>
+<p>Restart Claude Desktop. OpenOSINT's tools will appear in the tool palette as <code>search_email</code>, <code>search_ip</code>, <code>search_abuseipdb</code>, etc.</p>
+</div>
+
+<h2>Configure Claude code</h2>
+<div class="indent">
+<p>From any terminal with Claude Code installed:</p>
+<pre>claude mcp add openosint -- uvx --from openosint openosint-mcp
+claude mcp list</pre>
+<p>Now inside a Claude Code session you can ask it to investigate targets and it will call the appropriate OSINT tools automatically.</p>
+</div>
+
+<h2>Example investigation</h2>
+<div class="indent">
+<p>In Claude Desktop or Claude Code, type a natural-language request:</p>
+<pre>&gt; Investigate the email suspicious@example.com. Check for linked accounts and breach exposure.</pre>
+<p>Claude will call tools in sequence:</p>
+<pre>  &rarr; generate_dorks('suspicious@example.com')
+  &rarr; search_email('suspicious@example.com')
+  &check; Found: GitHub, WordPress, Gravatar
+
+  &rarr; search_breach('suspicious@example.com')
+  &check; Found in 1 breach: LinkedIn (2016)
+
+  Summary: The email is registered on GitHub, WordPress, and Gravatar.
+  It appeared in the LinkedIn 2016 breach (leaked: email, password hash).</pre>
+</div>
+
+<h2>CLI vs MCP</h2>
+<div class="indent">
+<table>
+<tr><th>CLI</th><th>MCP + Claude</th></tr>
+<tr><td>Run one tool at a time</td><td>AI chains tools automatically</td></tr>
+<tr><td>Output is raw text</td><td>Results are interpreted and summarised</td></tr>
+<tr><td>You decide the workflow</td><td>AI selects tools based on findings</td></tr>
+<tr><td>No memory between commands</td><td>Session context preserved</td></tr>
+</table>
+<p>For scripting and quick one-off lookups, the CLI remains fastest. For open-ended investigations where you are not sure which tools to use, MCP lets the AI drive.</p>
+</div>
+
+<h2>See also</h2>
+<div class="indent">
+<ul>
+<li><a href="/tools/">Full tools reference</a> &mdash; the full tool set, parameters, and example output</li>
+<li><a href="/blog/email-osint-guide.html">Email OSINT guide</a> &mdash; deep dive into email enumeration and breach detection</li>
+<li><a href="/docs/">OpenOSINT documentation</a> &mdash; complete manual including REPL and CLI usage</li>
+</ul>
+</div>
+
+
+<aside class="oo-cta">
+  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+</aside>

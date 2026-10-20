@@ -1,0 +1,58 @@
+{
+    "actorSpecification": 1,
+    "fields": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+            "username": {
+                "type": "string",
+                "title": "Username",
+                "description": "The username that was checked.",
+                "example": "johndoe"
+            },
+            "platform": {
+                "type": "string",
+                "title": "Platform",
+                "description": "The platform/site where the account was found.",
+                "example": "GitHub"
+            },
+            "url": {
+                "type": "string",
+                "title": "Profile URL",
+                "description": "Direct URL to the discovered profile.",
+                "example": "https://github.com/johndoe"
+            },
+            "category": {
+                "type": ["string", "null"],
+                "title": "Category",
+                "description": "Platform category, when known. Currently always null — sherlock's site catalog carries no category taxonomy.",
+                "example": null
+            },
+            "checkedAt": {
+                "type": "string",
+                "title": "Checked at",
+                "description": "ISO 8601 timestamp when this platform was checked.",
+                "example": "2026-09-17T12:00:00Z"
+            }
+        },
+        "required": ["username", "platform", "url", "checkedAt"]
+    },
+    "views": {
+        "overview": {
+            "title": "Overview",
+            "transformation": {
+                "fields": ["username", "platform", "url", "category", "checkedAt"]
+            },
+            "display": {
+                "component": "table",
+                "properties": {
+                    "username": { "label": "Username" },
+                    "platform": { "label": "Platform" },
+                    "url": { "label": "Profile URL", "format": "link" },
+                    "category": { "label": "Category" },
+                    "checkedAt": { "label": "Checked at" }
+                }
+            }
+        }
+    }
+}

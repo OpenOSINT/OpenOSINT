@@ -1,64 +1,92 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Automating OSINT with APIs: Shodan, VirusTotal, Censys and More</title>
-<meta name="description" content="Shodan, VirusTotal, Censys, and AbuseIPDB each expose REST APIs with distinct data models. This guide covers authentication, rate limits, Python integration patterns, and how OpenOSINT wraps these sources into a unified investigative layer.">
-<meta name="keywords" content="OSINT API automation, Shodan API, VirusTotal API, Censys API, AbuseIPDB API, OSINT Python, automated threat intelligence, API security research">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automating OSINT with Shodan, VirusTotal and Censys</title>
+<meta name="description" content="Compare Shodan, VirusTotal, Censys and AbuseIPDB APIs: authentication, rate limits, Python patterns, and combining them into one investigation pipeline.">
 <link rel="canonical" href="https://openosint.tech/blog/osint-api-automation.html">
-<meta property="og:title" content="Automating OSINT with APIs: Shodan, VirusTotal, Censys and More">
-<meta property="og:description" content="Shodan, VirusTotal, Censys, and AbuseIPDB APIs: authentication, rate limits, Python integration patterns, and how OpenOSINT wraps them into one investigative layer.">
-<meta property="og:url" content="https://openosint.tech/blog/osint-api-automation.html">
-<meta property="og:type" content="article">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
 <meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Automating OSINT with Shodan, VirusTotal and Censys">
+<meta property="og:description" content="Compare Shodan, VirusTotal, Censys and AbuseIPDB APIs: authentication, rate limits, Python patterns, and combining them into one investigation pipeline.">
+<meta property="og:url" content="https://openosint.tech/blog/osint-api-automation.html">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Automating OSINT with APIs: Shodan, VirusTotal, Censys and More">
-<meta name="twitter:description" content="REST API integration for OSINT automation: Shodan, VirusTotal, Censys, AbuseIPDB — authentication, rate limits, Python patterns.">
-<link rel="icon" type="image/svg+xml" href="../logo.svg">
-<link rel="stylesheet" href="../style.css">
+<meta name="twitter:title" content="Automating OSINT with Shodan, VirusTotal and Censys">
+<meta name="twitter:description" content="Compare Shodan, VirusTotal, Censys and AbuseIPDB APIs: authentication, rate limits, Python patterns, and combining them into one investigation pipeline.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "Automating OSINT with APIs: Shodan, VirusTotal, Censys and More",
-  "author": { "@type": "Organization", "name": "OpenOSINT" },
-  "publisher": { "@type": "Organization", "name": "OpenOSINT", "url": "https://openosint.tech" },
+  "description": "Compare Shodan, VirusTotal, Censys and AbuseIPDB APIs: authentication, rate limits, Python patterns, and combining them into one investigation pipeline.",
+  "author": {
+    "@type": "Organization",
+    "name": "OpenOSINT"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "OpenOSINT",
+    "url": "https://openosint.tech/"
+  },
   "datePublished": "2026-05-24",
   "dateModified": "2026-05-24",
-  "url": "https://openosint.tech/blog/osint-api-automation.html",
-  "description": "Shodan, VirusTotal, Censys, and AbuseIPDB each expose REST APIs with distinct data models. This guide covers authentication, rate limits, Python integration patterns, and how OpenOSINT wraps these sources into a unified investigative layer."
+  "mainEntityOfPage": "https://openosint.tech/blog/osint-api-automation.html",
+  "image": "https://openosint.tech/assets/og.png"
 }
 </script>
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/" aria-current="page">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
 
-<div id="nav">
-<a href="/" style="color:#3fb950;font-weight:bold;">HOME</a>
-<a href="/blog/" style="color:#58a6ff;">BLOG</a>
-<a href="/tools/" style="color:#58a6ff;">TOOLS</a>
-<a href="/commercial/" style="color:#f0a732;font-weight:bold;">FOR TEAMS</a>
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GITHUB</a>
-</div>
-
-<div id="content">
-
-<div style="font-family:monospace;font-size:12px;margin-bottom:4px;">
-<a href="/blog/">&larr; Back to Blog</a>
-</div>
-
-<h2>AUTOMATING OSINT WITH APIs</h2>
-<div class="indent">
-<p style="font-family:monospace;font-size:12px;">Published: 2026-05-24</p>
-</div>
-
-<h2>CHOOSING THE RIGHT API FOR THE QUESTION</h2>
+<main id="main">
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>Automating OSINT with APIs: Shodan, VirusTotal, Censys and More</h1>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <h2>Choosing the right API for the question</h2>
 <div class="indent">
 <p>Each major OSINT API answers a different question. Shodan answers: what services are running on this IP or across this organization's infrastructure? VirusTotal answers: is this URL, file hash, or IP flagged by any of 70+ security vendors? Censys answers: what does this IP's TLS certificate say, and what subdomains has this organization ever issued certificates for? AbuseIPDB answers: has this IP been reported for malicious activity, and how recently? These are distinct questions with distinct data models. Understanding which source answers which question prevents redundant queries and ensures you're using the right tool for each investigation phase.</p>
 <p>All four expose REST APIs with API key authentication. Free tiers are sufficient for investigative use; paid tiers are needed for bulk automation. Rate limits vary significantly &mdash; understanding them before building automation prevents failed runs and temporary key suspensions.</p>
 </div>
 
-<h2>SHODAN: INFRASTRUCTURE SEARCH</h2>
+<h2>Shodan: Infrastructure search</h2>
 <div class="indent">
 <p>Shodan's API is available via both REST and the official Python library. Install: <code>pip install shodan</code>. The Python library wraps the REST endpoints cleanly:</p>
 <pre>import shodan
@@ -78,7 +106,7 @@ for match in results['matches']:
 <p>Rate limits: free API keys get 1 query/second and 100 results per search. Monitor credit usage via <code>api.info()</code>. For ASN-wide queries, <code>asn:AS12345</code> is more reliable than <code>org:</code> which matches on free-text org name fields. OpenOSINT's <code>search_shodan</code> tool wraps both host lookup and keyword search with timeout enforcement and error handling.</p>
 </div>
 
-<h2>VIRUSTOTAL: MULTI-VENDOR THREAT INTELLIGENCE</h2>
+<h2>VirusTotal: Multi-vendor threat intelligence</h2>
 <div class="indent">
 <p>VirusTotal's v3 API uses Bearer token authentication. The key endpoints for OSINT are: <code>/api/v3/urls/{id}</code> for URL analysis, <code>/api/v3/ip_addresses/{ip}</code> for IP reputation, and <code>/api/v3/domains/{domain}</code> for domain analysis. Each returns a <code>data.attributes</code> object with <code>last_analysis_stats</code> (counts of malicious/suspicious/clean/undetected verdicts) and <code>last_analysis_results</code> (per-vendor verdicts).</p>
 <pre>import requests, base64
@@ -98,7 +126,7 @@ print(f"Malicious: {stats['malicious']} / {sum(stats.values())}")</pre>
 <p>Rate limits: free tier is 4 requests/minute, 500/day. For IP lookups, the <code>last_analysis_date</code> field tells you when VirusTotal last scanned the IP &mdash; important context since stale data can produce false negatives on recently-compromised infrastructure. OpenOSINT's <code>search_virustotal</code> handles URL submission, result polling, and timeout for analyses that haven't been cached yet.</p>
 </div>
 
-<h2>CENSYS AND ABUSEIPDB</h2>
+<h2>Censys and AbuseIPDB</h2>
 <div class="indent">
 <p>Censys uses HTTP Basic Auth with an API ID and secret. The primary OSINT use case is certificate search: every subdomain that ever received a TLS certificate is indexed. Query the certificates index:</p>
 <pre>from censys.search import CensysHosts
@@ -122,7 +150,7 @@ print(f"Score: {data['abuseConfidenceScore']}% | Reports: {data['totalReports']}
 <p>AbuseIPDB is most useful for threat context: an IP with 400 abuse reports in 90 days is high-risk infrastructure regardless of what geolocation or ASN data says. OpenOSINT's <code>search_abuseipdb</code> exposes this directly; see the <a href="/blog/ip-intelligence-guide.html">IP intelligence guide</a> for combining AbuseIPDB with IP2Location for full context. For bulk IP reputation checking across a target's entire infrastructure, see the <a href="/blog/parallel-osint.html">parallel OSINT guide</a>.</p>
 </div>
 
-<h2>BUILDING A UNIFIED INVESTIGATION PIPELINE</h2>
+<h2>Building a unified investigation pipeline</h2>
 <div class="indent">
 <p>The pattern for multi-source API automation: collect all target identifiers first, then dispatch queries in parallel, then correlate results. Python's <code>asyncio</code> with <code>aiohttp</code> handles concurrent API calls efficiently without threading complexity:</p>
 <pre>import asyncio
@@ -144,7 +172,7 @@ async def bulk_ip_check(ips: list[str], key: str) -> dict:
 <p>OpenOSINT wraps this pattern in its multi-target runner. The <code>openosint multi targets.txt</code> command handles rate limiting, retries, and structured JSON output automatically. For custom pipelines that need direct API access, the pattern above is the starting point. The <a href="/tools/">tools reference</a> documents which API keys each OpenOSINT tool requires and what structured data each returns.</p>
 </div>
 
-<h2>SEE ALSO</h2>
+<h2>See also</h2>
 <div class="indent">
 <ul>
 <li><a href="/blog/ip-intelligence-guide.html">IP intelligence guide</a> &mdash; combining geolocation, ASN, and abuse data for full context</li>
@@ -155,19 +183,44 @@ async def bulk_ip_check(ips: list[str], key: str) -> dict:
 
 
 <aside class="oo-cta">
-  <strong>AI OSINT Prompt Pack &mdash; 30+ tested prompts for OpenOSINT investigations</strong>
-  <p>Covers 8 target types &mdash; email, username, domain, IP, phone, company due-diligence, image, reporting &mdash; with one repeatable collect &rarr; pivot &rarr; verify &rarr; document flow. Built for analysts already running OpenOSINT.</p>
-  <a href="https://tommasodev.gumroad.com/l/ai-osint-prompt-pack?utm_source=site&amp;utm_medium=blog_cta&amp;utm_campaign=prompt_pack" class="oo-cta-btn">Get the Prompt Pack ($29) &rarr;</a>
+  <p>Checking a company? <a href="https://app.openosint.tech/diligence?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Diligence</a> compares official company records with the company&rsquo;s public footprint.</p>
 </aside>
-<hr>
 
-<div style="margin-top:24px; padding-top:12px; border-top:1px solid #ccc; font-family:monospace; font-size:12px; text-align:center;">
-<a href="/">Home</a> &middot;
-<a href="/blog/">Blog</a> &middot;
-<a href="/tools/">Tools</a> &middot;
-<a href="https://github.com/OpenOSINT/OpenOSINT" target="_blank" rel="noopener">GitHub</a>
+  </article>
 </div>
 
-</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
 </body>
 </html>

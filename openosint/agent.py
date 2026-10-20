@@ -11,8 +11,8 @@ Implements the agentic loop using either:
 
 All agents share the same ``run()`` interface and return an ``AgentResponse``.
 No manual JSON parsing.  The model issues hard stops when it needs a tool,
-the real tool executes, the output goes back.  Hallucination in tool results
-is structurally impossible.
+the real tool executes, the output goes back.  Tool results come from real
+executions; the model can still misread or misattribute them.
 """
 
 from __future__ import annotations
@@ -26,6 +26,14 @@ from typing import Any
 import anthropic
 
 from openosint.pivot import investigate_graph_for_agent
+from openosint.tool_policy import (
+    ToolBudget,
+    current_budget,
+    disabled_result,
+    filter_definitions,
+    is_tool_enabled,
+    use_budget,
+)
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.scrape_url import run_scrape_url_osint
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint
@@ -36,11 +44,13 @@ from openosint.tools.search_domain import run_domain_osint
 from openosint.tools.search_dorks_live import run_dorks_live_osint
 from openosint.tools.search_email import run_email_osint
 from openosint.tools.search_footprint import run_footprint_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
 from openosint.tools.search_github import run_github_osint
 from openosint.tools.search_ip import run_ip_osint
 from openosint.tools.search_ip2location import run_ip2location_osint
 from openosint.tools.search_paste import run_paste_osint
 from openosint.tools.search_phone import run_phone_osint
+from openosint.tools.search_rdap import run_rdap_osint
 from openosint.tools.search_shodan import run_shodan_osint
 from openosint.tools.search_username import run_username_osint
 from openosint.tools.search_virustotal import run_virustotal_osint
@@ -49,6 +59,41 @@ from openosint.tools.search_whois import run_whois_osint
 logger = logging.getLogger(__name__)
 
 _MAX_TOKENS = 4096
+
+# Pinned deliberately. Dateless Claude model IDs are NOT evergreen
+# pointers — from the 4.6 generation on, a dateless ID maps to one
+# fixed snapshot. Revisit when a newer Sonnet ships.
+# Override at runtime with ANTHROPIC_MODEL.  (reviewed 2026-09)
+DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-5"
+
+_warned_openosint_model_deprecated = False
+
+
+def default_anthropic_model() -> str:
+    """Return the Anthropic model to use.
+
+    Resolution order: $ANTHROPIC_MODEL > $OPENOSINT_MODEL (deprecated, warns
+    once) > DEFAULT_ANTHROPIC_MODEL. Resolved at call time (not as a
+    module-level import-time constant) so a .env loaded later by the entry
+    point is always honoured.
+    """
+    global _warned_openosint_model_deprecated
+
+    anthropic_model = os.environ.get("ANTHROPIC_MODEL", "").strip()
+    if anthropic_model:
+        return anthropic_model
+
+    legacy_model = os.environ.get("OPENOSINT_MODEL", "").strip()
+    if legacy_model:
+        if not _warned_openosint_model_deprecated:
+            logger.warning(
+                "OPENOSINT_MODEL is deprecated and will be removed in a future "
+                "release; use ANTHROPIC_MODEL instead."
+            )
+            _warned_openosint_model_deprecated = True
+        return legacy_model
+
+    return DEFAULT_ANTHROPIC_MODEL
 
 # ---------------------------------------------------------------------------
 # Tool definitions — Anthropic format
@@ -177,7 +222,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "description": (
             "Query Shodan for host intelligence or banner searches. "
             "If the query looks like an IP address, performs a host lookup. "
-            "Otherwise performs a keyword/service search. Requires SHODAN_API_KEY."
+            "Otherwise performs a keyword/service search. Uses SHODAN_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -195,7 +240,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "description": (
             "Check IP, domain, URL, or file hash against VirusTotal's 70+ antivirus "
             "engines and threat intelligence. Auto-detects input type. "
-            "Requires VIRUSTOTAL_API_KEY."
+            "Uses VIRUSTOTAL_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -217,7 +262,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Search Censys for internet-facing infrastructure data. "
             "For IPs: returns open ports, services, ASN. "
             "For domains: returns certificate history, SANs, and issuer information. "
-            "Requires CENSYS_API_ID and CENSYS_SECRET."
+            "Uses CENSYS_API_ID and CENSYS_SECRET."
         ),
         "input_schema": {
             "type": "object",
@@ -236,7 +281,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Enhanced IP intelligence using IP2Location Security Plan. "
             "Returns geolocation, ISP, ASN, and detects VPN, proxy, Tor exit nodes, "
             "and datacenter hosting. Sponsored integration. "
-            "Requires IP2LOCATION_API_KEY."
+            "Uses IP2LOCATION_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -256,7 +301,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Returns abuse confidence score (0–100%), total reports, country, ISP, domain, "
             "and last reported timestamp. Use this when investigating suspicious IPs "
             "to determine if they are known attackers, spammers, or malicious actors. "
-            "Requires ABUSEIPDB_API_KEY."
+            "Uses ABUSEIPDB_API_KEY."
         ),
         "input_schema": {
             "type": "object",
@@ -291,6 +336,25 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "search_rdap",
+        "description": (
+            "Structured domain registration lookup via RDAP, the machine-readable successor to WHOIS: "
+            "registrar, registration and expiry dates, name servers and status codes. Registrant "
+            "contact details are redacted by policy and never returned. No API key required. "
+            "Use alongside search_whois to confirm registration dates and registrar."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "description": "Target domain (e.g. example.com).",
+                }
+            },
+            "required": ["domain"],
+        },
+    },
+    {
         "name": "search_dns",
         "description": (
             "Comprehensive DNS record enumeration for a domain including A, AAAA, MX, NS, "
@@ -312,13 +376,60 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "search_gdelt_geo",
+        "description": (
+            "Search recent, geolocated worldwide news from GDELT's 15-minute article "
+            "feed (headlines and URLs matched against the query; places come from the "
+            "articles' location mentions). No API key required. Use for situational "
+            "awareness of events in a region, or to find geolocated news mentioning a "
+            "target. The result says how far back it covers; the first call after "
+            "startup may cover only the last 15 minutes while older articles load. "
+            "Optionally scope the search to a bounding box (e.g. from a user-selected "
+            "map area); use query \"*\" to list all coverage inside it."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "Keywords matched against article headlines and URLs. Supports "
+                        "quoted phrases and OR groups. Use \"*\" for everything in the bbox."
+                    ),
+                },
+                "timespan": {
+                    "type": "integer",
+                    "description": (
+                        "Lookback in minutes (15–1440, capped at the loaded window, "
+                        "6 hours by default). Defaults to 60."
+                    ),
+                },
+                "maxpoints": {
+                    "type": "integer",
+                    "description": "Maximum point features to return (1–500). Defaults to 250.",
+                },
+                "bbox": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "description": (
+                        "Optional [min_lon, min_lat, max_lon, max_lat] to scope results "
+                        "to a bounding box."
+                    ),
+                },
+            },
+            "required": ["query"],
+        },
+    },
+    {
         "name": "search_dorks_live",
         "description": (
             "Execute Google dork queries for a target via the Bright Data SERP API, "
             "returning live structured results (title, URL, snippet). "
             "Use after generate_dorks when you need actual search results, not just URLs. "
             "Runs up to 5 dorks by default — each is a billable API call. "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
         ),
         "input_schema": {
             "type": "object",
@@ -338,7 +449,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "Cloudflare, CAPTCHA, and other bot-protection. Returns the page as clean "
             "Markdown. Use to retrieve content from URLs discovered by other tools when "
             "direct access is blocked. "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE."
+            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE."
         ),
         "input_schema": {
             "type": "object",
@@ -359,7 +470,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
             "entity-type-aware Google queries, returning structured results (title, URL, snippet) "
             "and Entity Correlation Graph nodes/edges for discovered domains and profiles. "
             "Use when you need a targeted, type-aware SERP sweep rather than generic dork URLs. "
-            "Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
+            "Uses BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE."
         ),
         "input_schema": {
             "type": "object",
@@ -402,6 +513,14 @@ _TOOL_MAP: dict[str, Any] = {
     "search_abuseipdb": lambda a: run_abuseipdb_osint(a["ip"], timeout_seconds=30),
     "search_github": lambda a: run_github_osint(a["query"], timeout_seconds=30),
     "search_dns": lambda a: run_dns_osint(a["domain"], timeout_seconds=10),
+    "search_rdap": lambda a: run_rdap_osint(a["domain"], timeout_seconds=15),
+    "search_gdelt_geo": lambda a: run_gdelt_geo_osint(
+        a["query"],
+        timeout_seconds=15,
+        timespan=int(a.get("timespan", 60)),
+        maxpoints=int(a.get("maxpoints", 250)),
+        bbox=tuple(a["bbox"]) if a.get("bbox") else None,
+    ),
     "search_dorks_live": lambda a: run_dorks_live_osint(a["target"], timeout_seconds=30),
     "scrape_url": lambda a: run_scrape_url_osint(a["url"], timeout_seconds=60),
     "search_footprint": lambda a: run_footprint_osint(
@@ -426,15 +545,16 @@ INVESTIGATION STRATEGY:
 - For a full name target: always start with generate_dorks to discover real identifiers.
 - For an email: run search_email and search_breach.
 - For a username: run search_username and search_paste.
-- For a domain: run search_whois, search_domain, and search_dns to reveal subdomains, registration data, DNS records, and email security posture.
+- For a domain: run search_whois, search_rdap, search_domain, and search_dns to reveal subdomains, registration data, DNS records, and email security posture.
 - For an IP: run search_ip and optionally search_shodan or search_censys for open ports/services.
 - For a GitHub username or handle: use search_github to retrieve profile data, repos, and commit-discovered emails.
 - For IP reputation/abuse: use search_abuseipdb to get the abuseConfidenceScore — a score above 50% indicates a high-risk IP; combine with search_ip or search_shodan for full context.
 - For a domain or IP infrastructure: use search_censys for certificate history and port data.
 - For a Shodan query or banners: use search_shodan.
-- For live Google search results on a target: use search_dorks_live (requires BRIGHTDATA_API_KEY).
-- For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (requires BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
-- To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (requires BRIGHTDATA_API_KEY).
+- For live Google search results on a target: use search_dorks_live (uses BRIGHTDATA_API_KEY).
+- For a targeted, entity-type-aware SERP sweep (email/username/domain/phone/name): use search_footprint (uses BRIGHTDATA_API_KEY). Prefer this over search_dorks_live when you know the entity type.
+- To fetch a URL that blocks direct access (Cloudflare/CAPTCHA): use scrape_url (uses BRIGHTDATA_API_KEY).
+- For real-time geolocated news coverage of a region or event (no key required): use search_gdelt_geo. If the user has selected a map area, pass its bbox with query "*". Tell the user how far back the result covers.
 - Chain tools intelligently: use findings from each step to decide the next.
 - Never run search_email or search_breach with a full name — only with actual email addresses.
 - Never run search_username with spaces in the name.
@@ -450,6 +570,7 @@ CRITICAL RULES:
 - NEVER invent, guess, or fabricate information not returned by tools.
 - If a tool returns no results, report exactly that.
 - Be honest about ambiguity — if multiple people share the name, say so.
+- Never ask the user for API keys or credentials, and never decline a tool call on the assumption that a credential is missing — call the tool and report whatever error it returns.
 - For general questions or chat, respond normally without calling tools."""
 
 
@@ -474,6 +595,7 @@ class AgentResponse:
     content: str
     tool_calls: list[ToolCall] = field(default_factory=list)
     error: str = ""
+    limit_reached: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -494,12 +616,74 @@ async def _execute_tool(
     tool_input: dict[str, Any],
     on_tool_call: Any,
 ) -> str:
-    """Invoke on_tool_call callback then run the tool, returning its string result."""
+    """Invoke on_tool_call callback then run the tool, returning its string result.
+
+    A tool the current mode doesn't offer returns a structured "disabled" result even
+    if the model asks for it anyway; a call past the request's budget is refused.
+    """
+    # Every request counts against the budget, including unknown and disabled tools: a model
+    # that keeps asking for a refused tool must still hit the cap instead of looping forever.
+    budget = current_budget()
+    if budget is not None and not budget.try_consume():
+        return budget.message()
+    if tool_name not in _TOOL_MAP:
+        return f"Error: unknown tool '{tool_name}'."
+    if not is_tool_enabled(tool_name):
+        return disabled_result(tool_name)
     if on_tool_call is not None:
         await on_tool_call(tool_name, tool_input)
-    if tool_name in _TOOL_MAP:
-        return await _TOOL_MAP[tool_name](tool_input)
-    return f"Error: unknown tool '{tool_name}'."
+    return await _TOOL_MAP[tool_name](tool_input)
+
+
+def _system_prompt() -> str:
+    """SYSTEM_PROMPT plus a note that only the offered tools exist in this mode."""
+    return (
+        SYSTEM_PROMPT
+        + "\n\nAVAILABLE TOOLS: use only the tools you are given; some tools mentioned above may be "
+        "disabled in this mode. If a tool result says a tool is disabled, do not retry it; tell the "
+        "user how to enable it. Each user request has a tool-call limit; prefer the most informative calls."
+    )
+
+
+def _capped_response(
+    budget: ToolBudget, tool_calls: list[ToolCall], last_text: str, history: list[dict[str, Any]]
+) -> AgentResponse:
+    """End the turn with an explicit message when the model asked for more calls than allowed."""
+    content = f"{last_text}\n\n⚠ {budget.message()}".strip()
+    history.append({"role": "assistant", "content": content})
+    return AgentResponse(content=content, tool_calls=tool_calls, limit_reached=True)
+
+
+class _BudgetedRun:
+    """Mixin: ``run()`` gives each user request its own tool-call budget (or a shared one)."""
+
+    async def run(
+        self,
+        prompt: str,
+        on_tool_call: Any = None,
+        budget: ToolBudget | None = None,
+    ) -> AgentResponse:
+        """
+        Execute one agent turn.
+
+        Parameters
+        ----------
+        prompt:
+            User message or OSINT target description.
+        on_tool_call:
+            Optional async callback invoked before each tool execution.
+            Signature: ``async def on_tool_call(name: str, input: dict) -> None``
+        budget:
+            Tool-call budget. Defaults to a fresh ``OPENOSINT_MAX_TOOL_CALLS`` budget per
+            call; investigate_multi passes one shared budget for all targets.
+
+        Returns
+        -------
+        AgentResponse
+            Final text response and list of tool calls made.
+        """
+        with use_budget(budget or ToolBudget()):
+            return await self._run(prompt, on_tool_call)  # type: ignore[attr-defined]
 
 
 async def _process_tool_turn(
@@ -516,11 +700,16 @@ async def _process_tool_turn(
         result = await _execute_tool(block.name, block.input, on_tool_call)
         tool_calls.append(ToolCall(name=block.name, input=block.input, result=result))
         logger.info("Tool executed: %s → %d chars", block.name, len(result))
+        # The provider gets the stripped text — every subsequent round of
+        # this investigation resends the whole message list, and raw
+        # coordinates are dead weight to a model. ToolCall.result above
+        # keeps the full output for CLI/REPL display.
+        model_text, _ = split_geojson_fence(result)
         tool_results.append(
             {
                 "type": "tool_result",
                 "tool_use_id": block.id,
-                "content": result,
+                "content": model_text,
             }
         )
     messages.append({"role": "user", "content": tool_results})
@@ -565,7 +754,7 @@ async def _process_ollama_tool_turn(
 # ---------------------------------------------------------------------------
 
 
-class OpenOSINTAgent:
+class OpenOSINTAgent(_BudgetedRun):
     """
     Stateful OSINT agent backed by the Anthropic API.
 
@@ -576,49 +765,30 @@ class OpenOSINTAgent:
     def __init__(
         self,
         api_key: str | None = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str | None = None,
     ) -> None:
         self.client = anthropic.AsyncAnthropic(
             api_key=api_key or os.environ.get("ANTHROPIC_API_KEY", "")
         )
-        self.model = model
+        self.model = model or default_anthropic_model()
         self.history: list[dict[str, Any]] = []
 
     def clear_history(self) -> None:
         """Reset conversation memory."""
         self.history = []
 
-    async def run(
-        self,
-        prompt: str,
-        on_tool_call: Any = None,
-    ) -> AgentResponse:
-        """
-        Execute one agent turn.
-
-        Parameters
-        ----------
-        prompt:
-            User message or OSINT target description.
-        on_tool_call:
-            Optional async callback invoked before each tool execution.
-            Signature: ``async def on_tool_call(name: str, input: dict) -> None``
-
-        Returns
-        -------
-        AgentResponse
-            Final text response and list of tool calls made.
-        """
+    async def _run(self, prompt: str, on_tool_call: Any = None) -> AgentResponse:
         self.history.append({"role": "user", "content": prompt})
         messages: list[dict[str, Any]] = list(self.history)
         tool_calls: list[ToolCall] = []
+        budget = current_budget() or ToolBudget()
         try:
             while True:
                 response = await self.client.messages.create(
                     model=self.model,
                     max_tokens=_MAX_TOKENS,
-                    system=SYSTEM_PROMPT,
-                    tools=TOOL_DEFINITIONS,  # type: ignore[arg-type]
+                    system=_system_prompt(),
+                    tools=filter_definitions(TOOL_DEFINITIONS),  # type: ignore[arg-type]
                     messages=messages,  # type: ignore[arg-type]
                 )
                 if response.stop_reason == "end_turn":
@@ -628,17 +798,32 @@ class OpenOSINTAgent:
                 if response.stop_reason == "tool_use":
                     messages.append({"role": "assistant", "content": response.content})
                     await _process_tool_turn(messages, tool_calls, on_tool_call, response.content)
+                    if budget.denied:
+                        return _capped_response(
+                            budget, tool_calls, _extract_first_text(response.content), self.history
+                        )
                 else:
                     break
         except anthropic.AuthenticationError:
             return AgentResponse(
                 content="",
-                error="Invalid API key. Run 'openosint config' to update it.",
+                error="Invalid API key. Set ANTHROPIC_API_KEY in your .env or environment.",
             )
         except anthropic.APIConnectionError:
             return AgentResponse(
                 content="",
                 error="Cannot reach the Anthropic API. Check your internet connection.",
+            )
+        except anthropic.NotFoundError:
+            name = (
+                os.environ.get("ANTHROPIC_MODEL")
+                or os.environ.get("OPENOSINT_MODEL")
+                or DEFAULT_ANTHROPIC_MODEL
+            )
+            logger.warning("Anthropic model not found: %s", name)
+            return AgentResponse(
+                content="",
+                error=f"Model '{name}' not found. Check ANTHROPIC_MODEL, or remove it to use the default.",
             )
         except Exception as exc:
             logger.exception("Unexpected error in Anthropic agent loop.")
@@ -666,10 +851,9 @@ def _to_ollama_tools(defs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
-_OLLAMA_TOOLS = _to_ollama_tools(TOOL_DEFINITIONS)
 
 
-class OllamaAgent:
+class OllamaAgent(_BudgetedRun):
     """
     Stateful OSINT agent backed by a local Ollama model.
 
@@ -693,26 +877,7 @@ class OllamaAgent:
         """Reset conversation memory."""
         self.history = []
 
-    async def run(
-        self,
-        prompt: str,
-        on_tool_call: Any = None,
-    ) -> AgentResponse:
-        """
-        Execute one agent turn via Ollama.
-
-        Parameters
-        ----------
-        prompt:
-            User message or OSINT target description.
-        on_tool_call:
-            Optional async callback — same signature as ``OpenOSINTAgent.run``.
-
-        Returns
-        -------
-        AgentResponse
-            Final text response and list of tool calls made.
-        """
+    async def _run(self, prompt: str, on_tool_call: Any = None) -> AgentResponse:
         try:
             import ollama  # type: ignore
         except ImportError:
@@ -735,10 +900,11 @@ class OllamaAgent:
 
         self.history.append({"role": "user", "content": prompt})
         messages: list[Any] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": _system_prompt()},
             *self.history,
         ]
         tool_calls: list[ToolCall] = []
+        budget = current_budget() or ToolBudget()
 
         try:
             client = ollama.AsyncClient(host=self.host)
@@ -746,7 +912,7 @@ class OllamaAgent:
                 response = await client.chat(
                     model=self.model,
                     messages=messages,
-                    tools=_OLLAMA_TOOLS,
+                    tools=_to_ollama_tools(filter_definitions(TOOL_DEFINITIONS)),
                 )
                 msg = response.message
                 if not msg.tool_calls:
@@ -754,6 +920,8 @@ class OllamaAgent:
                     self.history.append({"role": "assistant", "content": text})
                     return AgentResponse(content=text, tool_calls=tool_calls)
                 await _process_ollama_tool_turn(messages, tool_calls, on_tool_call, msg)
+                if budget.denied:
+                    return _capped_response(budget, tool_calls, msg.content or "", self.history)
         except Exception as exc:
             err_str = str(exc)
             # Surface a clear, actionable error when the Ollama server is not running
@@ -788,8 +956,7 @@ class OllamaAgent:
 # ---------------------------------------------------------------------------
 
 
-# OpenAI and Ollama share the same function-tool schema.
-_OPENAI_TOOLS = _OLLAMA_TOOLS
+# OpenAI and Ollama share the same function-tool schema (_to_ollama_tools).
 
 
 def _build_openai_assistant_message(msg: Any) -> dict[str, Any]:
@@ -843,7 +1010,7 @@ async def _process_openai_tool_turn(
         )
 
 
-class OpenAICompatibleAgent:
+class OpenAICompatibleAgent(_BudgetedRun):
     """
     Stateful OSINT agent backed by any OpenAI-compatible chat-completions API.
 
@@ -863,7 +1030,7 @@ class OpenAICompatibleAgent:
     def __init__(
         self,
         model: str = "gpt-4o-mini",
-        base_url: str = "http://localhost:8080/v1",
+        base_url: str = "http://localhost:4000/v1",
         api_key: str | None = None,
     ) -> None:
         self.model = model
@@ -876,26 +1043,7 @@ class OpenAICompatibleAgent:
         """Reset conversation memory."""
         self.history = []
 
-    async def run(
-        self,
-        prompt: str,
-        on_tool_call: Any = None,
-    ) -> AgentResponse:
-        """
-        Execute one agent turn via an OpenAI-compatible endpoint.
-
-        Parameters
-        ----------
-        prompt:
-            User message or OSINT target description.
-        on_tool_call:
-            Optional async callback — same signature as ``OpenOSINTAgent.run``.
-
-        Returns
-        -------
-        AgentResponse
-            Final text response and list of tool calls made.
-        """
+    async def _run(self, prompt: str, on_tool_call: Any = None) -> AgentResponse:
         try:
             import openai  # type: ignore
         except ImportError:
@@ -910,10 +1058,11 @@ class OpenAICompatibleAgent:
 
         self.history.append({"role": "user", "content": prompt})
         messages: list[Any] = [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": _system_prompt()},
             *self.history,
         ]
         tool_calls: list[ToolCall] = []
+        budget = current_budget() or ToolBudget()
 
         try:
             client = openai.AsyncOpenAI(base_url=self.base_url, api_key=self.api_key)
@@ -921,7 +1070,7 @@ class OpenAICompatibleAgent:
                 response = await client.chat.completions.create(
                     model=self.model,
                     messages=messages,
-                    tools=_OPENAI_TOOLS,
+                    tools=_to_ollama_tools(filter_definitions(TOOL_DEFINITIONS)),
                     tool_choice="auto",
                     max_tokens=_MAX_TOKENS,
                 )
@@ -946,6 +1095,10 @@ class OpenAICompatibleAgent:
                 await _process_openai_tool_turn(
                     messages, tool_calls, on_tool_call, msg, self._preserve_response_history
                 )
+                if self._preserve_response_history:
+                    self.history = messages[1:]
+                if budget.denied:
+                    return _capped_response(budget, tool_calls, msg.content or "", self.history)
         except openai.AuthenticationError:
             return AgentResponse(
                 content="",
@@ -958,9 +1111,23 @@ class OpenAICompatibleAgent:
             return AgentResponse(
                 content="",
                 error=(
-                    f"[ERROR] Cannot reach the {self.provider_name} server at {self.base_url}\n\n"
-                    "Verify the base URL is correct and the server is running, then retry:\n"
-                    f"  {self.retry_command}"
+                    (
+                        f"[ERROR] Cannot reach the {self.provider_name} server at {self.base_url}\n\n"
+                        "Verify the base URL is correct and the server is running, then retry:\n"
+                        f"  {self.retry_command}"
+                    )
+                    if self.provider_name == "MiniMax"
+                    else f"[ERROR] Cannot reach the OpenAI-compatible server at {self.base_url}\n\n"
+                    "This provider expects a self-hosted OpenAI-compatible gateway "
+                    "(LiteLLM, vLLM, LM Studio, llama.cpp, …) — it does NOT talk to "
+                    "OpenAI's own API by default. Verify your server is running, e.g.:\n"
+                    "  openosint --provider openai \\\n"
+                    "    --openai-base-url http://localhost:4000/v1 \\\n"
+                    "    --openai-model gpt-4o-mini\n\n"
+                    "To reach hosted OpenAI instead, set:\n"
+                    "  OPENAI_BASE_URL=https://api.openai.com/v1\n"
+                    "  OPENAI_API_KEY=sk-...\n"
+                    "  openosint --provider openai --openai-model gpt-4o"
                 ),
             )
         except Exception as exc:

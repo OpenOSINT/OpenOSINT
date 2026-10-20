@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -23,6 +24,22 @@ router = APIRouter()
 
 _ERROR_PREFIXES = ("Scan error", "Internal error", "Error:")
 _CONTACT_MESSAGE = "No credits remaining. Contact commercial@openosint.tech for access."
+
+
+def _log_id(api_key: str) -> str:
+    """A customer identifier safe to log: never the full key, never the
+    target. Enough to correlate requests in support/incident review, not
+    enough to reconstruct the credential."""
+    return f"...{api_key[-4:]}" if len(api_key) > 4 else "***"
+
+
+def _log_outcome(tool: str, api_key: str, status: str, elapsed: float) -> None:
+    """The only per-request line Cloud logs: identifier, tool name, outcome
+    status, and timing. Never the target, never a provider response body."""
+    logger.info(
+        "enrich: customer=%s tool=%s status=%s elapsed=%.2fs",
+        _log_id(api_key), tool, status, elapsed,
+    )
 
 
 class EnrichRequest(BaseModel):
@@ -76,21 +93,24 @@ async def enrich(
         _raise_402(customer.plan)
 
     # Run the tool first; we only charge on a successful result
+    start = time.monotonic()
     try:
         result = await asyncio.wait_for(
             tools.dispatch(body.tool, body.target, api_key=api_key),
             timeout=float(TOOL_TIMEOUT_SECONDS),
         )
     except asyncio.TimeoutError:
-        logger.warning("Tool %s timed out (target=%s)", body.tool, body.target)
+        _log_outcome(body.tool, customer.api_key, "timeout", time.monotonic() - start)
         raise HTTPException(
             status_code=504,
             detail=f"Tool '{body.tool}' exceeded the {TOOL_TIMEOUT_SECONDS} s timeout",
         )
+    elapsed = time.monotonic() - start
 
     # No charge when the tool returned an upstream error
     first_line = result["results"][0] if result["results"] else (result.get("error") or "")
     if any(first_line.startswith(p) for p in _ERROR_PREFIXES):
+        _log_outcome(body.tool, customer.api_key, "upstream_error", elapsed)
         return EnrichResponse(
             tool=result["tool"],
             target=result["target"],
@@ -104,8 +124,10 @@ async def enrich(
     new_credits = await db.decrement_credits(customer.api_key, cost)
     if new_credits is None:
         # Race: a concurrent request drained the last credit between pre-check and now
+        _log_outcome(body.tool, customer.api_key, "credits_exhausted", elapsed)
         _raise_402(customer.plan)
 
+    _log_outcome(body.tool, customer.api_key, "ok", elapsed)
     return EnrichResponse(
         tool=result["tool"],
         target=result["target"],

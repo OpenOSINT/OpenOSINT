@@ -10,7 +10,8 @@ Markers (created automatically if absent):
     <!-- SPONSORS:START -->
     <!-- SPONSORS:END -->
 
-Pass --docs-html to also sync the sponsor cards on docs/sponsors.html from the
+Pass --docs-html to also sync the sponsor cards on the media-kit page source
+(site/content/pages/sponsors.html; docs/sponsors.html is built from it) from the
 same sponsors.json (markers: <!-- SPONSORS-HTML:START/END -->). Opt-in and off
 by default so this script's default behavior — and the existing test suite —
 is unchanged.
@@ -19,7 +20,7 @@ Running this script is idempotent: re-running it produces the same output.
 Wire it to CI or pre-commit to keep README in sync:
 
     pre-commit: python scripts/render_sponsors.py --check
-    CI step:    python scripts/render_sponsors.py --docs-html docs/sponsors.html && git diff --exit-code README.md docs/sponsors.html
+    CI step:    python scripts/render_sponsors.py --docs-html site/content/pages/sponsors.html && git diff --exit-code README.md site/content/pages/sponsors.html
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).parent.parent
 _README = _REPO_ROOT / "README.md"
-_SPONSORS_FILE = _REPO_ROOT / "sponsors.json"
+_SPONSORS_FILE = _REPO_ROOT / "openosint" / "sponsors.json"
 
 START_MARKER = "<!-- SPONSORS:START -->"
 END_MARKER = "<!-- SPONSORS:END -->"
@@ -99,16 +100,24 @@ def _render_block(sponsors: list[dict]) -> str:
         lines.append("")
         for s in featured:
             logo = s.get("html_logo", s["logo"])
+            logo_dark = s.get("html_logo_dark")
+            if logo_dark:
+                width = s.get("logo_width", 400)
+                img_tag = (
+                    "<picture>"
+                    f'<source media="(prefers-color-scheme: dark)" srcset="{logo_dark}">'
+                    f'<img src="{logo}" alt="{s["name"]} logo" width="{width}">'
+                    "</picture>"
+                )
+            else:
+                img_tag = f'<img src="{logo}" alt="{s["name"]} logo" height="40">'
             tool_note = f" — powers `{s['tool']}`" if s.get("tool") else ""
             doc_note = (
                 f" · [Integration guide]({s['integration_doc']})"
                 if s.get("integration_doc")
                 else ""
             )
-            lines.append(
-                f'<a href="{s["url"]}" rel="noopener sponsored">'
-                f'<img src="{logo}" alt="{s["name"]} logo" height="40"></a>'
-            )
+            lines.append(f'<a href="{s["url"]}" rel="noopener sponsored">{img_tag}</a>')
             lines.append("")
             lines.append(f"**[{s['name']}]({s['url']})**{tool_note}{doc_note}")
             lines.append("")
@@ -158,12 +167,14 @@ def _render_html_array(sponsors: list[dict]) -> str:
     lines = [HTML_START_MARKER, "var SPONSORS = ["]
     for i, s in enumerate(featured):
         html_logo = s.get("html_logo", s["logo"])
+        html_logo_dark = s.get("html_logo_dark", "")
         logo_alt = f"{s['name']} logo — sponsor for {s.get('category', s['name'])}"
         comma = "," if i < len(featured) - 1 else ""
         lines.append("  {")
         lines.append(f"    name:        {_js_string(s['name'])},")
         lines.append(f"    url:         {_js_string(s['url'])},")
         lines.append(f"    logo:        {_js_string(html_logo)},")
+        lines.append(f"    logo_dark:   {_js_string(html_logo_dark)},")
         lines.append(f"    logo_alt:    {_js_string(logo_alt)},")
         lines.append(f"    category:    {_js_string(s.get('category', ''))},")
         lines.append(f"    description: {_js_string(s['tagline'])}")
@@ -218,7 +229,7 @@ def main() -> None:
         "--sponsors",
         type=Path,
         default=_SPONSORS_FILE,
-        help="Path to sponsors.json (default: repo root sponsors.json).",
+        help="Path to sponsors.json (default: openosint/sponsors.json).",
     )
     parser.add_argument(
         "--docs-html",
@@ -250,7 +261,10 @@ def main() -> None:
         if out_of_sync:
             for path in out_of_sync:
                 print(f"[render_sponsors] {path} sponsors block is out of sync.")
-            print("Run:  python scripts/render_sponsors.py" + (" --docs-html <path>" if args.docs_html else ""))
+            print(
+                "Run:  python scripts/render_sponsors.py"
+                + (" --docs-html <path>" if args.docs_html else "")
+            )
             sys.exit(1)
         for path, _before, _after in targets:
             print(f"[render_sponsors] {path} is up to date.")

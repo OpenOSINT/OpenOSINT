@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="wrap page">
+  <article class="prose">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
+    <h1>{{ page.title }}</h1>
+    <p class="meta"><time datetime="{{ page.date }}">{{ page.date }}</time> &middot; {{ page.reading_minutes }} min read</p>
+    {{ page.body|safe }}
+  </article>
+</div>
+{% endblock %}

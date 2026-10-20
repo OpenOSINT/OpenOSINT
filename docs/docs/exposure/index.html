@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT exposure report: grade a domain from outside</title>
+<meta name="description" content="openosint exposure grades one domain A to F from outside: SPF, DMARC, DKIM, TLS, registration and security headers. No AI or key needed. Beta.">
+<link rel="canonical" href="https://openosint.tech/docs/exposure/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT exposure report: grade a domain from outside">
+<meta property="og:description" content="openosint exposure grades one domain A to F from outside: SPF, DMARC, DKIM, TLS, registration and security headers. No AI or key needed. Beta.">
+<meta property="og:url" content="https://openosint.tech/docs/exposure/">
+<meta property="og:image" content="https://openosint.tech/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT exposure report: grade a domain from outside">
+<meta name="twitter:description" content="openosint exposure grades one domain A to F from outside: SPF, DMARC, DKIM, TLS, registration and security headers. No AI or key needed. Beta.">
+<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Exposure report",
+      "item": "https://openosint.tech/docs/exposure/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/" aria-current="page">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/" aria-current="page">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.36.1</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Exposure report</li>
+        </ol>
+      </nav>
+      <h1>External exposure report</h1>
+      <p><code>openosint exposure</code> checks one domain from the outside and gives it a grade from A to F. It is passive and point-in-time, needs no AI provider and no API key, and is in <strong>beta</strong>: checks, scoring and the report format may change between releases.</p>
+<pre><code class="language-bash">openosint exposure example.com
+</code></pre>
+<h2 id="what-it-checks">What it checks</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Check name</th>
+<th>Covers</th>
+<th>Contacts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email</code></td>
+<td>SPF, DMARC, DKIM and MX</td>
+<td>DNS only</td>
+</tr>
+<tr>
+<td><code>registration</code></td>
+<td>Domain age, expiry and DNSSEC via RDAP</td>
+<td>The registry, not the target</td>
+</tr>
+<tr>
+<td><code>tls</code></td>
+<td>Certificate and protocol</td>
+<td>A TLS handshake with the target on port 443 (the domain and <code>www</code>)</td>
+</tr>
+<tr>
+<td><code>http_headers</code></td>
+<td>Security headers</td>
+<td>One HTTPS GET to <code>https://DOMAIN/</code>; redirects are followed</td>
+</tr>
+</tbody>
+</table></div>
+<p>It does not scan ports, log in to anything or collect personal data. The grade is not a certification and not proof of NIS2 or any other compliance.</p>
+<h2 id="options">Options</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--json</code></td>
+<td>Structured JSON output.</td>
+</tr>
+<tr>
+<td><code>--report PATH.html</code></td>
+<td>Also write a self-contained HTML report that prints cleanly to PDF.</td>
+</tr>
+<tr>
+<td><code>--lang {en,it}</code></td>
+<td>Report language, used with <code>--report</code>. Default <code>en</code>.</td>
+</tr>
+<tr>
+<td><code>--lookalikes</code></td>
+<td>Also look for registered typo, homoglyph and TLD-swap domains. DNS only; not part of the grade.</td>
+</tr>
+<tr>
+<td><code>--resolver IP</code></td>
+<td>Recursive resolver for lookups outside the domain's own nameservers.</td>
+</tr>
+<tr>
+<td><code>--checks NAMES</code></td>
+<td>Run only some checks, comma-separated.</td>
+</tr>
+<tr>
+<td><code>--public-only</code></td>
+<td>Refuse targets that resolve to non-public addresses and vet every redirect hop. For hosted use; ignores proxy settings.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="run-only-the-passive-checks">Run only the passive checks</h2>
+<pre><code class="language-bash">openosint exposure example.com --checks email,registration
+</code></pre>
+<p><code>email</code> and <code>registration</code> never connect to the target. A selection is <strong>not graded</strong>: the output has no letter and no score, because a grade from some of the checks would read like a full result.</p>
+<pre><code class="language-text">Not graded: only some checks were selected (not run: tls, http_headers).
+
+Checks:
+  email         OK       [passive]
+  registration  OK       [passive]
+
+Findings:
+  [LOW] DMARC has no aggregate report address (dmarc_no_rua)
+      fix: Add rua=mailto:... so you receive reports on who sends mail as your domain.
+  [INFO] Domain registered 31.2 years ago (domain_age)
+      fix: No action needed; age is context only.
+</code></pre>
+<p>Every finding carries its evidence and a suggested fix. The HTML report footer shows its <code>report_version</code>.</p>
+<h2 id="hosted-version">Hosted version</h2>
+<p><a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=docs">OpenOSINT Monitor</a> runs checks like these on a schedule and emails you when something changes.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/safety/" rel="prev"><small>Previous</small>Safety</a><a class="next" href="/docs/entity-graph/" rel="next"><small>Next</small>Entity graph</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/exposure.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

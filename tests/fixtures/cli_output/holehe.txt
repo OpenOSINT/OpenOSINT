@@ -1,0 +1,12 @@
+
+*********************
+   a@example.com
+*********************
+[+] github.com
+[+] gravatar.com
+
+[+] Email used, [-] Email not used, [x] Rate limit
+120 websites checked in 18.4 seconds
+Twitter : @palenath
+Github : https://github.com/megadose/holehe
+For BTC Donations : 1FHDM49QfZX6pJmhjLE5tB2K6CaTLMZpXZ
