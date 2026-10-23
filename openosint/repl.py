@@ -9,6 +9,7 @@ Usage:
     openosint                                  # Anthropic Claude (default)
     openosint --provider ollama                # local Ollama model
     openosint --provider ollama --ollama-model mistral
+    openosint --provider minimax --minimax-region cn
     openosint --no-pdf                         # disable PDF export
 """
 
@@ -31,8 +32,14 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 
 from openosint import __version__
+from openosint.agent import (
+    MINIMAX_MODELS,
+    MiniMaxAgent,
+    OllamaAgent,
+    OpenAICompatibleAgent,
+    OpenOSINTAgent,
+)
 from openosint.tool_policy import active_enabled, max_tool_calls
-from openosint.agent import OllamaAgent, OpenAICompatibleAgent, OpenOSINTAgent
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +110,8 @@ def _print_banner(provider: str, model: str) -> None:
         provider_info = f"[dim]Provider: Ollama ({model})[/]"
     elif provider == "openai":
         provider_info = f"[dim]Provider: OpenAI-compatible ({model})[/]"
+    elif provider == "minimax":
+        provider_info = f"[dim]Provider: MiniMax ({model})[/]"
     else:
         provider_info = f"[dim]Provider: Anthropic ({model})[/]"
 
@@ -228,6 +237,8 @@ def _print_config(
     ollama_host: str,
     is_pdf_disabled: bool,
     openai_base_url: str = "",
+    minimax_region: str = "",
+    minimax_base_url: str = "",
 ) -> None:
     masked = ("*" * 20 + api_key[-6:]) if api_key and len(api_key) > 6 else "not set"
     rows = [
@@ -238,6 +249,9 @@ def _print_config(
         rows.append(f"[bold]API Key:[/]  {masked}")
     elif provider == "openai":
         rows.append(f"[bold]Endpoint:[/] {openai_base_url}")
+    elif provider == "minimax":
+        rows.append(f"[bold]Region:[/]   {minimax_region}")
+        rows.append(f"[bold]Endpoint:[/] {minimax_base_url}")
     else:
         rows.append(f"[bold]Ollama:[/]   {ollama_host}")
     rows += [
@@ -287,6 +301,9 @@ class OpenOSINTRepl:
         openai_base_url: str = "http://localhost:4000/v1",
         openai_model: str = "gpt-4o-mini",
         openai_api_key: str | None = None,
+        minimax_model: str = MINIMAX_MODELS[0],
+        minimax_region: str = "global",
+        minimax_api_key: str | None = None,
         is_pdf_disabled: bool = False,
     ) -> None:
         self._api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
@@ -296,9 +313,11 @@ class OpenOSINTRepl:
         self._openai_base_url = openai_base_url
         self._openai_model = openai_model
         self._openai_api_key = openai_api_key
+        self._minimax_region = minimax_region
+        self._minimax_base_url = ""
         self._is_pdf_disabled = is_pdf_disabled
 
-        self._agent: OpenOSINTAgent | OllamaAgent | OpenAICompatibleAgent
+        self._agent: OpenOSINTAgent | OllamaAgent | OpenAICompatibleAgent | MiniMaxAgent
         if provider == "ollama":
             self._agent = OllamaAgent(
                 model=ollama_model,
@@ -312,6 +331,14 @@ class OpenOSINTRepl:
                 api_key=openai_api_key,
             )
             self._display_model = openai_model
+        elif provider == "minimax":
+            self._agent = MiniMaxAgent(
+                model=minimax_model,
+                region=minimax_region,
+                api_key=minimax_api_key,
+            )
+            self._minimax_base_url = self._agent.base_url
+            self._display_model = minimax_model
         else:
             self._agent = OpenOSINTAgent(api_key=self._api_key)
             self._display_model = self._agent.model
@@ -460,6 +487,8 @@ class OpenOSINTRepl:
                         self._ollama_host,
                         self._is_pdf_disabled,
                         self._openai_base_url,
+                        self._minimax_region,
+                        self._minimax_base_url,
                     )
                     continue
 
