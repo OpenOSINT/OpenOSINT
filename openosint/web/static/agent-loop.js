@@ -235,6 +235,7 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
       return;
     }
 
+    const results = [];
     for (const call of response.toolCalls) {
       if (toolCallsUsed >= maxToolCalls) {
         onEvent({
@@ -255,6 +256,7 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
       onEvent({ type: 'tool_start', tool: call.name, input: String(inputValue) });
 
       let resultText;
+      let resultIsError = false;
 
       if (tool && tool.enabled === false) {
         // The model asked for a tool this mode doesn't offer: say so, don't run it.
@@ -265,6 +267,7 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
           reason: tool.unavailable_reason,
         });
         onEvent({ type: 'tool_result', tool: call.name, output: resultText, elapsed: 0, isError: true });
+        resultIsError = true;
       } else if (!tool || tool.tool_type === 'B') {
         // Type-B: return demo stub, never call the backend.
         resultText = _getDemoOutput(call.name);
@@ -292,6 +295,7 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
           elapsed: result.elapsed ?? 0,
           isError: result.isError || false,
         });
+        resultIsError = result.isError || false;
       }
 
       // Feed the result back into the conversation (provider-specific
@@ -299,7 +303,8 @@ export async function runAgentLoop(message, history, adapterSettings, toolKeys, 
       // this whole message list on every subsequent round; the browser
       // already got the full resultText via the tool_result event above.
       const [modelText] = splitGeojsonFence(resultText);
-      messages = adapter.appendToolResult(messages, call, modelText);
+      results.push({ call, content: modelText, isError: resultIsError });
     }
+    messages = adapter.appendToolResults(messages, response, results);
   }
 }
