@@ -144,7 +144,7 @@
         </ol>
       </nav>
       <h1>Use OpenOSINT as an MCP server</h1>
-      <p>The MCP server exposes the OpenOSINT tools to any <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> client over stdio. The client's own model drives the tools; OpenOSINT only runs them and returns real output.</p>
+      <p>The MCP server exposes the OpenOSINT tools to any <a href="https://modelcontextprotocol.io/">Model Context Protocol</a> client over stdio or Streamable HTTP. The client's own model drives the tools; OpenOSINT only runs them and returns real output.</p>
 <h2 id="requirements">Requirements</h2>
 <p>Install <a href="https://docs.astral.sh/uv/">uv</a>. <code>uvx</code> then fetches and runs OpenOSINT on demand, so there is no separate install step. The command every client runs is the same:</p>
 <pre><code class="language-bash">uvx --from openosint openosint-mcp
@@ -179,6 +179,38 @@ claude mcp list
 <pre><code class="language-json">&quot;env&quot;: { &quot;OPENOSINT_ENV_FILE&quot;: &quot;/absolute/path/to/.env&quot; }
 </code></pre>
 <p>The <a href="/docs/configuration/">configuration page</a> lists every key and which tools need it.</p>
+<h2 id="streamable-http">Streamable HTTP</h2>
+<p>For clients that connect to an existing service, start one long-running listener:</p>
+<pre><code class="language-bash">uvx --from openosint openosint-mcp --http
+</code></pre>
+<p>It binds to <code>127.0.0.1:8081</code> and serves MCP at <code>/mcp</code>. <code>GET /health</code> returns
+<code>{"status":"ok"}</code> without authentication so a service supervisor can check it.
+HTTP uses stateless JSON responses; the tools, descriptions, results and passive
+policy are the same as stdio. A client that calls a disabled tool directly is
+still refused.</p>
+<p>Set an inbound bearer token with <code>OPENOSINT_MCP_TOKEN</code>, or read one from a file:</p>
+<pre><code class="language-bash">chmod 600 /run/secrets/openosint-mcp-token
+uvx --from openosint openosint-mcp --http --host 0.0.0.0 --port 8081 \
+  --http-token-file /run/secrets/openosint-mcp-token \
+  --http-allowed-host openosint-mcp:8081
+</code></pre>
+<p>Non-loopback binds require a token. Loopback binds can run without one, but use
+the token when other local users should not have access to your provider keys.
+Clients must send <code>Authorization: Bearer &lt;token&gt;</code> on every <code>/mcp</code> request,
+including <code>GET</code> and <code>DELETE</code>. Missing or incorrect credentials return <code>401</code>.
+The inbound token is separate from the provider API keys used by OSINT tools.</p>
+<p><code>OPENOSINT_MCP_TOKEN_FILE</code> also selects a file; <code>--http-token-env NAME</code> names a
+custom environment variable. Explicit file takes priority over explicit env;
+an explicit env selector takes priority over the default variables. Otherwise
+<code>OPENOSINT_MCP_TOKEN_FILE</code> takes priority over <code>OPENOSINT_MCP_TOKEN</code>. An empty,
+missing or unreadable selected source fails startup. Files must be regular,
+owner-only files on POSIX systems. Token values never go in command-line flags.</p>
+<p>Host checks accept loopback names and the explicit bind address. When binding
+to all interfaces, add the DNS name used by your clients with
+<code>--http-allowed-host HOST[:PORT]</code>; repeat it for additional names. Browser
+Origin headers are rejected; this is a machine-client endpoint with no CORS
+interface. Put remote connections behind TLS or an encrypted private network:
+the listener itself serves plain HTTP. No stdio bridge is needed.</p>
 <h2 id="passive-tools-only-by-default">Passive tools only, by default</h2>
 <p><code>tools/list</code> returns only the passive tools, so the client's model never sees the noisy ones. Each tool description carries its noise label. To also expose the tools that touch the target or are noisy, do one of:</p>
 <ul>
