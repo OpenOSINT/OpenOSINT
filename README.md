@@ -634,6 +634,14 @@ The command every client runs is the same:
 uvx --from openosint openosint-mcp   # passive tools only (20 listed)
 ```
 
+For a long-running Streamable HTTP service, run `openosint-mcp --http`
+(`http://127.0.0.1:8081/mcp`, health check `/health`). Remote binds require a
+bearer token from `OPENOSINT_MCP_TOKEN` or an owner-only file selected with
+`--http-token-file`; configure clients to send it on every request. Use
+`--host`, `--port` and `--http-allowed-host` for a private-network service.
+Both transports share the same tools and passive defaults. See the
+[HTTP setup and security instructions](https://openosint.tech/docs/mcp/#streamable-http).
+
 GUI clients (Claude Desktop, Cursor) often launch with a minimal `PATH` that does not include `uvx`. If the server fails to start, replace `"uvx"` with the absolute path from `which uvx` (macOS/Linux) or `where uvx` (Windows).
 
 **Claude Code:**
@@ -822,6 +830,8 @@ itself — the app starts and every key-less tool works with zero configuration.
 | `OPENOSINT_GDELT_WINDOW_HOURS` | `search_gdelt_geo` | Optional | Hours of news kept in memory (default `6`, max `24`). See [search_gdelt_geo](#search_gdelt_geo). |
 | `OPENOSINT_GDELT_MAX_ARTICLES` | `search_gdelt_geo` | Optional | Hard cap on stored articles (default `30000`; oldest dropped first) |
 | `OPENOSINT_ENV_FILE` | All | Optional | Explicit path to a `.env` file, overriding the directory search above |
+| `OPENOSINT_MCP_TOKEN` | HTTP MCP | Required for non-loopback binds | Inbound bearer token; clients send `Authorization: Bearer <token>` on every `/mcp` request |
+| `OPENOSINT_MCP_TOKEN_FILE` | HTTP MCP | Optional | Read the inbound bearer token from an owner-only file instead; selected missing or empty files fail startup |
 | `OPENOSINT_SETUP_TOKEN` | Web UI | Optional | Lets the browser save keys when it is not on loopback (Docker). Send as `X-Setup-Token`; the UI has a field for it. Unset = saving from a non-loopback browser is off. Failed attempts are throttled. |
 | `HIBP_API_KEY` | `search_breach` | Required for this tool | HaveIBeenPwned v3 — [get one](https://haveibeenpwned.com/API/Key) |
 | `IPINFO_TOKEN` | `search_ip` | Optional | Works without it; raises ipinfo.io rate limits |

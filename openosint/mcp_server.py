@@ -66,7 +66,7 @@ from openosint.tools.search_whois import run_whois_osint  # noqa: E402
 from openosint.tools.search_footprint import run_footprint_osint  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="[MCP] %(levelname)s: %(message)s")
-app = Server("openosint")
+app = Server("openosint", version=__version__)
 
 _JSON_PROP = {
     "json_output": {"type": "boolean", "description": "Return result as structured JSON."}
@@ -756,7 +756,29 @@ async def _serve() -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="openosint-mcp", description="OpenOSINT MCP server (stdio).")
+    parser = argparse.ArgumentParser(
+        prog="openosint-mcp", description="OpenOSINT MCP server (stdio or Streamable HTTP)."
+    )
+    parser.add_argument(
+        "--http", action="store_true", help="Serve Streamable HTTP at /mcp instead of stdio."
+    )
+    parser.add_argument(
+        "--host", default=None,
+        help="HTTP bind address (default: 127.0.0.1). Non-loopback requires a bearer token.",
+    )
+    parser.add_argument("--port", type=int, default=None, help="HTTP port (default: 8081).")
+    parser.add_argument(
+        "--http-token-file", default=None, metavar="PATH",
+        help="Read inbound bearer token from an owner-only file (takes priority over environment).",
+    )
+    parser.add_argument(
+        "--http-token-env", default=None, metavar="NAME",
+        help="Name of the environment variable holding the inbound bearer token.",
+    )
+    parser.add_argument(
+        "--http-allowed-host", action="append", default=None, metavar="HOST[:PORT]",
+        help="Additional accepted HTTP Host, e.g. openosint-mcp:8081 (repeatable).",
+    )
     parser.add_argument(
         "--allow-active",
         action="store_true",
@@ -766,9 +788,33 @@ def main(argv: list[str] | None = None) -> None:
             "Off by default: the server lists passive tools only. Same as OPENOSINT_ALLOW_ACTIVE=1."
         ),
     )
-    if parser.parse_args(argv).allow_active:
+    args = parser.parse_args(argv)
+    if not args.http and any(
+        value is not None
+        for value in (args.host, args.port, args.http_token_file, args.http_token_env, args.http_allowed_host)
+    ):
+        parser.error("HTTP options require --http")
+    if args.port is not None and not 1 <= args.port <= 65535:
+        parser.error("--port must be between 1 and 65535")
+    if args.allow_active:
         os.environ[ENV_ALLOW_ACTIVE] = "1"
-    asyncio.run(_serve())
+    if args.http:
+        import uvicorn
+
+        from openosint.mcp_http import create_http_app, read_http_token
+
+        try:
+            http_app = create_http_app(
+                app,
+                host=args.host or "127.0.0.1",
+                token=read_http_token(token_file=args.http_token_file, token_env=args.http_token_env),
+                allowed_hosts=args.http_allowed_host or (),
+            )
+        except ValueError as exc:
+            parser.error(str(exc))
+        uvicorn.run(http_app, host=args.host or "127.0.0.1", port=args.port or 8081)
+    else:
+        asyncio.run(_serve())
 
 
 if __name__ == "__main__":

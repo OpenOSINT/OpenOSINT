@@ -6,7 +6,7 @@ description: "Add the openosint-mcp server to Claude Desktop, Claude Code, Curso
 group: Use
 order: 4
 ---
-The MCP server exposes the OpenOSINT tools to any [Model Context Protocol](https://modelcontextprotocol.io/) client over stdio. The client's own model drives the tools; OpenOSINT only runs them and returns real output.
+The MCP server exposes the OpenOSINT tools to any [Model Context Protocol](https://modelcontextprotocol.io/) client over stdio or Streamable HTTP. The client's own model drives the tools; OpenOSINT only runs them and returns real output.
 
 ## Requirements
 
@@ -64,6 +64,49 @@ Put keys in the client's `env` block, as above. The server is started by the cli
 ```
 
 The [configuration page](/docs/configuration/) lists every key and which tools need it.
+
+## Streamable HTTP
+
+For clients that connect to an existing service, start one long-running listener:
+
+```bash
+uvx --from openosint openosint-mcp --http
+```
+
+It binds to `127.0.0.1:8081` and serves MCP at `/mcp`. `GET /health` returns
+`{"status":"ok"}` without authentication so a service supervisor can check it.
+HTTP uses stateless JSON responses; the tools, descriptions, results and passive
+policy are the same as stdio. A client that calls a disabled tool directly is
+still refused.
+
+Set an inbound bearer token with `OPENOSINT_MCP_TOKEN`, or read one from a file:
+
+```bash
+chmod 600 /run/secrets/openosint-mcp-token
+uvx --from openosint openosint-mcp --http --host 0.0.0.0 --port 8081 \
+  --http-token-file /run/secrets/openosint-mcp-token \
+  --http-allowed-host openosint-mcp:8081
+```
+
+Non-loopback binds require a token. Loopback binds can run without one, but use
+the token when other local users should not have access to your provider keys.
+Clients must send `Authorization: Bearer <token>` on every `/mcp` request,
+including `GET` and `DELETE`. Missing or incorrect credentials return `401`.
+The inbound token is separate from the provider API keys used by OSINT tools.
+
+`OPENOSINT_MCP_TOKEN_FILE` also selects a file; `--http-token-env NAME` names a
+custom environment variable. Explicit file takes priority over explicit env;
+an explicit env selector takes priority over the default variables. Otherwise
+`OPENOSINT_MCP_TOKEN_FILE` takes priority over `OPENOSINT_MCP_TOKEN`. An empty,
+missing or unreadable selected source fails startup. Files must be regular,
+owner-only files on POSIX systems. Token values never go in command-line flags.
+
+Host checks accept loopback names and the explicit bind address. When binding
+to all interfaces, add the DNS name used by your clients with
+`--http-allowed-host HOST[:PORT]`; repeat it for additional names. Browser
+Origin headers are rejected; this is a machine-client endpoint with no CORS
+interface. Put remote connections behind TLS or an encrypted private network:
+the listener itself serves plain HTTP. No stdio bridge is needed.
 
 ## Passive tools only, by default
 
