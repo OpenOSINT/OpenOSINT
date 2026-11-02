@@ -2,6 +2,7 @@
 
 1. **Bump the version** (the docs-consistency test fails if these drift):
    - `pyproject.toml` (`[project] version`)
+   - `.claude-plugin/plugin.json` (`version`; `tests/test_agent_skill.py` fails if it differs from `pyproject.toml`)
    - `.mcp/server.json` (`version` and `packages[0].version`)
    - `README.md` footer (`*OpenOSINT vX.Y.Z — Month YYYY*`, near the end)
 1a. **Rebuild the site**: `python scripts/build_site.py`. The docs pages show the version from `pyproject.toml`, so `scripts/check_site.py` (and CI) fails until you do. Refresh `stars` in `site/data/site.yaml` if you want the home page count current.

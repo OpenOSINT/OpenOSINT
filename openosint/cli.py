@@ -48,7 +48,12 @@ from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
 from openosint.tools.search_censys import run_censys_osint  # noqa: E402
+from openosint.tools.generate_dorks import run_dork_osint  # noqa: E402
 from openosint.tools.search_dns import run_dns_osint  # noqa: E402
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence  # noqa: E402
+from openosint.tools.search_ip import run_ip_osint  # noqa: E402
+from openosint.tools.search_rdap import run_rdap_osint  # noqa: E402
+from openosint.tools.search_whois import run_whois_osint  # noqa: E402
 from openosint.tools.search_dorks_live import run_dorks_live_osint  # noqa: E402
 from openosint.tools.search_email import run_email_osint  # noqa: E402
 from openosint.tools.search_footprint import run_footprint_osint  # noqa: E402
@@ -376,6 +381,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help="DNS query timeout (default: 10).",
     )
 
+    # whois / rdap / gdelt / dorks: keyless, passive wrappers (no AI)
+    for name, arg, metavar, help_text in _KEYLESS_COMMANDS:
+        keyless_cmd = subparsers.add_parser(name, help=help_text)
+        keyless_cmd.add_argument(arg, type=str, metavar=metavar)
+        if name != "dorks":
+            keyless_cmd.add_argument(
+                "-t",
+                "--timeout",
+                type=int,
+                default=30,
+                metavar="SECONDS",
+                help="Request timeout (default: 30).",
+            )
+
     # exposure
     exposure_cmd = subparsers.add_parser(
         "exposure",
@@ -661,8 +680,18 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 
-# Direct subcommands that run one non-passive tool; refused up front in passive mode.
-_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url"}
+# Direct subcommands that run one tool; refused up front when TOOL_POLICY disables it
+# (non-passive tools in passive mode).
+_COMMAND_TOOLS = {
+    "email": "search_email",
+    "username": "search_username",
+    "scrape": "scrape_url",
+    "whois": "search_whois",
+    "rdap": "search_rdap",
+    "ip": "search_ip",
+    "gdelt": "search_gdelt_geo",
+    "dorks": "generate_dorks",
+}
 
 
 def _print_result(result: str) -> None:
@@ -817,6 +846,42 @@ async def _handle_github(
     result = await run_github_osint(query=query, timeout_seconds=timeout)
     if json_output:
         _emit_json(format_tool_result("search_github", query, result))
+    else:
+        _print_result(result)
+
+
+async def _run_gdelt(query: str, timeout: int) -> str:
+    # Raw GeoJSON is for the web globe; drop it from terminal/JSON output.
+    return split_geojson_fence(await run_gdelt_geo_osint(query=query, timeout_seconds=timeout))[0]
+
+
+# (command, positional dest, metavar, help) for the keyless subcommands
+_KEYLESS_COMMANDS = (
+    ("whois", "domain", "DOMAIN", "WHOIS registration data for a domain (no AI, no key)."),
+    ("rdap", "domain", "DOMAIN", "RDAP registration data for a domain (no AI, no key)."),
+    ("ip", "address", "ADDRESS", "IP geolocation and ASN via ipinfo.io (no AI; IPINFO_TOKEN optional)."),
+    ("gdelt", "query", "QUERY", "News mentions via GDELT (no AI, no key)."),
+    ("dorks", "target", "TARGET", "Google dork URLs for a target; sends nothing (no AI, no key)."),
+)
+
+# command -> (tool name, runner(target, timeout))
+_KEYLESS_HANDLERS = {
+    "whois": ("search_whois", lambda t, s: run_whois_osint(domain=t, timeout_seconds=s)),
+    "rdap": ("search_rdap", lambda t, s: run_rdap_osint(domain=t, timeout_seconds=s)),
+    "ip": ("search_ip", lambda t, s: run_ip_osint(ip=t, timeout_seconds=s)),
+    "gdelt": ("search_gdelt_geo", _run_gdelt),
+    "dorks": ("generate_dorks", lambda t, s: run_dork_osint(target=t)),
+}
+
+
+async def _handle_keyless(
+    command: str, target: str, timeout: int, json_output: bool = False
+) -> None:
+    tool, runner = _KEYLESS_HANDLERS[command]
+    print(f"[*] {command}: {target}", file=sys.stderr)
+    result = await runner(target, timeout)
+    if json_output:
+        _emit_json(format_tool_result(tool, target, result))
     else:
         _print_result(result)
 
@@ -1233,6 +1298,16 @@ async def _async_main() -> None:
         await _handle_github(args.query, args.timeout, json_output=json_output)
     elif args.command == "dns":
         await _handle_dns(args.domain, args.timeout, json_output=json_output)
+    elif args.command in _KEYLESS_HANDLERS:
+        await _handle_keyless(
+            args.command,
+            getattr(args, "domain", None)
+            or getattr(args, "address", None)
+            or getattr(args, "query", None)
+            or args.target,
+            getattr(args, "timeout", 30),
+            json_output=json_output,
+        )
     elif args.command == "exposure":
         await _handle_exposure(
             args.domain, json_output=json_output, report_path=args.report, lang=args.lang, lookalikes=args.lookalikes, resolver=args.resolver,

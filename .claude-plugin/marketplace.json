@@ -1,0 +1,15 @@
+{
+  "name": "openosint",
+  "owner": {
+    "name": "OpenOSINT",
+    "url": "https://github.com/OpenOSINT"
+  },
+  "description": "OpenOSINT: passive OSINT and exposure checks for Claude Code.",
+  "plugins": [
+    {
+      "name": "openosint",
+      "source": "./",
+      "description": "Skills /osint and /exposure plus the OpenOSINT MCP server (passive by default, no API keys needed)."
+    }
+  ]
+}

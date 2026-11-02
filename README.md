@@ -28,7 +28,23 @@ mcp-name: io.github.OpenOSINT/openosint
 
 **Docs:** https://openosint.tech/docs/
 
-OpenOSINT is an open-source engine for passive checks of public information; the hosted products are built on it, and everything below is free and MIT-licensed.
+OpenOSINT is an open-source engine for checks of public information, passive by default; the hosted products are built on it, and everything below is free and MIT-licensed.
+
+## Use as an agent skill
+
+No API keys needed for the default flow. Passive by default; needs [`uv`](https://docs.astral.sh/uv/).
+
+```text
+# Claude Code (plugin: skills + passive MCP server)
+/plugin marketplace add OpenOSINT/OpenOSINT
+/plugin install openosint@openosint
+/openosint:osint example.com
+```
+
+```bash
+# Skills only, for Claude Code, Codex, Gemini CLI, Cursor and other agents
+npx skills add OpenOSINT/OpenOSINT
+```
 
 ## Self-host (free, MIT)
 
@@ -689,7 +705,7 @@ claude mcp add openosint -e SHODAN_API_KEY=your-key -e HIBP_API_KEY=your-key -- 
 
 API keys go in the client's `env` block. MCP hosts launch the server with a cwd unrelated to your project, so a `.env` file is not picked up reliably; to use one, set `"OPENOSINT_ENV_FILE": "/absolute/path/to/.env"` in the same `env` block.
 
-By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.36.1`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
+By default the server lists **passive tools only**, so a client LLM cannot see the noisy ones. Each tool description carries its noise label. Pin a release with `--from openosint==2.37.0`. Running from a source checkout instead: `"command": "python", "args": ["-m", "openosint.mcp_server"]`.
 
 **Agentic use via Claude Code:**
 
@@ -1018,7 +1034,7 @@ OpenOSINT is open source under the [MIT License](./LICENSE) — free for any use
 
 *For authorized security research only. See [DISCLAIMER.md](DISCLAIMER.md).*
 
-*OpenOSINT v2.36.1 — October 2026*
+*OpenOSINT v2.37.0 — November 2026*
 
 ## Star History
 

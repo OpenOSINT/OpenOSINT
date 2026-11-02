@@ -9,6 +9,14 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.37.0] — 2026-11-02
+
+### Added
+
+- Keyless CLI subcommands `openosint whois DOMAIN`, `rdap DOMAIN`, `ip ADDRESS`, `gdelt QUERY` and `dorks TARGET`, each with `--json` (same envelope as `dns`: `tool`, `target`, `timestamp`, `results`, `error`). They call the existing tool functions unchanged and go through `TOOL_POLICY` like the MCP tools (all five are passive). `gdelt` leaves out the raw GeoJSON block that only the web globe uses.
+- Test that fails when `.claude-plugin/plugin.json` `version` differs from `pyproject.toml`.
+- Agent Skill and Claude Code plugin. `skills/osint` (passive recon of a domain, IP or organization) and `skills/exposure` (wraps `openosint exposure`) follow the Agent Skills format and install with `npx skills add OpenOSINT/OpenOSINT`. `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `.mcp.json` make `/plugin marketplace add OpenOSINT/OpenOSINT` then `/plugin install openosint@openosint` work, and register the MCP server in passive mode (`uvx --from openosint openosint-mcp`, no `--allow-active`). The skill calls the CLI first, so it works on any agent without the MCP server, and uses MCP tools only when the server is connected. The default flow needs no API keys; the skill names the variable to set when a keyed tool would help, and requires every finding to cite the tool call that produced it. No tool behaviour changed.
+
 ## [2.36.1] — 2026-10-19
 
 ### Changed
