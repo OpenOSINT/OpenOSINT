@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import shlex
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,8 @@ from openosint.tool_policy import TOOL_POLICY
 ROOT = Path(__file__).resolve().parent.parent
 SKILL_FILES = sorted((ROOT / "skills").glob("*/SKILL.md"))
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-CLI_PREFIX = "uvx --from openosint openosint "
+VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+CLI_PREFIX = f"uvx --from openosint=={VERSION} openosint "
 
 
 def _load_json(rel: str) -> dict:
@@ -74,7 +76,7 @@ def test_marketplace_manifest() -> None:
 def test_mcp_server_is_passive() -> None:
     server = _load_json(".mcp.json")["mcpServers"]["openosint"]
     assert server["command"] == "uvx"
-    assert server["args"] == ["--from", "openosint", "openosint-mcp"]
+    assert server["args"] == ["--from", f"openosint=={VERSION}", "openosint-mcp"]
     assert "--allow-active" not in server["args"]
 
 
@@ -120,10 +122,22 @@ def test_osint_skill_uses_every_keyless_cli_command() -> None:
 
 
 def test_plugin_version_matches_pyproject() -> None:
-    import tomllib
-
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     plugin = _load_json(".claude-plugin/plugin.json")
     assert plugin["version"] == pyproject["project"]["version"], (
         "bump .claude-plugin/plugin.json together with pyproject.toml (see RELEASING.md)"
     )
+
+
+def test_every_uvx_pin_matches_pyproject() -> None:
+    """Skills and .mcp.json must pin the release they document, never an unpinned (possibly older) build."""
+    files = [ROOT / ".mcp.json", *sorted((ROOT / "skills").rglob("*.md"))]
+    seen = 0
+    for path in files:
+        text = path.read_text(encoding="utf-8")
+        for pin in re.findall(r"--from[\"',\s]+(openosint\S*?)[\"',\s]", text):
+            seen += 1
+            assert pin == f"openosint=={VERSION}", (
+                f"{path.name}: {pin!r}, expected openosint=={VERSION}"
+            )
+    assert seen >= 3

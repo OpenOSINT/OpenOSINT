@@ -2,7 +2,7 @@
   "mcpServers": {
     "openosint": {
       "command": "uvx",
-      "args": ["--from", "openosint", "openosint-mcp"]
+      "args": ["--from", "openosint==2.37.0", "openosint-mcp"]
     }
   }
 }
