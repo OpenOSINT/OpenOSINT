@@ -15,9 +15,9 @@ mcp-name: io.github.OpenOSINT/openosint
 [![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)
 [![Sponsored by TestMu AI](https://img.shields.io/badge/sponsored%20by-TestMu%20AI-000000?style=flat-square)](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)
 
-![OpenOSINT globe view: an agent investigation lands as a point on an interactive 3D globe, clicking it pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
+![OpenOSINT in Claude Code: add the marketplace, install the plugin, run /openosint:osint example.com and get a report where every finding cites its tool call, ending with leads to verify](assets/demo/skill-demo.gif)
 
-*An agent investigation landing live on the globe; click a point to pivot. [Sharper MP4](docs/assets/globe-demo.mp4) · [Live demo](https://demo.openosint.tech) (bring your own key, no signup).*
+*A real Claude Code session, nothing mocked: install the plugin and run a passive recon on `example.com`. [Sharper MP4](assets/demo/skill-demo.mp4).*
 
 </div>
 
@@ -149,6 +149,10 @@ Enable active tools with `openosint --allow-active …`, `OPENOSINT_ALLOW_ACTIVE
 ### Web UI + globe
 
 `openosint web` starts a local browser app with streaming chat, tool cards, a news globe and a graph view. [Docs](https://openosint.tech/docs/web-ui/).
+
+![OpenOSINT globe view: an agent investigation lands as a point on an interactive 3D globe, clicking it pivots into a follow-up investigation, and the new entity appears in the entity graph](docs/assets/globe-demo.gif)
+
+*An agent investigation landing live on the globe; click a point to pivot. [Sharper MP4](docs/assets/globe-demo.mp4) · [Live demo](https://demo.openosint.tech) (bring your own key, no signup).*
 
 ### Entity graph
 

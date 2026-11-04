@@ -82,6 +82,43 @@ git add docs/assets/demo-web-graph.*
 
 See [`scripts/record-demo/README.md`](scripts/record-demo/README.md) for prerequisites and pipeline details.
 
+## Regenerating the plugin demo
+
+`assets/demo/skill-demo.tape` drives a real Claude Code session with [VHS](https://github.com/charmbracelet/vhs)
+(`brew install vhs`): marketplace add, plugin install, then `/openosint:osint example.com`.
+It uses your normal Claude Code login, so set the machine up first and restore it after:
+
+```bash
+# 1. Fresh-install state: no openosint plugin or marketplace, noisy plugins off
+claude plugin uninstall openosint@openosint
+claude plugin marketplace remove openosint
+claude plugin disable <each plugin that prints notices or runs hooks>
+
+# 2. Demo folder that pre-allows the tools, so no permission prompt appears on screen
+mkdir -p /tmp/openosint-demo/.claude
+cat > /tmp/openosint-demo/.claude/settings.local.json <<'JSON'
+{"permissions": {"allow": ["Bash(uvx --from openosint==2.37.0 openosint *)", "mcp__plugin_openosint_openosint__*"]}}
+JSON
+
+# 3. Record (one take costs a few API calls). Raw video lands in /tmp/openosint-demo-raw/
+mkdir -p /tmp/openosint-demo-raw && vhs assets/demo/skill-demo.tape
+```
+
+Then post-process the raw video (needs `ffmpeg`, `gifsicle`, `tesseract` and `pip install numpy pillow`):
+
+```bash
+python assets/demo/skill-demo-post.py /tmp/openosint-demo-raw/raw.mp4 --deny you@example.com --deny yourname
+```
+
+It masks the Claude Code header that stays on screen after `/clear` (logo, version, plan), speeds
+up idle "model is thinking" frames, holds the final frame for 3s, writes `skill-demo.mp4` (H.264)
+and `skill-demo.gif` (under 5 MB), and OCRs every output frame. It refuses to write anything if
+your email, username, home paths or keys appear, so pass your own identifiers with `--deny`.
+
+Afterwards re-add the marketplace, reinstall `openosint@openosint` and re-enable the plugins you
+disabled. Never commit `.cast` files or temp config. Keep the version in the `settings.local.json`
+rule in sync with `.mcp.json`.
+
 ## Contributor License Agreement
 
 Before your first pull request can be merged, you must sign the
