@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import re
 import shlex
-import tomllib
 from pathlib import Path
 
 import pytest
@@ -17,7 +16,17 @@ from openosint.tool_policy import TOOL_POLICY
 ROOT = Path(__file__).resolve().parent.parent
 SKILL_FILES = sorted((ROOT / "skills").glob("*/SKILL.md"))
 NAME_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
-VERSION = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
+
+
+def _pyproject_version() -> str:
+    # Regex, not tomllib: tomllib is 3.11+ and the package supports 3.10.
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M)
+    assert match, "version not found in pyproject.toml"
+    return match.group(1)
+
+
+VERSION = _pyproject_version()
 CLI_PREFIX = f"uvx --from openosint=={VERSION} openosint "
 
 
@@ -122,9 +131,8 @@ def test_osint_skill_uses_every_keyless_cli_command() -> None:
 
 
 def test_plugin_version_matches_pyproject() -> None:
-    pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
     plugin = _load_json(".claude-plugin/plugin.json")
-    assert plugin["version"] == pyproject["project"]["version"], (
+    assert plugin["version"] == VERSION, (
         "bump .claude-plugin/plugin.json together with pyproject.toml (see RELEASING.md)"
     )
 
