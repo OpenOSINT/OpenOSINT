@@ -4,7 +4,7 @@ label: "Configuration"
 seo_title: "OpenOSINT configuration: API keys and environment variables"
 description: "Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code."
 group: Use
-order: 6
+order: 7
 ---
 OpenOSINT starts with zero configuration. A key is only needed by the tool that uses it, plus one AI provider if you use the chat or REPL.
 

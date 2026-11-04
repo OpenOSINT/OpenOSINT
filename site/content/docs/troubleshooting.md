@@ -4,7 +4,7 @@ label: "Troubleshooting"
 seo_title: "OpenOSINT troubleshooting: common errors and fixes"
 description: "Fixes for common OpenOSINT errors: missing API key, ANTHROPIC_API_KEY not set, disabled_in_passive_mode, port in use, Host not allowed, tool not installed."
 group: Reference
-order: 10
+order: 12
 ---
 Each entry below is a message OpenOSINT really prints.
 
@@ -55,6 +55,15 @@ The app launched with a minimal `PATH` and cannot find `uvx`. Use the absolute p
 ## A `.env` file is ignored
 
 `.env` is searched upward from the directory you run `openosint` from. The MCP server has an unrelated working directory, so set `OPENOSINT_ENV_FILE=/absolute/path/to/.env` in the client's `env` block.
+
+## Limitations
+
+- **Authorized use only.** OpenOSINT queries public and semi-public sources. It does not bypass authentication, exploit systems, or access anything you are not already entitled to see. You are responsible for the law and for the terms of service of every source you query. See the [disclaimer](https://github.com/OpenOSINT/OpenOSINT/blob/main/DISCLAIMER.md).
+- **No aggregation guarantees.** Each tool reports what its upstream source currently returns. A negative result (no breach found, no accounts found) means the source did not report a match, not that no exposure exists.
+- **Many tools depend on third-party services you do not control.** The keyed tools (Shodan, VirusTotal, Censys, AbuseIPDB, IP2Location, HaveIBeenPwned and the three [Bright Data](%%BRIGHTDATA_LINK_DOCS%%)-backed tools) are subject to that provider's uptime, rate limits and pricing. Free tiers are small; heavy use needs a paid plan with the provider, not with OpenOSINT. The Bright Data link is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.
+- **Local binaries are unsandboxed subprocesses.** `holehe`, `sherlock`, `sublist3r` and `phoneinfoga` run as external processes on your machine. Keep them updated yourself; OpenOSINT does not patch or vet them.
+- **The entity graph module is additive, not authoritative.** `same_as` links are scored candidates for human review, not verified identity matches. See [Entity graph](/docs/entity-graph/).
+- **AI output is a lead, not proof.** The agent can only call OpenOSINT's tools (by default only the passive ones). Tool results come from real executions and are shown with the tool call that produced them, but the model can still misread, misattribute or over-weight a result, and its tool selection can be wrong or incomplete for a given target. Check the raw tool output before acting on a conclusion.
 
 ## Still stuck
 

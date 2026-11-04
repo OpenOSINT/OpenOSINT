@@ -1,5 +1,12 @@
 # OpenOSINT
-> MCP-native Open Source Intelligence framework for AI agents. Autonomous OSINT investigations from your terminal.
+> The OSINT toolkit for AI agents: Agent Skill, MCP server and CLI. Passive by default, no API keys needed to start, and every finding cites the tool call that produced it.
+
+## Agent Skill and Claude Code plugin
+Requires [uv](https://docs.astral.sh/uv/getting-started/installation/). No API keys for the default flow.
+- Claude Code plugin (skills + passive MCP server): `/plugin marketplace add OpenOSINT/OpenOSINT`, `/plugin install openosint@openosint`, then `/openosint:osint example.com`
+- Any Agent Skills client (Codex, Gemini CLI, Cursor, ...): `npx skills add OpenOSINT/OpenOSINT`, then `/osint example.com`
+- Skills: `osint` (passive recon of a domain, IP or organization) and `exposure` (A-F external exposure grade). Passive only; every finding cites its tool call.
+- Keyless CLI commands the skills use: `exposure`, `dns`, `rdap`, `whois`, `ip`, `gdelt`, `dorks`.
 
 ## Overview
 OpenOSINT is a modular OSINT framework that exposes 21 intelligence-gathering tools to large language models via the Model Context Protocol (MCP). It also operates as a standalone CLI, interactive REPL, and browser Web UI for direct human use. No LLM is embedded — OpenOSINT provides the tool surface that an MCP-compatible client (e.g. Claude Code, Claude Desktop) drives autonomously.
@@ -49,7 +56,9 @@ holehe, sherlock, sublist3r, phoneinfoga — must be present in PATH
 
 ## Documentation
 - [Overview](https://openosint.tech/docs/) — what OpenOSINT is and the three ways to use it
+- [Agent Skill and Claude Code plugin](https://openosint.tech/docs/agent-skill/) — install per agent, what the skills do, the passive rules, troubleshooting
 - [Install](https://openosint.tech/docs/install/) — pip, pipx, uv, Docker, extras and how to verify
+- [CLI reference](https://openosint.tech/docs/cli/) — every subcommand and flag, including the keyless commands
 - [Quickstart](https://openosint.tech/docs/quickstart/) — first investigation with the CLI and REPL
 - [MCP server](https://openosint.tech/docs/mcp/) — Claude Desktop, Claude Code, Cursor and other MCP clients
 - [Web UI](https://openosint.tech/docs/web-ui/) — local chat, globe and graph

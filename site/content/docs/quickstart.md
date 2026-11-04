@@ -4,7 +4,7 @@ label: "Quickstart"
 seo_title: "OpenOSINT quickstart: first investigation in 5 minutes"
 description: "Run a DNS lookup and an exposure report with no API key, then start the AI REPL with Anthropic, Ollama or an OpenAI-compatible endpoint."
 group: Get started
-order: 3
+order: 4
 ---
 This takes about five minutes. The first two steps need no API key and no AI provider.
 

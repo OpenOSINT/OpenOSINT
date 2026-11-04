@@ -67,10 +67,10 @@ def test_agent_and_mcp_server_expose_the_same_tool_catalog():
 def test_readme_tools_table_row_count_matches_registered_tools():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     table_match = re.search(
-        r"\| Tool \| Powered by \| What it investigates \|\n\|[-| ]+\|\n((?:\|.+\|\n)+)",
+        r"\| Tool \| Source \| Level \| Key needed \|\n\|[-| ]+\|\n((?:\|.+\|\n)+)",
         readme,
     )
-    assert table_match, "README tools table (Tool | Powered by | What it investigates) not found"
+    assert table_match, "README tools table (Tool | Source | Level | Key needed) not found"
     rows = [line for line in table_match.group(1).splitlines() if line.strip()]
     assert len(rows) == len(_mcp_server_tool_names())
 

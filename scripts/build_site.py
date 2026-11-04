@@ -335,7 +335,7 @@ def blog_pages() -> list[dict]:
             "datePublished": date,
             "dateModified": modified,
             "mainEntityOfPage": BASE_URL + url,
-            "image": BASE_URL + "/assets/og.png",
+            "image": BASE_URL + "/assets/social-card.png",
         }
         body = wrap_tables(body)
         pages.append(
@@ -430,7 +430,7 @@ def build() -> dict[str, str]:
         "nav": NAV,
         "footer": FOOTER,
         "hosted_url": HOSTED_URL,
-        "og_image": BASE_URL + "/assets/og.png",
+        "og_image": BASE_URL + "/assets/social-card.png",
     }
     env = Environment(
         loader=FileSystemLoader([SITE / "layouts", SITE / "content"]), undefined=StrictUndefined, autoescape=True

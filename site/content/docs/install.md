@@ -4,7 +4,7 @@ label: "Install"
 seo_title: "Install OpenOSINT with pip, pipx, uv or Docker"
 description: "Install OpenOSINT with pip install openosint (Python 3.10+), pipx, uv or Docker, then check it works with openosint dns example.com. No API key needed."
 group: Get started
-order: 2
+order: 3
 ---
 ## One command
 

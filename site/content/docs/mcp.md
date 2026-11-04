@@ -4,7 +4,7 @@ label: "MCP server"
 seo_title: "OpenOSINT MCP server for Claude Desktop and Claude Code"
 description: "Add the openosint-mcp server to Claude Desktop, Claude Code, Cursor or any MCP client with uvx. Config snippets, API keys, and how to enable active tools."
 group: Use
-order: 4
+order: 5
 ---
 The MCP server exposes the OpenOSINT tools to any [Model Context Protocol](https://modelcontextprotocol.io/) client over stdio. The client's own model drives the tools; OpenOSINT only runs them and returns real output.
 

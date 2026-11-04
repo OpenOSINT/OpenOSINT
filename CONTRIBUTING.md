@@ -71,6 +71,17 @@ Add at least one test for the new tool in `tests/`. The test should:
 Add a row for the new service to the Integrations table in `README.md` with the
 service name, URL, tool name, and tier (`Community`).
 
+## Regenerating the demo GIF/MP4
+
+```bash
+export OPENOSINT_DEMO_KEY=sk-ant-...   # your Anthropic key, never committed
+openosint web &                        # start the web server on :8080
+make demo                              # record -> encode -> write docs/assets/demo-web-graph.*
+git add docs/assets/demo-web-graph.*
+```
+
+See [`scripts/record-demo/README.md`](scripts/record-demo/README.md) for prerequisites and pipeline details.
+
 ## Contributor License Agreement
 
 Before your first pull request can be merged, you must sign the

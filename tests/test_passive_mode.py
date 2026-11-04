@@ -766,11 +766,15 @@ async def test_web_claude_loop_is_capped_and_filtered(monkeypatch):
 
 
 def test_readme_table_notes_match_policy_and_are_self_contained():
+    import html
+    import re
     from pathlib import Path
 
-    readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
+    # The noise table lives on the Safety docs page (generated from TOOL_POLICY); the README links to it.
+    page = (Path(__file__).resolve().parent.parent / "docs" / "docs" / "safety" / "index.html").read_text(encoding="utf-8")
+    text = html.unescape(re.sub(r"<[^>]+>", "", page)).replace("`", "")
     for name, policy in TOOL_POLICY.items():
         assert "next row" not in policy.note, f"{name}: note must be self-contained"
         if name in {"investigate_graph", "graph_export", "graph_neighbors", "graph_review_candidates", "investigate_multi"}:
             continue  # not rows of the noise table
-        assert policy.note in readme, f"README noise table out of sync with TOOL_POLICY for {name}"
+        assert policy.note.replace("`", "").replace("**", "") in text, f"Safety page noise table out of sync with TOOL_POLICY for {name}"

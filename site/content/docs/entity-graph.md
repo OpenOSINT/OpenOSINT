@@ -4,7 +4,7 @@ label: "Entity graph"
 seo_title: "OpenOSINT entity graph: chat graph and optional graph store"
 description: "Two graph features: the chat's in-browser graph tab, and an optional FollowTheMoney store with provenance, a review queue and MCP tools. What each does."
 group: Reference
-order: 9
+order: 11
 ---
 OpenOSINT has two separate graph features. Do not confuse them.
 

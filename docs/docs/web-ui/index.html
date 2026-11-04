@@ -18,14 +18,14 @@
 <meta property="og:title" content="OpenOSINT web UI: chat, globe and graph on your machine">
 <meta property="og:description" content="Run openosint web to get a local browser app with AI chat, a worldwide news globe and a graph view. Default port 8080, loopback only, no account needed.">
 <meta property="og:url" content="https://openosint.tech/docs/web-ui/">
-<meta property="og:image" content="https://openosint.tech/assets/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OpenOSINT web UI: chat, globe and graph on your machine">
 <meta name="twitter:description" content="Run openosint web to get a local browser app with AI chat, a worldwide news globe and a graph view. Default port 8080, loopback only, no account needed.">
-<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -87,6 +87,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -99,6 +100,7 @@
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
@@ -115,6 +117,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -127,6 +130,7 @@
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
@@ -208,7 +212,13 @@
 <p>Settings can also save tool keys on this computer. They go to <code>config.env</code> in the data directory (<code>~/.openosint/</code>, or <code>$OPENOSINT_HOME</code>), never into the installed package. Values are not logged or sent back to the browser. See <a href="/docs/configuration/">Configuration</a>.</p>
 <p>Active tools are off by default. On a local install, Settings has an "Enable active tools" switch; a public or demo instance can never enable them. See <a href="/docs/safety/">Safety</a>.</p>
 <h2 id="reaching-it-by-another-name">Reaching it by another name</h2>
-<p>On a loopback bind the server only answers requests whose <code>Host</code> is <code>127.0.0.1</code>, <code>localhost</code> or <code>::1</code>, and browser requests to <code>/api/*</code> must come from the UI's own origin. If you use another host name, such as a LAN name or reverse proxy, set <code>OPENOSINT_ALLOWED_HOSTS=osint.lan,localhost</code>. A separate front end on another origin needs <code>OPENOSINT_ALLOWED_ORIGINS</code>.</p>
+<p>On a loopback bind the server only answers requests whose <code>Host</code> is <code>127.0.0.1</code>, <code>localhost</code> or <code>::1</code>, and browser requests to <code>/api/*</code> must come from the UI's own origin. If you use another host name, such as a LAN name or reverse proxy, set <code>OPENOSINT_ALLOWED_HOSTS=osint.lan,localhost</code>. A separate front end on another origin needs <code>OPENOSINT_ALLOWED_ORIGINS</code>. On a non-loopback bind (<code>--allow-remote</code>, Docker) the <code>Host</code> check only runs when <code>OPENOSINT_ALLOWED_HOSTS</code> is set, so set it there.</p>
+<h3 id="keys-follow-the-bind-address-v228-and-later">Keys follow the bind address (v2.28 and later)</h3>
+<p>Bound to <code>127.0.0.1</code> or <code>localhost</code> (the default), keys in your <code>.env</code> work as before. Bound to any other interface (<code>--host 0.0.0.0</code>, which already requires <code>--allow-remote</code>), the web UI never uses a key from your environment to serve a request: every caller must supply their own, and breach lookups (<code>search_breach</code>) are disabled outright. This applies regardless of any environment variable, including <code>OPENOSINT_DEMO_MODE</code>, which can only add restriction. If you were exposing the web UI on a LAN with your own keys and no per-caller authentication in front of it, that pattern no longer works.</p>
+<h3 id="behind-a-reverse-proxy">Behind a reverse proxy</h3>
+<p>A loopback bind only means the OS accepted the connection from this machine; it says nothing about who can reach it if nginx, Caddy, a Docker or Kubernetes sidecar, or a tunnel forwards requests from elsewhere. By default, a request carrying proxy-forwarding headers (<code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, <code>X-Forwarded-Host</code>, <code>Forwarded</code>, <code>CF-Connecting-IP</code>) is treated like a non-loopback bind: your local keys are never used, breach lookups are blocked, and the caller is told why.</p>
+<p>To make requests relayed by your own proxy behave like a normal local instance, set <code>OPENOSINT_TRUSTED_PROXY=true</code>. This is separate from the older <code>TRUSTED_PROXY</code>, which only affects which IP a rate-limit bucket is attributed to; reusing it would have silently upgraded a rate-limit-only setting into one that also permits credentialed access. Setting <code>OPENOSINT_TRUSTED_PROXY</code> does not blindly trust the forwarded headers' content: internally inconsistent values (for example two disagreeing <code>X-Forwarded-Proto</code> values on one request) are still treated as public.</p>
+<p>Setting it means you choose to serve credentialed lookups to whoever your reverse proxy relays to this instance, and you are the controller for their queries, as any operator of a hosted service is for its users. Put real authentication in front of it if "whoever the proxy relays" is broader than you intend.</p>
 <h2 id="docker">Docker</h2>
 <pre><code class="language-bash">docker compose up --build
 </code></pre>
