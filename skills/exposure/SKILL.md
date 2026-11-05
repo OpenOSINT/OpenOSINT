@@ -11,7 +11,7 @@ argument-hint: "<domain>"
 Domain: $ARGUMENTS (ask for one if empty). Only run this on domains the user owns or is authorized to assess.
 
 ```bash
-uvx --from openosint==2.37.1 openosint --json exposure DOMAIN
+uvx --from openosint==2.38.0 openosint --json exposure DOMAIN
 ```
 
 - The TLS and header checks connect to the domain on port 443. If the user wants no contact with the target, run `exposure DOMAIN --checks email,registration` instead (DNS and registry only; the result is not graded).

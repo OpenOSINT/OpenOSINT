@@ -1,6 +1,6 @@
 # Workflows and reading results
 
-Commands below are CLI subcommands (`uvx --from openosint==2.37.1 openosint --json <cmd> <target>`). Names starting with `search_` are MCP tools, used only when the server is connected.
+Commands below are CLI subcommands (`uvx --from openosint==2.38.0 openosint --json <cmd> <target>`). Names starting with `search_` are MCP tools, used only when the server is connected.
 
 ## Domain
 
