@@ -156,6 +156,8 @@
 <li><code>config.env</code> in the data directory: <code>~/.openosint/config.env</code>, or <code>$OPENOSINT_HOME/config.env</code>. The web UI saves keys here with user-only permissions where the OS supports it.</li>
 <li>A <code>.env</code> file, found by searching upward from the directory you run <code>openosint</code> from, or the file named by <code>OPENOSINT_ENV_FILE</code>.</li>
 </ol>
+<p>OpenOSINT reads a <code>.env</code> in place and never copies it into <code>config.env</code> on its own. To copy settings on purpose, run <code>openosint config import</code> (optionally <code>--from PATH</code> and <code>--only KEY,KEY</code>). It lists the setting names, asks for confirmation (<code>--yes</code> when there is no terminal), never overwrites a value already in <code>config.env</code>, and leaves your <code>.env</code> untouched. It never prints values.</p>
+<p>If <code>config.env</code> and a <code>.env</code> hold different values for the same setting, <code>config.env</code> wins. Startup prints a warning that names both files and the settings, so a stale key in <code>config.env</code> cannot silently override the one you just changed in <code>.env</code>.</p>
 <p>For the MCP server, set the variables in the client's <code>env</code> block; see <a href="/docs/mcp/">MCP server</a>.</p>
 <h2 id="api-keys-and-tokens">API keys and tokens</h2>
 <p>This table is generated from the key catalog in the code, so it matches the version you install.</p>

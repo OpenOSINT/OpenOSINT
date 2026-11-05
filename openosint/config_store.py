@@ -11,15 +11,17 @@ Precedence, highest first (see openosint/env.py, which applies it):
   2. this file
   3. legacy .env locations (OPENOSINT_ENV_FILE, ./.env upward, package root)
 
+A legacy .env is read in place and is never copied here implicitly; copying is
+the explicit `openosint config import` command (openosint/config_cli.py).
+
 Values are never logged or returned by anything in this module.
 """
 
 from __future__ import annotations
 
 import os
-import sys
 import tempfile
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 
 from dotenv import dotenv_values
@@ -102,41 +104,54 @@ def is_user_only(path: Path) -> bool | None:
     return (path.stat().st_mode & 0o077) == 0
 
 
-def migrate_legacy_env(legacy: Path, migratable_keys: frozenset[str]) -> list[str]:
-    """Copy saved settings from a legacy package-root .env into the config file, once.
+def config_dir_exposed() -> bool:
+    """True when the data directory exists and group/other can enter or list it (POSIX)."""
+    directory = config_path().parent
+    if os.name != "posix" or not directory.is_dir():
+        return False
+    return (directory.stat().st_mode & 0o077) != 0
 
-    "Once" means: only when no config file exists yet. The legacy file is left
-    untouched (it keeps working, at lower precedence) so nothing is lost if the
-    copy is wrong. Only known setting names are copied; the notice names keys,
-    never values. Returns the copied key names (empty if nothing was done).
-    """
-    if config_path().exists() or not legacy.is_file():
-        return []
+
+def legacy_candidates(legacy: Path, importable_keys: frozenset[str]) -> dict[str, str]:
+    """Known, non-blank, control-character-free settings in a legacy .env. Read-only."""
     try:
-        if legacy.stat().st_size > _MAX_LEGACY_BYTES:
-            return []
+        if not legacy.is_file() or legacy.stat().st_size > _MAX_LEGACY_BYTES:
+            return {}
         values = dotenv_values(legacy)
     except OSError:
-        return []
-
-    picked = {
-        k: v
+        return {}
+    return {
+        k: v.strip()
         for k, v in values.items()
-        if k in migratable_keys and v and v.strip() and not _has_control_chars(v)
+        if k in importable_keys and v and v.strip() and not _has_control_chars(v)
     }
-    if not picked:
-        return []
-    try:
-        write_config({k: v.strip() for k, v in picked.items()})
-    except OSError as exc:
-        print(f"[!] Could not migrate {legacy} to {config_path()}: {exc}", file=sys.stderr)
-        return []
 
-    keys = sorted(picked)
-    print(
-        f"[*] Copied {len(keys)} saved setting(s) ({', '.join(keys)}) from {legacy} to "
-        f"{config_path()}. The old file was left in place and now has lower priority; "
-        "you can delete it once you have checked.",
-        file=sys.stderr,
+
+def import_legacy_env(
+    legacy: Path,
+    importable_keys: frozenset[str],
+    only: Sequence[str] | None = None,
+) -> tuple[list[str], list[str]]:
+    """Copy settings from *legacy* into the config file; the caller has already confirmed.
+
+    Values already in the config file are never overwritten. The legacy file is left
+    untouched. Returns (imported names, skipped names), both sorted; names only.
+    """
+    picked = legacy_candidates(legacy, importable_keys)
+    if only is not None:
+        picked = {k: v for k, v in picked.items() if k in set(only)}
+    existing = read_config()
+    skipped = sorted(k for k in picked if k in existing)
+    fresh = {k: v for k, v in picked.items() if k not in existing}
+    if fresh:
+        write_config(fresh)
+    return sorted(fresh), skipped
+
+
+def shadowed_keys(config_values: Mapping[str, str], legacy_values: Mapping[str, str]) -> list[str]:
+    """Names set to different non-blank values in both files (config.env wins)."""
+    return sorted(
+        k
+        for k, v in legacy_values.items()
+        if v and v.strip() and (config_values.get(k) or "").strip() not in ("", v.strip())
     )
-    return keys

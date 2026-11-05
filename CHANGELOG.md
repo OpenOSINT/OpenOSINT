@@ -9,6 +9,13 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Security hardening
+
+- A legacy package-root `.env` is no longer copied into `~/.openosint/config.env` automatically. Before this change, the first start of the CLI, web server or MCP server from a source or editable checkout (and only when `config.env` did not exist yet) copied every known setting from that `.env` (up to 16 names, 11 of them secrets: Anthropic, OpenAI, Shodan, VirusTotal, Bright Data and others) into the data directory without asking. The copy was announced on stderr only, which MCP hosts and the web UI usually hide. The file was created user-only (0600), but the directory kept its existing mode if it already existed. The copy also made the stale-key problem below possible.
+- Stale-key shadowing: `config.env` takes priority over a legacy `.env`, so after you rotated a key in the `.env`, the older copied value kept winning silently. When both files define the same setting with different values, startup now prints a warning that names the winning file, the overridden file and the setting names (never values).
+- New explicit command: `openosint config import [--from PATH] [--only KEY,...] [--yes]` copies settings from a `.env` after listing the names and asking for confirmation (non-interactive use needs `--yes`). It never overwrites a value already in `config.env`, leaves the `.env` in place, and offers to set the data directory to 0700 when it is readable by other users. A startup hint tells you when a package-root `.env` has settings that are not saved.
+- Migrating: nothing breaks. Your `.env` is still read as before at lower priority than `config.env`. If an earlier version already copied it, `config.env` already holds those values; compare the two files and delete whichever you no longer want.
+
 ## [2.37.0] — 2026-11-02
 
 ### Added

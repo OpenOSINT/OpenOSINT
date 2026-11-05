@@ -16,6 +16,10 @@ Highest priority first. The first source to set a variable wins.
 2. `config.env` in the data directory: `~/.openosint/config.env`, or `$OPENOSINT_HOME/config.env`. The web UI saves keys here with user-only permissions where the OS supports it.
 3. A `.env` file, found by searching upward from the directory you run `openosint` from, or the file named by `OPENOSINT_ENV_FILE`.
 
+OpenOSINT reads a `.env` in place and never copies it into `config.env` on its own. To copy settings on purpose, run `openosint config import` (optionally `--from PATH` and `--only KEY,KEY`). It lists the setting names, asks for confirmation (`--yes` when there is no terminal), never overwrites a value already in `config.env`, and leaves your `.env` untouched. It never prints values.
+
+If `config.env` and a `.env` hold different values for the same setting, `config.env` wins. Startup prints a warning that names both files and the settings, so a stale key in `config.env` cannot silently override the one you just changed in `.env`.
+
 For the MCP server, set the variables in the client's `env` block; see [MCP server](/docs/mcp/).
 
 ## API keys and tokens

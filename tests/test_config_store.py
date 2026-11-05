@@ -1,4 +1,4 @@
-"""Data-directory settings: storage, permissions, precedence, legacy migration."""
+"""Data-directory settings: storage, permissions, precedence, explicit legacy import."""
 
 from __future__ import annotations
 
@@ -64,7 +64,15 @@ class TestWriteConfig:
 
     @pytest.mark.parametrize(
         "value",
-        ['has "quotes"', "back\\slash", "with # hash", "  inner  spaces ", "ünïcode-日本", "a=b=c", "$HOME"],
+        [
+            'has "quotes"',
+            "back\\slash",
+            "with # hash",
+            "  inner  spaces ",
+            "ünïcode-日本",
+            "a=b=c",
+            "$HOME",
+        ],
     )
     def test_awkward_values_round_trip(self, home, value):
         config_store.write_config({"SOME_KEY": value})
@@ -108,7 +116,9 @@ class TestPrecedence:
     def test_real_env_beats_config_beats_legacy(self, tmp_path, monkeypatch, home, fresh_env):
         cwd = self._loaded(tmp_path, monkeypatch, home)
         (cwd / ".env").write_text("PREC_BOTH=legacy\nPREC_REAL=legacy\nPREC_ONLY_LEGACY=legacy\n")
-        config_store.write_config({"PREC_BOTH": "config", "PREC_REAL": "config", "PREC_ONLY_CONFIG": "config"})
+        config_store.write_config(
+            {"PREC_BOTH": "config", "PREC_REAL": "config", "PREC_ONLY_CONFIG": "config"}
+        )
         monkeypatch.setenv("PREC_REAL", "real")
 
         env_module.load_env()
@@ -118,7 +128,9 @@ class TestPrecedence:
         assert os.environ["PREC_ONLY_CONFIG"] == "config"
         assert os.environ["PREC_ONLY_LEGACY"] == "legacy"
 
-    def test_value_source_reports_where_each_value_came_from(self, tmp_path, monkeypatch, home, fresh_env):
+    def test_value_source_reports_where_each_value_came_from(
+        self, tmp_path, monkeypatch, home, fresh_env
+    ):
         cwd = self._loaded(tmp_path, monkeypatch, home)
         (cwd / ".env").write_text("SRC_LEGACY=1\n")
         config_store.write_config({"SRC_CONFIG": "1"})
@@ -141,7 +153,7 @@ class TestPrecedence:
         assert os.environ["RESTART_KEY"] == "persisted"
 
 
-class TestLegacyMigration:
+class TestLegacyEnvIsNeverCopiedImplicitly:
     @pytest.fixture
     def package_root(self, tmp_path, monkeypatch, fresh_env):
         root = tmp_path / "site-packages"
@@ -152,39 +164,38 @@ class TestLegacyMigration:
         monkeypatch.chdir(elsewhere)  # no .env here -> the package-root file is the one loaded
         return root
 
-    def test_package_root_env_is_copied_once_with_a_notice(self, package_root, home, capsys, monkeypatch):
-        legacy = package_root / ".env"
-        legacy.write_text("SHODAN_API_KEY=legacy-secret\nUNRELATED_VAR=keep-out\nHIBP_API_KEY=\n")
+    def test_load_env_writes_nothing_but_still_uses_the_legacy_file(self, package_root, home):
+        (package_root / ".env").write_text("SHODAN_API_KEY=legacy-secret\n")
 
         env_module.load_env()
 
-        assert config_store.read_config() == {"SHODAN_API_KEY": "legacy-secret"}
-        assert legacy.read_text().startswith("SHODAN_API_KEY=legacy-secret")  # left untouched
+        assert not home.exists()
+        assert os.environ["SHODAN_API_KEY"] == "legacy-secret"
+
+    def test_hint_gives_count_and_command_and_never_a_value(self, package_root, home, capsys):
+        (package_root / ".env").write_text(
+            "SHODAN_API_KEY=legacy-secret\nHIBP_API_KEY=other-secret\n"
+        )
+
+        env_module.load_env()
+
         err = capsys.readouterr().err
-        assert "Copied 1 saved setting(s) (SHODAN_API_KEY)" in err
-        assert "legacy-secret" not in err
+        assert "2 setting(s)" in err
+        assert "openosint config import" in err
+        assert "not copied" in err.lower()
+        assert "legacy-secret" not in err and "other-secret" not in err
 
-    def test_second_start_does_not_migrate_again(self, package_root, home, capsys, monkeypatch):
-        (package_root / ".env").write_text("SHODAN_API_KEY=first\n")
-        env_module.load_env()
-        capsys.readouterr()
-        (package_root / ".env").write_text("SHODAN_API_KEY=changed-later\n")
-        monkeypatch.setattr(env_module, "_load_attempted", False)
-
-        env_module.load_env()
-
-        assert config_store.read_config() == {"SHODAN_API_KEY": "first"}
-        assert "Copied" not in capsys.readouterr().err
-
-    def test_existing_config_is_never_overwritten(self, package_root, home, monkeypatch):
-        config_store.write_config({"SHODAN_API_KEY": "from-ui"})
-        (package_root / ".env").write_text("SHODAN_API_KEY=legacy\nHIBP_API_KEY=legacy-too\n")
+    def test_no_hint_once_a_config_file_exists(self, package_root, home, capsys):
+        config_store.write_config({"GITHUB_TOKEN": "x"})
+        (package_root / ".env").write_text("SHODAN_API_KEY=legacy\n")
 
         env_module.load_env()
 
-        assert config_store.read_config() == {"SHODAN_API_KEY": "from-ui"}
+        assert "config import" not in capsys.readouterr().err
 
-    def test_no_migration_when_a_cwd_env_is_the_one_loaded(self, package_root, home, tmp_path, monkeypatch):
+    def test_no_hint_when_a_cwd_env_is_the_one_loaded(
+        self, package_root, home, tmp_path, monkeypatch, capsys
+    ):
         (package_root / ".env").write_text("SHODAN_API_KEY=package\n")
         work = tmp_path / "work"
         work.mkdir()
@@ -193,20 +204,125 @@ class TestLegacyMigration:
 
         env_module.load_env()
 
-        assert not (home / "config.env").exists()
-        assert os.environ["SHODAN_API_KEY"] == "cwd"
+        assert "config import" not in capsys.readouterr().err
+        assert not home.exists()
 
-    def test_legacy_without_known_keys_creates_nothing(self, package_root, home, monkeypatch):
+    def test_no_hint_without_known_settings(self, package_root, home, capsys):
         (package_root / ".env").write_text("RATE_LIMIT_MAX=5\n")
 
         env_module.load_env()
 
-        assert not (home / "config.env").exists()
+        assert "config import" not in capsys.readouterr().err
 
-    def test_oversized_legacy_file_is_not_migrated(self, package_root, home):
-        (package_root / ".env").write_text("SHODAN_API_KEY=x\n" + "#" * (config_store._MAX_LEGACY_BYTES + 1))
 
-        assert config_store.migrate_legacy_env(package_root / ".env", frozenset({"SHODAN_API_KEY"})) == []
+class TestShadowWarning:
+    @pytest.fixture
+    def cwd(self, tmp_path, monkeypatch, home, fresh_env):
+        work = tmp_path / "work"
+        work.mkdir()
+        monkeypatch.chdir(work)
+        monkeypatch.setattr(env_module, "__file__", str(tmp_path / "pkg" / "openosint" / "env.py"))
+        return work
+
+    def test_names_the_winning_file_the_losing_file_and_only_differing_keys(
+        self, cwd, home, capsys
+    ):
+        (cwd / ".env").write_text("SHODAN_API_KEY=old-value\nHIBP_API_KEY=same\n")
+        config_store.write_config({"SHODAN_API_KEY": "new-value", "HIBP_API_KEY": "same"})
+
+        env_module.load_env()
+
+        err = capsys.readouterr().err
+        assert "SHODAN_API_KEY" in err
+        assert "HIBP_API_KEY" not in err.split("overrides")[-1]
+        assert str(home / "config.env") in err
+        assert str(cwd / ".env") in err
+        assert "overrides" in err
+        assert "old-value" not in err and "new-value" not in err
+        assert os.environ["SHODAN_API_KEY"] == "new-value"
+
+    def test_no_warning_when_a_real_environment_variable_decides(
+        self, cwd, home, capsys, monkeypatch
+    ):
+        (cwd / ".env").write_text("SHODAN_API_KEY=old\n")
+        config_store.write_config({"SHODAN_API_KEY": "new"})
+        monkeypatch.setenv("SHODAN_API_KEY", "from-shell")
+
+        env_module.load_env()
+
+        assert "overrides" not in capsys.readouterr().err
+
+    def test_no_warning_when_only_one_file_defines_the_key(self, cwd, home, capsys):
+        (cwd / ".env").write_text("SHODAN_API_KEY=old\n")
+        config_store.write_config({"HIBP_API_KEY": "new"})
+
+        env_module.load_env()
+
+        assert "overrides" not in capsys.readouterr().err
+
+
+class TestLegacyCandidatesAndImport:
+    KEYS = frozenset({"SHODAN_API_KEY", "HIBP_API_KEY", "GITHUB_TOKEN"})
+
+    def test_candidates_keep_only_known_nonblank_safe_values(self, tmp_path):
+        legacy = tmp_path / ".env"
+        legacy.write_text("SHODAN_API_KEY= spaced \nHIBP_API_KEY=\nUNRELATED=1\nGITHUB_TOKEN=ok\n")
+
+        assert config_store.legacy_candidates(legacy, self.KEYS) == {
+            "SHODAN_API_KEY": "spaced",
+            "GITHUB_TOKEN": "ok",
+        }
+
+    def test_candidates_empty_for_missing_or_oversized_file(self, tmp_path):
+        big = tmp_path / ".env"
+        big.write_text("SHODAN_API_KEY=x\n" + "#" * (config_store._MAX_LEGACY_BYTES + 1))
+
+        assert config_store.legacy_candidates(big, self.KEYS) == {}
+        assert config_store.legacy_candidates(tmp_path / "nope", self.KEYS) == {}
+
+    def test_import_copies_and_never_overwrites_existing_config_values(self, tmp_path, home):
+        legacy = tmp_path / ".env"
+        legacy.write_text("SHODAN_API_KEY=legacy\nHIBP_API_KEY=legacy-too\n")
+        config_store.write_config({"SHODAN_API_KEY": "from-ui"})
+
+        imported, skipped = config_store.import_legacy_env(legacy, self.KEYS)
+
+        assert imported == ["HIBP_API_KEY"]
+        assert skipped == ["SHODAN_API_KEY"]
+        assert config_store.read_config() == {
+            "SHODAN_API_KEY": "from-ui",
+            "HIBP_API_KEY": "legacy-too",
+        }
+        assert legacy.read_text().startswith("SHODAN_API_KEY=legacy")  # left untouched
+
+    def test_import_only_filter(self, tmp_path, home):
+        legacy = tmp_path / ".env"
+        legacy.write_text("SHODAN_API_KEY=a\nHIBP_API_KEY=b\n")
+
+        imported, _ = config_store.import_legacy_env(legacy, self.KEYS, only=["HIBP_API_KEY"])
+
+        assert imported == ["HIBP_API_KEY"]
+        assert config_store.read_config() == {"HIBP_API_KEY": "b"}
+
+    @pytest.mark.skipif(os.name != "posix", reason="POSIX permissions only")
+    def test_imported_file_is_user_only(self, tmp_path, home):
+        legacy = tmp_path / ".env"
+        legacy.write_text("SHODAN_API_KEY=a\n")
+
+        config_store.import_legacy_env(legacy, self.KEYS)
+
+        assert stat.S_IMODE((home / "config.env").stat().st_mode) == 0o600
+
+    @pytest.mark.skipif(os.name != "posix", reason="POSIX permissions only")
+    def test_exposed_directory_detection(self, home):
+        home.mkdir(mode=0o755)
+        home.chmod(0o755)
+        assert config_store.config_dir_exposed() is True
+        home.chmod(0o700)
+        assert config_store.config_dir_exposed() is False
+
+    def test_missing_directory_is_not_reported_exposed(self, home):
+        assert config_store.config_dir_exposed() is False
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX permission semantics")

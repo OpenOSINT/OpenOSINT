@@ -73,6 +73,7 @@ These are noisy and off by default. They need the local binary installed and `--
 | `openosint playbook RECIPE TARGET` | Run a fixed investigation recipe with no AI. `RECIPE` is a name such as `domain` or a YAML file |
 | `openosint history [--all] [--last N] [open N \| clear]` | List, open or delete saved REPL sessions |
 | `openosint proxy-test` | Fetch your exit IP through the configured proxy |
+| `openosint config import [--from PATH] [--only KEY,...] [--yes]` | Copy settings from a `.env` into `~/.openosint/config.env` after confirmation |
 | `openosint sponsors` | List current sponsors and featured integrations |
 | `openosint-mcp [--allow-active]` | The [MCP server](/docs/mcp/) (a separate executable) |
 

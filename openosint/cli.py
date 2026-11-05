@@ -648,6 +648,35 @@ def _build_parser() -> argparse.ArgumentParser:
 
     history_sub.add_parser("clear", help="Delete all session history files.")
 
+    # config
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Manage saved settings in ~/.openosint/config.env.",
+    )
+    config_sub = config_parser.add_subparsers(dest="config_action", metavar="action", required=True)
+    config_import = config_sub.add_parser(
+        "import",
+        help="Copy settings from a legacy .env into config.env (never done automatically).",
+    )
+    config_import.add_argument(
+        "--from",
+        dest="config_source",
+        metavar="PATH",
+        default=None,
+        help="The .env to read (default: the .env this run loaded).",
+    )
+    config_import.add_argument(
+        "--only",
+        metavar="KEY[,KEY...]",
+        default=None,
+        help="Copy only these setting names.",
+    )
+    config_import.add_argument(
+        "--yes",
+        action="store_true",
+        help="Do not ask for confirmation (required when stdin is not a terminal).",
+    )
+
     # sponsors
     subparsers.add_parser(
         "sponsors",
@@ -1158,6 +1187,24 @@ async def _handle_web(
 
 
 # ---------------------------------------------------------------------------
+# Config command handler
+# ---------------------------------------------------------------------------
+
+
+def _handle_config(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    from openosint.config_cli import run_config_import
+    from openosint.env import loaded_env_path
+
+    source = Path(args.config_source).expanduser() if args.config_source else loaded_env_path()
+    only = [n.strip() for n in args.only.split(",") if n.strip()] if args.only else None
+    sys.exit(
+        run_config_import(source, only, args.yes, interactive=sys.stdin.isatty() and sys.stdout.isatty())
+    )
+
+
+# ---------------------------------------------------------------------------
 # History command handler
 # ---------------------------------------------------------------------------
 
@@ -1348,6 +1395,8 @@ async def _async_main() -> None:
         )
     elif args.command == "history":
         _handle_history(args)
+    elif args.command == "config":
+        _handle_config(args)
     elif args.command == "sponsors":
         _handle_sponsors()
     elif args.command == "proxy-test":
