@@ -47,9 +47,13 @@ VERIFY_WAIT_SECONDS = 2.0
 TOKEN_KEY = "BRIGHTDATA_API_KEY"
 _YES = ("y", "yes")
 
-# ITEM-6 PLACEHOLDER: the one-sentence work-email advice (item 6) is printed in the signup step
-# when this is non-empty. Wording is decided with the user; do not fill it in here.
-WORK_EMAIL_ADVICE = ""
+# Printed in the signup step only (people who already have an account never see it). It claims
+# nothing Bright Data does not document: inviting users and invoice recipients. A work email is not
+# required and earns no extra credit.
+WORK_EMAIL_ADVICE = (
+    "Using this at work? Sign up with your work email so you can invite teammates "
+    "and send invoices to your company."
+)
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -240,8 +244,7 @@ def _signup(session: _Session) -> None:
     _say(f"Sign up here: {link}")
     if disclosure():
         _say(disclosure())
-    if WORK_EMAIL_ADVICE:
-        _say(WORK_EMAIL_ADVICE)
+    _say(WORK_EMAIL_ADVICE)
     if session.yes("Open it in your browser? [y/N] "):
         session.open_browser(link)
 

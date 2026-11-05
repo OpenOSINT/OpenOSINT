@@ -37,7 +37,7 @@ It needs an interactive terminal. If you stop halfway, run it again to finish th
 
 ## Manual setup
 
-1. [Sign up for Bright Data](%%BRIGHTDATA_LINK_DOCS%%){: target="_blank" rel="sponsored noopener" }, or log in. If you already have an account, skip this.
+1. [Sign up for Bright Data](%%BRIGHTDATA_LINK_DOCS%%){: target="_blank" rel="sponsored noopener" }, or log in. Using this at work? Sign up with your work email so you can invite teammates and send invoices to your company. If you already have an account, skip this.
 2. Copy your API token from [brightdata.com/cp/setting/users](https://brightdata.com/cp/setting/users). It goes in `BRIGHTDATA_API_KEY`.
 3. Create a **SERP API** zone in your dashboard. Its name goes in `BRIGHTDATA_SERP_ZONE`.
 4. Create a **Web Unlocker** zone. Its name goes in `BRIGHTDATA_UNLOCKER_ZONE`.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import stat
+from pathlib import Path
 
 import pytest
 
@@ -14,6 +15,10 @@ from openosint.brightdata_response import TOKEN_URL
 from openosint.settings_catalog import SETTINGS
 
 TOKEN = "FAKE-token-not-real-0000"
+WORK_EMAIL_SENTENCE = (
+    "Using this at work? Sign up with your work email so you can invite teammates "
+    "and send invoices to your company."
+)
 LIST_URL = "https://api.brightdata.com/zone/get_active_zones"
 ZONE_URL = "https://api.brightdata.com/zone"
 SERP_BODY = {
@@ -224,8 +229,55 @@ class TestNewUser:
         assert len(session.secret_prompts) == 1 and "hidden" in session.secret_prompts[0].lower()
         assert all(TOKEN not in p for p in session.prompts)
 
-    def test_work_email_advice_is_still_a_placeholder(self):
-        assert setup_brightdata.WORK_EMAIL_ADVICE == ""
+    def test_work_email_advice_is_the_agreed_sentence(self):
+        assert setup_brightdata.WORK_EMAIL_ADVICE == WORK_EMAIL_SENTENCE
+
+    def test_work_email_advice_claims_nothing_bright_data_does_not_document(self):
+        advice = setup_brightdata.WORK_EMAIL_ADVICE.lower()
+
+        assert not any(w in advice for w in ("require", "must", "credit", "bonus", "free", "more"))
+
+    def test_the_work_email_advice_is_shown_at_signup(self, api, capsys):
+        session = Session(answers=["n", "n", "skip", "skip"], secrets=[TOKEN])
+
+        session.run()
+
+        assert WORK_EMAIL_SENTENCE in capsys.readouterr().out
+
+    def test_the_work_email_advice_is_shown_even_when_referral_links_are_off(
+        self, api, monkeypatch, capsys
+    ):
+        monkeypatch.setenv(brightdata.OPT_OUT_ENV, "1")
+        session = Session(answers=["n", "n", "skip", "skip"], secrets=[TOKEN])
+
+        session.run()
+
+        assert WORK_EMAIL_SENTENCE in capsys.readouterr().out
+
+    def test_the_work_email_advice_is_hidden_when_you_already_have_an_account(self, api, capsys):
+        session = Session(answers=["y", "skip", "skip"], secrets=[TOKEN])
+
+        session.run()
+
+        out = capsys.readouterr()
+        assert "work email" not in out.out + out.err
+
+    def test_the_work_email_advice_is_hidden_when_already_set_up(self, api, monkeypatch, capsys):
+        monkeypatch.setenv("BRIGHTDATA_API_KEY", TOKEN)
+        monkeypatch.setenv("BRIGHTDATA_SERP_ZONE", "my_serp")
+        monkeypatch.setenv("BRIGHTDATA_UNLOCKER_ZONE", "my_unlocker")
+        api.get_queue = [Resp(200, [{"name": "my_serp"}, {"name": "my_unlocker"}])]
+
+        Session().run()
+
+        assert "work email" not in capsys.readouterr().out
+
+    def test_the_docs_page_says_the_same_sentence_at_its_signup_step(self):
+        page = (Path(__file__).parent.parent / "site/content/docs/bright-data.md").read_text(
+            encoding="utf-8"
+        )
+
+        assert WORK_EMAIL_SENTENCE in page
 
 
 class TestZones:
