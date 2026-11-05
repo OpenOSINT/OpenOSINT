@@ -16,6 +16,17 @@ The REPL needs an AI provider. Export a key (`export ANTHROPIC_API_KEY=sk-ant-..
 
 A tool needs an API key you have not provided. The message names the variable and a link to get one. Set it as an environment variable, put it in `config.env` or `.env`, or save it in the web UI under Settings. See [Configuration](/docs/configuration/).
 
+## `Bright Data ...` errors from `search_dorks_live`, `search_footprint` and `scrape_url`
+
+These tools stop at the first account-level failure instead of retrying every query, and the message says which kind it is:
+
+- **`rejected the API token (HTTP 401)`**: the token is wrong, revoked or expired. Check or regenerate it in your Bright Data account settings, and set `BRIGHTDATA_API_KEY` to the token only.
+- **`zone 'NAME' not found`**: the zone does not exist in your account. Create a SERP API zone (for `search_dorks_live` and `search_footprint`) or a Web Unlocker zone (for `scrape_url`), or set `BRIGHTDATA_SERP_ZONE` / `BRIGHTDATA_UNLOCKER_ZONE` to an existing zone name.
+- **`reported a usage limit (client_10100) ... may mean your free credits are used up`**: a best-effort hint. Bright Data's free tier is 5,000 credits a month, shared across its products and renewed on the 1st; without deposited funds requests stop at the limit. Check usage and add funds on the Bright Data billing page. Bright Data does not document the exact response, so this message says "may".
+- **`Bright Data-side error`** (HTTP 500, 502, 503 or 504 from `api.brightdata.com`): not your key or zone. Retry in a few minutes; if it persists, contact Bright Data support.
+- **`the target blocked the request`** (a CAPTCHA or protection page): the website refused the fetch. A retry can help; some targets cannot be fetched.
+- **`[Target returned HTTP 404]`** (or 410, 401, 5xx) at the top of a `scrape_url` result: not a failure. The site itself answered with that status, and the page body follows. A removed page or profile can be a finding in its own right.
+
 ## `disabled_in_passive_mode`
 
 The tool is active (it touches the target or is noisy) and active tools are off. Pass `--allow-active`, set `OPENOSINT_ALLOW_ACTIVE=1`, or use the web UI switch, after reading [Safety](/docs/safety/). A public or demo instance cannot enable them.

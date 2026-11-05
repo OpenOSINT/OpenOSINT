@@ -32,10 +32,10 @@ from urllib.parse import urlparse
 
 import requests
 
-from openosint.brightdata import disclosure_suffix, referral_link
-from openosint.settings_catalog import missing_from, missing_keys_message
+from openosint.brightdata_response import classify
 from openosint.regexes import detect_entity_kind
-from openosint.tools.exceptions import OSINTError, ToolExecutionError
+from openosint.settings_catalog import missing_from, missing_keys_message
+from openosint.tools.exceptions import OSINTError
 
 logger = logging.getLogger(__name__)
 
@@ -104,14 +104,11 @@ def _fetch_serp(url: str, api_key: str, zone: str, timeout: int) -> dict:
     except requests.RequestException as exc:
         raise OSINTError(f"Network error querying Bright Data SERP: {exc}") from exc
 
-    if response.status_code == 401:
-        raise OSINTError(f"Bright Data SERP: invalid API key. Get a key: {referral_link(content='search_footprint')}{disclosure_suffix()}")
-    if response.status_code == 403:
-        raise OSINTError("Bright Data SERP: forbidden — check zone permissions.")
-    if response.status_code == 429:
-        raise OSINTError("Bright Data SERP: rate limit exceeded.")
-    if response.status_code != 200:
-        raise ToolExecutionError(f"Bright Data SERP returned HTTP {response.status_code}.")
+    error = classify(
+        response, api_key=api_key, zone=zone, zone_env="BRIGHTDATA_SERP_ZONE", product="SERP API"
+    )
+    if error is not None:
+        raise error
 
     # format="raw" + data_format="parsed_light": body IS the parsed JSON dict
     return response.json()
@@ -218,14 +215,13 @@ async def run_footprint_osint(
     seen_domains: set[str] = set()
     discovered_urls: list[str] = []
     error_count = 0
+    stop_message: str | None = None
 
     for i, query in enumerate(queries, start=1):
         google_url = _build_google_url(query)
         lines.append(f"[+] Query {i}/{len(queries)}: {query}")
         try:
-            data = await asyncio.to_thread(
-                _fetch_serp, google_url, api_key, zone, timeout_seconds
-            )
+            data = await asyncio.to_thread(_fetch_serp, google_url, api_key, zone, timeout_seconds)
             results = _extract_organic(data)
             if results:
                 for r in results:
@@ -247,6 +243,9 @@ async def run_footprint_osint(
         except OSINTError as exc:
             error_count += 1
             logger.warning("Footprint SERP query failed: %s", exc)
+            if getattr(exc, "stop_batch", False):
+                stop_message = str(exc)  # every further query would fail the same way
+                break
             lines.append(f"    (error: {exc})")
             lines.append("")
         except Exception as exc:
@@ -254,6 +253,12 @@ async def run_footprint_osint(
             logger.exception("Unexpected error in footprint SERP query.")
             lines.append(f"    (internal error: {exc})")
             lines.append("")
+
+    if stop_message:
+        if error_count == i:
+            return f"Scan error: {stop_message}"
+        lines.append(f"[stopped early after {i - 1} of {len(queries)} queries] {stop_message}")
+        return "\n".join(lines)
 
     if error_count == len(queries):
         return (

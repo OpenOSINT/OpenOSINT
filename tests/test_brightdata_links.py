@@ -128,7 +128,9 @@ class TestInProductMessages:
         entry = next(e for e in public_catalog() if e["key"] == "BRIGHTDATA_API_KEY")
         assert entry["url"] == "https://brightdata.com" and "commission" not in entry["note"]
 
-    def test_invalid_key_errors_carry_the_disclosure_and_respect_opt_out(self, monkeypatch):
+    def test_invalid_key_errors_point_at_the_token_page_not_the_referral_link(self, monkeypatch):
+        """The user already has an account: a signup link there would only be a sales push."""
+        from openosint.brightdata_response import TOKEN_URL
         from openosint.tools import scrape_url, search_footprint
 
         class Resp:
@@ -145,13 +147,9 @@ class TestInProductMessages:
         ):
             with pytest.raises(Exception) as err:
                 call()
-            assert REFERRAL_ID in str(err.value) and "commission" in str(err.value)
-
-            monkeypatch.setenv(brightdata.OPT_OUT_ENV, "1")
-            with pytest.raises(Exception) as err:
-                call()
-            assert REFERRAL_ID not in str(err.value) and "commission" not in str(err.value)
-            monkeypatch.delenv(brightdata.OPT_OUT_ENV)
+            message = str(err.value)
+            assert TOKEN_URL in message
+            assert REFERRAL_ID not in message and "commission" not in message
 
 
 class TestEntryPointsSetTheSurface:

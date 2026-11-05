@@ -29,9 +29,9 @@ from collections import Counter
 
 import requests
 
-from openosint.brightdata import disclosure_suffix, referral_link
+from openosint.brightdata_response import BrightDataError, body_preview, brd_headers, classify
 from openosint.settings_catalog import missing_from, missing_keys_message
-from openosint.tools.exceptions import OSINTError, ToolExecutionError
+from openosint.tools.exceptions import OSINTError
 from openosint.tools.generate_dorks import _DORK_TEMPLATES
 
 logger = logging.getLogger(__name__)
@@ -40,81 +40,21 @@ _API_URL = "https://api.brightdata.com/request"
 _DEFAULT_TIMEOUT = 30
 _DEFAULT_MAX_DORKS = 5
 _GOOGLE_SEARCH_BASE = "https://www.google.com/search?q="
-_BODY_PREVIEW_LEN = 200
 _UNRESOLVED_URL = "(unresolved)"
 _GOOGLE_REDIRECT_PATHS = ("/url", "/goto")
-_RETRY_HINT = "query temporarily blocked by Bright Data, retry after 15 seconds"
-_VERIFICATION_HINT = "search engine returned a verification page; not billed"
-_RETRY_ERROR_CODES = frozenset({"failed_query_rejected", "repeat_query_rejected"})
-_VERIFICATION_ERROR_CODES = frozenset({"captcha", "verifying"})
-_AUTH_STATUS_CODES = (401, 403)
+_FORBIDDEN_STATUS = 403
 
-
-class SerpFetchError(ToolExecutionError):
-    """Bright Data reported a failed SERP fetch: bad status (HTTP or x-brd-*), or unparsable body."""
-
-    def __init__(
-        self, message: str, *, status_code: int | None = None, error_code: str | None = None
-    ) -> None:
-        super().__init__(message)
-        self.status_code = status_code
-        self.error_code = error_code
+# Kept as the name this module has always exported; the class lives with the classifier.
+SerpFetchError = BrightDataError
 
 
 def _build_google_url(dork_query: str) -> str:
     return f"{_GOOGLE_SEARCH_BASE}{urllib.parse.quote(dork_query)}&hl=en&gl=us"
 
 
-def _redact(text: str, api_key: str) -> str:
-    return text.replace(api_key, "***REDACTED***") if api_key else text
-
-
 def _serp_error_detail(response: requests.Response, api_key: str) -> str:
     content_type = response.headers.get("content-type", "unknown")
-    body_preview = _redact((response.text or "")[:_BODY_PREVIEW_LEN], api_key)
-    return f"HTTP {response.status_code}, content-type={content_type!r}, body={body_preview!r}"
-
-
-def _brd_error_headers(response: requests.Response) -> tuple[int | None, str | None, str | None]:
-    """Read Bright Data's real outcome from x-brd-* response headers.
-
-    Bright Data returns HTTP 200 at the API level even when the underlying
-    fetch failed; the real status/error code/message live in these headers
-    instead. Proxy-layer failures use the x-brd-err-code/x-brd-err-msg
-    spelling rather than x-brd-error-code/x-brd-error.
-    """
-    headers = response.headers
-    raw_status = headers.get("x-brd-status-code")
-    error_code = headers.get("x-brd-error-code") or headers.get("x-brd-err-code")
-    error_message = headers.get("x-brd-error") or headers.get("x-brd-err-msg")
-    status = int(raw_status) if raw_status and raw_status.strip().isdigit() else None
-    return status, error_code, error_message
-
-
-def _brd_failure_message(status: int, error_code: str | None, error_message: str | None) -> str:
-    text = f"Bright Data {status}"
-    if error_code:
-        text += f" {error_code}"
-    if error_message:
-        text += f": {error_message}"
-    if error_code in _RETRY_ERROR_CODES:
-        text += f" — {_RETRY_HINT}"
-    elif error_code in _VERIFICATION_ERROR_CODES:
-        text += f" — {_VERIFICATION_HINT}"
-    return text
-
-
-def _auth_error(response: requests.Response, api_key: str) -> SerpFetchError:
-    kind = (
-        "invalid API key" if response.status_code == 401 else "forbidden — check zone permissions"
-    )
-    body_preview = _redact((response.text or "")[:_BODY_PREVIEW_LEN], api_key)
-    message = f"Bright Data SERP: {kind}. HTTP {response.status_code}, body={body_preview!r}"
-    if response.status_code == 401:
-        message += f" Get a key: {referral_link(content='search_dorks_live')}{disclosure_suffix()}"
-    if "token expired" in (response.text or "").lower():
-        message += " — Bright Data API key expired — renew it in the Bright Data dashboard."
-    return SerpFetchError(message, status_code=response.status_code, error_code="auth")
+    return f"HTTP {response.status_code}, content-type={content_type!r}, body={body_preview(response, api_key)!r}"
 
 
 def _fetch_serp(url: str, api_key: str, zone: str, timeout: int) -> dict:
@@ -131,23 +71,12 @@ def _fetch_serp(url: str, api_key: str, zone: str, timeout: int) -> dict:
     except requests.RequestException as exc:
         raise OSINTError(f"Network error querying Bright Data SERP: {exc}") from exc
 
-    if response.status_code in _AUTH_STATUS_CODES:
-        raise _auth_error(response, api_key)
-
-    brd_status, brd_error_code, brd_error_message = _brd_error_headers(response)
-    if brd_status is not None:
-        if not (200 <= brd_status < 300):
-            raise SerpFetchError(
-                _brd_failure_message(brd_status, brd_error_code, brd_error_message),
-                status_code=brd_status,
-                error_code=brd_error_code,
-            )
-    elif response.status_code != 200:
-        raise SerpFetchError(
-            f"Bright Data SERP: unexpected response. {_serp_error_detail(response, api_key)}",
-            status_code=response.status_code,
-        )
-    elif not (response.text or "").strip():
+    error = classify(
+        response, api_key=api_key, zone=zone, zone_env="BRIGHTDATA_SERP_ZONE", product="SERP API"
+    )
+    if error is not None:
+        raise error
+    if brd_headers(response)[0] is None and not (response.text or "").strip():
         raise SerpFetchError(
             f"Bright Data SERP: empty response body. {_serp_error_detail(response, api_key)}"
         )
@@ -269,8 +198,11 @@ async def run_dorks_live_osint(
     error_count = 0
     failure_labels: list[str] = []
     auth_failure_seen = False
+    stop_message: str | None = None
+    attempted = 0
 
     for template in dorks:
+        attempted += 1
         query = template.format(target=target)
         google_url = _build_google_url(query)
         lines.append(f"[+] Dork: {query}")
@@ -290,10 +222,13 @@ async def run_dorks_live_osint(
         except OSINTError as exc:
             error_count += 1
             failure_labels.append(_failure_label(exc))
-            if isinstance(exc, SerpFetchError) and exc.status_code in _AUTH_STATUS_CODES:
+            if isinstance(exc, SerpFetchError) and exc.status_code == _FORBIDDEN_STATUS:
                 auth_failure_seen = True
             logger.warning("Dork %r failed: %s", query, exc)
             logger.debug("Dork %r failure detail", query, exc_info=True)
+            if getattr(exc, "stop_batch", False):
+                stop_message = str(exc)  # every further dork would fail the same way
+                break
             lines.append(f"    (error: {exc})")
             lines.append("")
         except Exception as exc:
@@ -303,6 +238,12 @@ async def run_dorks_live_osint(
             logger.debug("Dork %r failure detail", query, exc_info=True)
             lines.append(f"    (internal error: {exc})")
             lines.append("")
+
+    if stop_message:
+        if error_count == attempted:
+            return f"Scan error: {stop_message}"
+        lines.append(f"[stopped early after {attempted - 1} of {len(dorks)} dorks] {stop_message}")
+        return "\n".join(lines)
 
     if error_count == len(dorks):
         return _summarize_failures(failure_labels, len(dorks), auth_failure_seen)

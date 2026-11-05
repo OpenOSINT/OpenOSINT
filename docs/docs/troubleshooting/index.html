@@ -153,6 +153,16 @@
 <p>The REPL needs an AI provider. Export a key (<code>export ANTHROPIC_API_KEY=sk-ant-...</code>), or start with <code>--provider ollama</code> or <code>--provider openai</code>. Direct commands such as <code>openosint dns example.com</code> need none.</p>
 <h2 id="scan-error-cannot-run-not-set-and-key_required"><code>Scan error: ... cannot run: ... not set.</code> and <code>[key_required]</code></h2>
 <p>A tool needs an API key you have not provided. The message names the variable and a link to get one. Set it as an environment variable, put it in <code>config.env</code> or <code>.env</code>, or save it in the web UI under Settings. See <a href="/docs/configuration/">Configuration</a>.</p>
+<h2 id="bright-data-errors-from-search_dorks_live-search_footprint-and-scrape_url"><code>Bright Data ...</code> errors from <code>search_dorks_live</code>, <code>search_footprint</code> and <code>scrape_url</code></h2>
+<p>These tools stop at the first account-level failure instead of retrying every query, and the message says which kind it is:</p>
+<ul>
+<li><strong><code>rejected the API token (HTTP 401)</code></strong>: the token is wrong, revoked or expired. Check or regenerate it in your Bright Data account settings, and set <code>BRIGHTDATA_API_KEY</code> to the token only.</li>
+<li><strong><code>zone 'NAME' not found</code></strong>: the zone does not exist in your account. Create a SERP API zone (for <code>search_dorks_live</code> and <code>search_footprint</code>) or a Web Unlocker zone (for <code>scrape_url</code>), or set <code>BRIGHTDATA_SERP_ZONE</code> / <code>BRIGHTDATA_UNLOCKER_ZONE</code> to an existing zone name.</li>
+<li><strong><code>reported a usage limit (client_10100) ... may mean your free credits are used up</code></strong>: a best-effort hint. Bright Data's free tier is 5,000 credits a month, shared across its products and renewed on the 1st; without deposited funds requests stop at the limit. Check usage and add funds on the Bright Data billing page. Bright Data does not document the exact response, so this message says "may".</li>
+<li><strong><code>Bright Data-side error</code></strong> (HTTP 500, 502, 503 or 504 from <code>api.brightdata.com</code>): not your key or zone. Retry in a few minutes; if it persists, contact Bright Data support.</li>
+<li><strong><code>the target blocked the request</code></strong> (a CAPTCHA or protection page): the website refused the fetch. A retry can help; some targets cannot be fetched.</li>
+<li><strong><code>[Target returned HTTP 404]</code></strong> (or 410, 401, 5xx) at the top of a <code>scrape_url</code> result: not a failure. The site itself answered with that status, and the page body follows. A removed page or profile can be a finding in its own right.</li>
+</ul>
 <h2 id="disabled_in_passive_mode"><code>disabled_in_passive_mode</code></h2>
 <p>The tool is active (it touches the target or is noisy) and active tools are off. Pass <code>--allow-active</code>, set <code>OPENOSINT_ALLOW_ACTIVE=1</code>, or use the web UI switch, after reading <a href="/docs/safety/">Safety</a>. A public or demo instance cannot enable them.</p>
 <h2 id="tool-call-limit-reached-n-calls-for-this-request"><code>Tool call limit reached (N calls for this request)</code></h2>

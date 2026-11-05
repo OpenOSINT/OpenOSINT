@@ -9,6 +9,12 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Bright Data errors are now classified in one place (`openosint/brightdata_response.py`) for `search_dorks_live`, `search_footprint` and `scrape_url`. `search_dorks_live` and `search_footprint` stop at the first account-level failure instead of sending every query, and the result names the cause: token rejected (with the account settings page), zone not found (with the variable to set), a possible usage limit (`x-brd-err-code: client_10100`, worded "may mean your free credits are used up" because Bright Data does not document it), or a Bright Data-side 500/502/503/504 (never blamed on your key; retry, then contact Bright Data support). Results gathered before the stop are kept.
+- `scrape_url` and `search_footprint` now read Bright Data's `x-brd-*` outcome headers, as `search_dorks_live` already did. `scrape_url` now tells a block from the target's own answer: a CAPTCHA or protection page is an error, while the target's own HTTP status (404, 410, 401, 5xx) is returned as a `[Target returned HTTP N]` line followed by the page body, because a removed page or profile is itself a finding. For the SERP tools a non-200 from the search engine is still a failure.
+- Invalid-key and wrong-zone messages no longer include the Bright Data signup link: you already have an account, so they point at your token page or billing page instead.
+
 ## [2.37.1] — 2026-11-05
 
 ### Security hardening
