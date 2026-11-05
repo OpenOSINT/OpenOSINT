@@ -46,6 +46,14 @@ claude mcp add openosint -- uvx --from openosint openosint-mcp
 pip install openosint && openosint exposure example.com
 ```
 
+## OpenOSINT Cloud
+
+The same engine as a hosted chat: ask about a domain, an IP address or a company. Every answer shows which public sources were checked, when, and a source on every claim. No install, no API keys.
+
+<a href="https://chat.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=cloud_demo"><img src="docs/assets/cloud-demo.gif" width="960" alt="OpenOSINT Cloud answering a question about a company: three lookups with their times, then an answer with source chips"></a>
+
+[Try it: 10 free messages](https://chat.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=cloud_demo)
+
 ## What you can do
 
 Real output, captured 2026-11-04 on v2.37.0 and trimmed. None of these commands needs an API key or an AI provider.
@@ -186,9 +194,10 @@ Keys go in the web UI Settings, `~/.openosint/config.env` or the environment; th
 
 Built on this engine. The open-source project stays free and MIT-licensed.
 
-- **[Monitor](https://app.openosint.tech/monitor?utm_source=github&utm_medium=readme&utm_campaign=monitor)**: scheduled external checks of your domain, with an email when something gets worse. Free for one domain.
-- **[Diligence](https://app.openosint.tech/diligence?utm_source=github&utm_medium=readme&utm_campaign=diligence)**: due-diligence signals for UK companies and LEI holders, from official registries, each with its source.
-- **[Cloud](https://app.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=cloud)**: hosted REST and MCP API for IP and domain infrastructure intelligence (invite-only).
+- **[Cloud](https://chat.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=hosted_versions)**: chat about a domain, an IP address or a company, with sourced answers. [Details above](#openosint-cloud).
+- **[Monitor](https://app.openosint.tech/monitor?utm_source=github&utm_medium=readme&utm_campaign=hosted_versions)**: domain security monitoring (SPF, DKIM, DMARC, TLS). Free for one domain.
+- **[Diligence](https://app.openosint.tech/diligence?utm_source=github&utm_medium=readme&utm_campaign=hosted_versions)**: UK and LEI company checks against registries and sanctions lists.
+- **API access (by request)**: hosted REST and MCP API. Email [commercial@openosint.tech](mailto:commercial@openosint.tech).
 
 ## Sponsors
 
