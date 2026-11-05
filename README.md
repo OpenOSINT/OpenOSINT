@@ -46,6 +46,14 @@ claude mcp add openosint -- uvx --from openosint openosint-mcp
 pip install openosint && openosint exposure example.com
 ```
 
+## OpenOSINT Cloud
+
+The same engine as a hosted chat: ask about a domain, an IP address or a company. Every answer shows which public sources were checked, when, and a source on every claim. No install, no API keys.
+
+<a href="https://chat.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=cloud_demo"><img src="docs/assets/cloud-demo.gif" width="960" alt="OpenOSINT Cloud answering a question about a company: three lookups with their times, then an answer with source chips"></a>
+
+[Try it: 10 free messages](https://chat.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=cloud_demo)
+
 ## What you can do
 
 Real output, captured 2026-11-04 on v2.37.0 and trimmed. None of these commands needs an API key or an AI provider.
