@@ -678,6 +678,17 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Do not ask for confirmation (required when stdin is not a terminal).",
     )
 
+    # setup
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Guided, opt-in setup for an integration.",
+    )
+    setup_sub = setup_parser.add_subparsers(dest="setup_target", metavar="integration", required=True)
+    setup_sub.add_parser(
+        "brightdata",
+        help="Check or create your Bright Data token and zones (asks before every change).",
+    )
+
     # sponsors
     subparsers.add_parser(
         "sponsors",
@@ -1206,6 +1217,17 @@ def _handle_config(args: argparse.Namespace) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Setup command handler
+# ---------------------------------------------------------------------------
+
+
+def _handle_setup() -> None:
+    from openosint.setup_brightdata import run_setup_brightdata
+
+    sys.exit(run_setup_brightdata(interactive=sys.stdin.isatty() and sys.stdout.isatty()))
+
+
+# ---------------------------------------------------------------------------
 # History command handler
 # ---------------------------------------------------------------------------
 
@@ -1399,6 +1421,8 @@ async def _async_main() -> None:
         _handle_history(args)
     elif args.command == "config":
         _handle_config(args)
+    elif args.command == "setup":
+        _handle_setup()
     elif args.command == "sponsors":
         _handle_sponsors()
     elif args.command == "proxy-test":

@@ -29,7 +29,7 @@ def _confirmed(ask: Callable[[str], str], prompt: str) -> bool:
     return ask(prompt).strip().lower() in _YES
 
 
-def _handle_exposed_directory(
+def handle_exposed_directory(
     assume_yes: bool, interactive: bool, ask: Callable[[str], str]
 ) -> None:
     """Warn when ~/.openosint is group/world accessible; tighten only after an explicit yes."""
@@ -88,7 +88,7 @@ def run_config_import(
             print("Nothing copied.")
             return EXIT_ABORTED
 
-    _handle_exposed_directory(assume_yes, interactive, ask)
+    handle_exposed_directory(assume_yes, interactive, ask)
     imported, _ = config_store.import_legacy_env(source, SAVEABLE_NAMES, only=to_copy)
     print(
         f"Imported {len(imported)} setting(s). {source} was left in place; delete it when you are ready."

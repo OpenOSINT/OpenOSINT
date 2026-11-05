@@ -9,6 +9,10 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- `openosint setup brightdata`: a guided, opt-in setup for the Bright Data tools. It explains what Bright Data is used for, asks before opening the signup page (a plain `brightdata.com` link with `OPENOSINT_NO_REFERRAL_LINKS=1`), reads the token hidden, validates it by listing your zones (`GET /zone/get_active_zones`, never the billable request endpoint), then uses an existing zone or, only after an explicit yes, creates a SERP API or Web Unlocker zone (`POST /zone`, documented as "Add a Zone"; Admin or Ops role). Values are saved to `config.env` at 0600, a saved value is replaced only after asking, and a user who is already set up is told so with no signup link. It refuses to run without a terminal (exit 2). The missing-key message now mentions it.
+
 ### Changed
 
 - The missing-key message is worded for where it is shown. The last line names the right place per interface (CLI: environment or `config.env`; MCP: the client's `env` block, then restart; web UI and demo: Settings). For the Bright Data tools it lists the dashboard steps for exactly the settings still missing (sign up, copy the token from account settings, create a SERP API or Web Unlocker zone) and no longer drops the zone guidance. A user who already has a token and only lacks a zone is not shown the signup link. `scrape_url` no longer makes a new user hit the passive-mode refusal and then the missing-key error in sequence: the refusal now carries an `also_needed` field and both are shown together.

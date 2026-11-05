@@ -118,8 +118,11 @@ _ZONE_STEPS = {
 }
 
 
-def setup_steps(missing: list[str]) -> list[str]:
-    """Numbered dashboard steps for exactly the Bright Data settings still missing."""
+def setup_steps(missing: list[str], *, guided_hint: bool = True) -> list[str]:
+    """Numbered dashboard steps for exactly the Bright Data settings still missing.
+
+    ``guided_hint`` adds a closing line pointing at ``openosint setup brightdata``.
+    """
     if not any(name.startswith("BRIGHTDATA") for name in missing):
         return []
     steps = []
@@ -130,4 +133,9 @@ def setup_steps(missing: list[str]) -> list[str]:
     heading = "Set up Bright Data" + (
         " (the free tier needs no credit card):" if "BRIGHTDATA_API_KEY" in missing else ":"
     )
-    return [heading] + [f"  {i}. {step}" for i, step in enumerate(steps, start=1)]
+    lines = [heading] + [f"  {i}. {step}" for i, step in enumerate(steps, start=1)]
+    if guided_hint:
+        lines.append(
+            "  Or run `openosint setup brightdata` for a guided setup (it asks before doing anything)."
+        )
+    return lines

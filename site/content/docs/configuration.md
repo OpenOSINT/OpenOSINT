@@ -28,6 +28,8 @@ This table is generated from the key catalog in the code, so it matches the vers
 
 <!-- gen:config-keys -->
 
+`openosint setup brightdata` walks through the Bright Data settings: it asks before opening the signup page, reads the token hidden, checks it by listing your zones, and can create the SERP API and Web Unlocker zones after an explicit yes. It saves what you confirm to `config.env` (user-only), never replaces a saved value without asking, and never calls the billable request endpoint. It needs an interactive terminal.
+
 The Bright Data key and zones are created in the [Bright Data dashboard](%%BRIGHTDATA_LINK_DOCS%%) (a free tier is available). That is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.
 
 These tools need no key: <!-- gen:keyless -->. Tools that are noisy or touch the target also need `--allow-active`; see the [tools reference](/tools/).
