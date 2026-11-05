@@ -97,7 +97,7 @@ claude plugin disable <each plugin that prints notices or runs hooks>
 # 2. Demo folder that pre-allows the tools, so no permission prompt appears on screen
 mkdir -p /tmp/openosint-demo/.claude
 cat > /tmp/openosint-demo/.claude/settings.local.json <<'JSON'
-{"permissions": {"allow": ["Bash(uvx --from openosint==2.37.0 openosint *)", "mcp__plugin_openosint_openosint__*"]}}
+{"permissions": {"allow": ["Bash(uvx --from openosint==2.37.1 openosint *)", "mcp__plugin_openosint_openosint__*"]}}
 JSON
 
 # 3. Record (one take costs a few API calls). Raw video lands in /tmp/openosint-demo-raw/

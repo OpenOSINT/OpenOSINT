@@ -222,7 +222,7 @@ MIT. See [LICENSE](./LICENSE). For authorized security research only; see [DISCL
 
 ¹ Bright Data links in this README are affiliate/referral links: OpenOSINT earns a commission if you sign up through them, at no extra cost to you.
 
-*OpenOSINT v2.37.0 — November 2026*
+*OpenOSINT v2.37.1 — November 2026*
 
 ## Star History
 

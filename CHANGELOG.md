@@ -9,6 +9,8 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.37.1] — 2026-11-05
+
 ### Security hardening
 
 - A legacy package-root `.env` is no longer copied into `~/.openosint/config.env` automatically. Before this change, the first start of the CLI, web server or MCP server from a source or editable checkout (and only when `config.env` did not exist yet) copied every known setting from that `.env` (up to 16 names, 11 of them secrets: Anthropic, OpenAI, Shodan, VirusTotal, Bright Data and others) into the data directory without asking. The copy was announced on stderr only, which MCP hosts and the web UI usually hide. The file was created user-only (0600), but the directory kept its existing mode if it already existed. The copy also made the stale-key problem below possible.
