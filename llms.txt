@@ -42,7 +42,7 @@ Claude Desktop / Cursor: `{"mcpServers": {"openosint": {"command": "uvx", "args"
 - `search_dns` — A/AAAA/MX/NS/TXT/CNAME/SOA records plus SPF, DMARC, DKIM analysis
 - `search_rdap` — domain registrar, registration/expiry dates, name servers and status via RDAP (keyless)
 - `search_gdelt_geo` — recent worldwide geolocated news (headline, link, place) from the GDELT 15-minute GKG feed, GeoJSON output
-- `search_dorks_live` — live Google search results for dork queries via [Bright Data](https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=search_dorks_live) SERP API (referral link: OpenOSINT earns a commission if you sign up through it)
+- `search_dorks_live` — live Google search results for dork queries via [Bright Data](https://get.brightdata.com/jx2wfi?sid1=docs&sid2=docs&sid3=search_dorks_live&utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=search_dorks_live) SERP API (referral link: OpenOSINT earns a commission if you sign up through it)
 - `scrape_url` — fetch any URL bypassing Cloudflare/CAPTCHA via Bright Data Web Unlocker, returns clean Markdown
 - `search_footprint` — entity-type-aware public search-engine footprint (email/username/domain/phone/name), returns structured results + Entity Correlation Graph nodes/edges
 

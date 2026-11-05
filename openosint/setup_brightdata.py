@@ -231,7 +231,7 @@ def _warn(text: str) -> None:
 def _refuse_non_interactive() -> int:
     _warn("openosint setup brightdata needs an interactive terminal (it asks before every change).")
     _warn(
-        f"Get an account: {referral_link('setup', content='openosint_setup')} {disclosure()}".rstrip()
+        f"Get an account: {referral_link('setup', dest='signup')} {disclosure()}".rstrip()
     )
     for line in setup_steps(["BRIGHTDATA_API_KEY", *(z.setting for z in ZONES)], guided_hint=False):
         _warn(line)
@@ -240,7 +240,7 @@ def _refuse_non_interactive() -> int:
 
 
 def _signup(session: _Session) -> None:
-    link = referral_link("setup", content="openosint_setup")
+    link = referral_link("setup", dest="signup")
     _say(f"Sign up here: {link}")
     if disclosure():
         _say(disclosure())

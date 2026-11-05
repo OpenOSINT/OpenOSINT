@@ -12,7 +12,6 @@ from openosint.brightdata_response import (
     classify,
 )
 
-REFERRAL_ID = "984ni58s2oad"
 SECRET = "sekret-token-123"
 
 
@@ -54,7 +53,7 @@ class TestTokenRejected:
         message = str(_classify(Resp(401, "Auth method is not supported")))
 
         assert (
-            REFERRAL_ID not in message
+            "get.brightdata.com" not in message
             and "get.brightdata.com" not in message
             and "commission" not in message
         )

@@ -1,7 +1,12 @@
 """
 Bright Data referral links for every OpenOSINT placement, in one place.
 
-Scheme: ``?utm_source=openosint&utm_medium=<surface>&utm_campaign=<moment>[&utm_content=<tool>]``
+Scheme: ``?sid1=<surface>&sid2=<moment>[&sid3=<tool>]`` plus the same values as
+``utm_source=openosint&utm_medium&utm_campaign[&utm_content]``. PartnerStack reports the SubIDs
+(``sid1..3``); the UTMs are kept for Bright Data's side.
+
+Destination: signup flows use the Signup link, ``search_dorks_live`` / ``search_footprint`` the SERP API
+link, ``scrape_url`` the Web Unlocker link, everything else the base link.
 
 * surface (``utm_medium``): where the link is shown. In-product surfaces are set once at
   startup by the entry point: ``cli`` (default), ``mcp``, ``webui`` (loopback web UI),
@@ -19,7 +24,13 @@ from __future__ import annotations
 import os
 from urllib.parse import urlencode
 
-_MAIN = "https://get.brightdata.com/984ni58s2oad"
+_LINKS = {
+    "main": "https://get.brightdata.com/984ni58s2oad",
+    "signup": "https://get.brightdata.com/openosint-signup",
+    "serp": "https://get.brightdata.com/jx2wfi",
+    "unlocker": "https://get.brightdata.com/openosint-unlocker",
+}
+_TOOL_DEST = {"search_dorks_live": "serp", "search_footprint": "serp", "scrape_url": "unlocker"}
 _PLAIN = "https://brightdata.com"
 
 # Dashboard pages for people who already have an account (no referral link on these).
@@ -59,26 +70,36 @@ def links_enabled() -> bool:
     return os.environ.get(OPT_OUT_ENV, "").strip().lower() not in _TRUTHY
 
 
-def _build(medium: str, campaign: str, content: str | None) -> str:
+def _build(medium: str, campaign: str, content: str | None, dest: str | None = None) -> str:
     if medium not in SURFACES:
         raise ValueError(f"unknown surface {medium!r}; expected one of {SURFACES}")
     if campaign not in CAMPAIGNS:
         raise ValueError(f"unknown campaign {campaign!r}; expected one of {CAMPAIGNS}")
-    params = {"utm_source": "openosint", "utm_medium": medium, "utm_campaign": campaign}
+    dest = dest or _TOOL_DEST.get(content or "", "main")
+    if dest not in _LINKS:
+        raise ValueError(f"unknown destination {dest!r}; expected one of {tuple(_LINKS)}")
+    params = {"sid1": medium, "sid2": campaign}
+    if content:
+        params["sid3"] = content
+    params |= {"utm_source": "openosint", "utm_medium": medium, "utm_campaign": campaign}
     if content:
         params["utm_content"] = content
-    return f"{_MAIN}?{urlencode(params)}"
+    return f"{_LINKS[dest]}?{urlencode(params)}"
 
 
-def referral_link(campaign: str = "setup", *, content: str | None = None) -> str:
+def referral_link(
+    campaign: str = "setup", *, content: str | None = None, dest: str | None = None
+) -> str:
     """The link for an in-product message; plain brightdata.com when the user opted out."""
-    tracked = _build(_surface, campaign, content)  # also validates the arguments
+    tracked = _build(_surface, campaign, content, dest)  # also validates the arguments
     return tracked if links_enabled() else _PLAIN
 
 
-def static_link(medium: str, campaign: str, content: str | None = None) -> str:
+def static_link(
+    medium: str, campaign: str, content: str | None = None, dest: str | None = None
+) -> str:
     """A link for a published file (site, README). Ignores the runtime surface and opt-out."""
-    return _build(medium, campaign, content)
+    return _build(medium, campaign, content, dest)
 
 
 def disclosure() -> str:
@@ -94,7 +115,7 @@ def disclosure_suffix() -> str:
 
 def resolve_static(text: str, medium: str = "docs", campaign: str = "setup") -> str:
     """Like :func:`resolve` for a published page: always tracked and disclosed, never opted out."""
-    link = static_link(medium, campaign)
+    link = static_link(medium, campaign, dest="signup")
     return (
         text.replace(LINK_PLACEHOLDER, link)
         .replace(DISCLOSURE_PLACEHOLDER, REFERRAL_DISCLOSURE)
@@ -104,7 +125,7 @@ def resolve_static(text: str, medium: str = "docs", campaign: str = "setup") -> 
 
 def resolve(text: str) -> str:
     """Fill the link and disclosure placeholders in catalog text for the running process."""
-    filled = text.replace(LINK_PLACEHOLDER, referral_link()).replace(
+    filled = text.replace(LINK_PLACEHOLDER, referral_link(dest="signup")).replace(
         DISCLOSURE_PLACEHOLDER, disclosure()
     )
     return filled.replace(" ()", "").strip()  # "(…)" around a disclosure that opt-out removed

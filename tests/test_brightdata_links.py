@@ -12,8 +12,14 @@ from openosint import brightdata
 from openosint.settings_catalog import missing_keys_message, public_catalog
 
 ROOT = Path(__file__).resolve().parent.parent
-REFERRAL_ID = "984ni58s2oad"
-REFERRAL_URL_RE = re.compile(r"https://get\.brightdata\.com/984ni58s2oad[^\s)\"'<>`]*")
+REFERRAL_IDS = {
+    "main": "984ni58s2oad",
+    "signup": "openosint-signup",
+    "serp": "jx2wfi",
+    "unlocker": "openosint-unlocker",
+}
+REFERRAL_ID = REFERRAL_IDS["main"]
+REFERRAL_URL_RE = re.compile(r"https://get\.brightdata\.com/[A-Za-z0-9_-]+[^\s)\"'<>`]*")
 
 
 @pytest.fixture(autouse=True)
@@ -32,16 +38,37 @@ class TestReferralLink:
 
         assert url.startswith(f"https://get.brightdata.com/{REFERRAL_ID}?")
         assert _query(url) == {
+            "sid1": "cli",
+            "sid2": "setup",
             "utm_source": "openosint",
             "utm_medium": "cli",
             "utm_campaign": "setup",
         }
 
-    def test_content_is_added_when_given(self):
-        assert (
-            _query(brightdata.referral_link("setup", content="scrape_url"))["utm_content"]
-            == "scrape_url"
-        )
+    def test_content_is_added_as_utm_and_sid3(self):
+        query = _query(brightdata.referral_link("setup", content="scrape_url"))
+
+        assert query["utm_content"] == query["sid3"] == "scrape_url"
+
+    @pytest.mark.parametrize(
+        ("kwargs", "dest"),
+        [
+            ({"dest": "signup"}, "signup"),
+            ({"content": "search_dorks_live"}, "serp"),
+            ({"content": "search_footprint"}, "serp"),
+            ({"content": "scrape_url"}, "unlocker"),
+            ({"content": "search_ip"}, "main"),
+            ({}, "main"),
+        ],
+    )
+    def test_each_placement_routes_to_its_link(self, kwargs, dest):
+        url = brightdata.referral_link("setup", **kwargs)
+
+        assert url.startswith(f"https://get.brightdata.com/{REFERRAL_IDS[dest]}?")
+
+    def test_unknown_destination_is_rejected(self):
+        with pytest.raises(ValueError, match="destination"):
+            brightdata.referral_link("setup", dest="blog")
 
     @pytest.mark.parametrize("surface", brightdata.SURFACES)
     def test_medium_follows_the_surface_set_at_startup(self, surface):
@@ -78,6 +105,9 @@ class TestReferralLink:
         url = brightdata.static_link("docs", "docs", content="search_footprint")
 
         assert _query(url) == {
+            "sid1": "docs",
+            "sid2": "docs",
+            "sid3": "search_footprint",
             "utm_source": "openosint",
             "utm_medium": "docs",
             "utm_campaign": "docs",
@@ -87,7 +117,7 @@ class TestReferralLink:
     def test_resolve_fills_placeholders_and_drops_the_disclosure_on_opt_out(self, monkeypatch):
         text = f"Get one: {brightdata.LINK_PLACEHOLDER} - free tier. {brightdata.DISCLOSURE_PLACEHOLDER}"
 
-        assert REFERRAL_ID in brightdata.resolve(text)
+        assert REFERRAL_IDS["signup"] in brightdata.resolve(text)
         assert "commission" in brightdata.resolve(text)
         monkeypatch.setenv(brightdata.OPT_OUT_ENV, "1")
         assert brightdata.resolve(text).startswith("Get one: https://brightdata.com - free tier.")
@@ -102,8 +132,9 @@ class TestInProductMessages:
             "scrape_url", ["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"]
         )
 
-        assert "utm_medium=mcp" in message
+        assert "utm_medium=mcp" in message and "sid1=mcp" in message
         assert "utm_source=openosint" in message
+        assert REFERRAL_IDS["signup"] in message
         assert "commission" in message
 
     def test_opt_out_removes_tracking_and_the_commission_claim_but_keeps_the_instructions(
@@ -115,14 +146,14 @@ class TestInProductMessages:
             "scrape_url", ["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"]
         )
 
-        assert REFERRAL_ID not in message and "utm_" not in message
-        assert "commission" not in message
+        assert "get.brightdata.com" not in message and "utm_" not in message
+        assert "sid1" not in message and "commission" not in message
         assert "BRIGHTDATA_API_KEY" in message and "Get one: https://brightdata.com" in message
 
     def test_web_catalog_resolves_links_and_notes(self, monkeypatch):
         brightdata.set_surface("webui")
         entry = next(e for e in public_catalog() if e["key"] == "BRIGHTDATA_SERP_ZONE")
-        assert "utm_medium=webui" in entry["url"] and "commission" in entry["note"]
+        assert "sid1=webui" in entry["url"] and "commission" in entry["note"]
 
         monkeypatch.setenv(brightdata.OPT_OUT_ENV, "1")
         entry = next(e for e in public_catalog() if e["key"] == "BRIGHTDATA_API_KEY")
@@ -149,7 +180,7 @@ class TestInProductMessages:
                 call()
             message = str(err.value)
             assert TOKEN_URL in message
-            assert REFERRAL_ID not in message and "commission" not in message
+            assert "get.brightdata.com" not in message and "commission" not in message
 
 
 class TestEntryPointsSetTheSurface:
@@ -205,7 +236,7 @@ class TestRepositoryFiles:
         paths = [ROOT / "README.md", ROOT / ".env.example", ROOT / "llms.txt"]
         paths += sorted((ROOT / "site" / "content").rglob("*.*"))
         paths += sorted((ROOT / "docs").rglob("*.html")) + [ROOT / "docs" / "llms.txt"]
-        return [p for p in paths if p.is_file() and REFERRAL_ID in p.read_text(encoding="utf-8")]
+        return [p for p in paths if p.is_file() and "get.brightdata.com" in p.read_text(encoding="utf-8")]
 
     def test_the_known_placements_are_found(self):
         names = {p.relative_to(ROOT).as_posix() for p in self._files()}
@@ -217,6 +248,9 @@ class TestRepositoryFiles:
             for raw in REFERRAL_URL_RE.findall(path.read_text(encoding="utf-8")):
                 query = _query(raw.replace("&amp;", "&"))
                 where = f"{path.relative_to(ROOT)}: {raw}"
+                assert urlsplit(raw).path.lstrip("/") in REFERRAL_IDS.values(), where
+                assert query.get("sid1") == query.get("utm_medium"), where
+                assert query.get("sid2") == query.get("utm_campaign"), where
                 assert query.get("utm_source") == "openosint", where
                 assert query.get("utm_medium") in brightdata.SURFACES, where
                 assert query.get("utm_campaign") in brightdata.CAMPAIGNS, where

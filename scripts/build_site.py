@@ -136,7 +136,7 @@ def token_values() -> dict[str, str]:
 
     return {
         "VERSION": project_version(),
-        "BRIGHTDATA_LINK_DOCS": static_link("docs", "docs"),
+        "BRIGHTDATA_LINK_DOCS": static_link("docs", "docs", dest="signup"),
         **{
             f"BRIGHTDATA_LINK_{tool.upper()}": static_link("docs", "docs", content=tool)
             for tool in ("search_dorks_live", "scrape_url", "search_footprint")

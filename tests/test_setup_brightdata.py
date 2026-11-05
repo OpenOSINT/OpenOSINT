@@ -187,9 +187,11 @@ class TestNewUser:
 
         assert len(session.opened) == 1
         link = session.opened[0]
-        assert link.startswith("https://get.brightdata.com/984ni58s2oad?")
+        assert link.startswith("https://get.brightdata.com/openosint-signup?")
         assert (
-            "utm_source=openosint" in link
+            "sid1=cli" in link
+            and "sid2=setup" in link
+            and "utm_source=openosint" in link
             and "utm_medium=cli" in link
             and "utm_campaign=setup" in link
         )

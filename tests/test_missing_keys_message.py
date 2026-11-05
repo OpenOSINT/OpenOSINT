@@ -12,7 +12,6 @@ from openosint.settings_catalog import SETTINGS, config_path, missing_keys_messa
 from openosint.tool_policy import humanize
 
 ALL_BD = ["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"]
-REFERRAL_ID = "984ni58s2oad"
 
 
 @pytest.fixture(autouse=True)
@@ -49,7 +48,7 @@ class TestBrightDataSetupSteps:
 
         assert "Sign up" not in message and "API token" not in message
         assert (
-            REFERRAL_ID not in message and "commission" not in message
+            "get.brightdata.com" not in message and "commission" not in message
         )  # they already have an account
         assert "1. Create a SERP API zone" in message and "BRIGHTDATA_SERP_ZONE" in message
 
@@ -68,14 +67,14 @@ class TestBrightDataSetupSteps:
         message = missing_keys_message("search_dorks_live", ALL_BD)
         get_one = next(line for line in message.splitlines() if line.startswith("Get one:"))
 
-        assert REFERRAL_ID in get_one and "commission" in get_one
+        assert "openosint-signup" in get_one and "commission" in get_one
 
     def test_opt_out_keeps_the_steps_and_drops_tracking_and_the_commission_claim(self, monkeypatch):
         monkeypatch.setenv(brightdata.OPT_OUT_ENV, "1")
 
         message = missing_keys_message("search_dorks_live", ALL_BD)
 
-        assert REFERRAL_ID not in message and "utm_" not in message and "commission" not in message
+        assert "get.brightdata.com" not in message and "utm_" not in message and "commission" not in message
         assert "Get one: https://brightdata.com" in message
         assert TOKEN_URL in message and "3. Create a SERP API zone" in message
 

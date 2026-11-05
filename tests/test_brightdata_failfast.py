@@ -8,8 +8,6 @@ import pytest
 
 from openosint.brightdata_response import BILLING_URL, TOKEN_URL
 
-REFERRAL_ID = "984ni58s2oad"
-
 
 def _resp(status=200, text="", headers=None, json_body=None):
     resp = MagicMock()
@@ -39,7 +37,7 @@ class TestDorksFailFast:
 
         assert post.call_count == 1
         assert result.startswith("Scan error:") and TOKEN_URL in result and "5x" not in result
-        assert REFERRAL_ID not in result
+        assert "get.brightdata.com" not in result
 
     async def test_a_bright_data_outage_is_not_blamed_on_the_key(self):
         from openosint.tools.search_dorks_live import run_dorks_live_osint
@@ -117,7 +115,7 @@ class TestFootprintFailFast:
 
         assert post.call_count == 1
         assert (
-            result.startswith("Scan error:") and TOKEN_URL in result and REFERRAL_ID not in result
+            result.startswith("Scan error:") and TOKEN_URL in result and "get.brightdata.com" not in result
         )
 
     async def test_outage_is_reported_as_bright_datas(self):
@@ -239,4 +237,4 @@ class TestScrapeUrlReadsTheOutcomeHeaders:
         ):
             result = await run_scrape_url_osint("https://example.com")
 
-        assert TOKEN_URL in result and REFERRAL_ID not in result and "commission" not in result
+        assert TOKEN_URL in result and "get.brightdata.com" not in result and "commission" not in result

@@ -175,9 +175,9 @@
 <tr><td><a href="#search_rdap"><code>search_rdap</code></a></td><td>RDAP (IANA bootstrap)</td><td>Registrar, dates, name servers, status</td><td>passive</td><td class="needs">&mdash;</td></tr>
 <tr><td><a href="#search_dns"><code>search_dns</code></a></td><td>dnspython (built-in)</td><td>A/AAAA/MX/NS/TXT/CNAME/SOA, SPF/DMARC/DKIM</td><td>passive</td><td class="needs">&mdash;</td></tr>
 <tr><td><a href="#search_gdelt_geo"><code>search_gdelt_geo</code></a></td><td>GDELT 15-minute GKG feed</td><td>Recent worldwide news on a map (GeoJSON)</td><td>passive</td><td class="needs">&mdash;</td></tr>
-<tr><td><a href="#search_dorks_live"><code>search_dorks_live</code></a></td><td><a href="https://get.brightdata.com/984ni58s2oad?utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs&amp;utm_content=search_dorks_live" target="_blank" rel="noopener sponsored">Bright Data SERP API</a></td><td>Live Google dork results (title, URL, snippet)</td><td>passive</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_SERP_ZONE</code></td></tr>
-<tr><td><a href="#scrape_url"><code>scrape_url</code></a></td><td><a href="https://get.brightdata.com/984ni58s2oad?utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs&amp;utm_content=scrape_url" target="_blank" rel="noopener sponsored">Bright Data Web Unlocker</a></td><td>Fetch any URL bypassing Cloudflare/CAPTCHA</td><td>touches target</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_UNLOCKER_ZONE</code>; <code>--allow-active</code></td></tr>
-<tr><td><a href="#search_footprint"><code>search_footprint</code></a></td><td><a href="https://get.brightdata.com/984ni58s2oad?utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs&amp;utm_content=search_footprint" target="_blank" rel="noopener sponsored">Bright Data SERP API</a></td><td>Entity-type-aware SERP footprint + correlation graph</td><td>passive</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_SERP_ZONE</code></td></tr>
+<tr><td><a href="#search_dorks_live"><code>search_dorks_live</code></a></td><td><a href="https://get.brightdata.com/jx2wfi?sid1=docs&amp;sid2=docs&amp;sid3=search_dorks_live&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs&amp;utm_content=search_dorks_live" target="_blank" rel="noopener sponsored">Bright Data SERP API</a></td><td>Live Google dork results (title, URL, snippet)</td><td>passive</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_SERP_ZONE</code></td></tr>
+<tr><td><a href="#scrape_url"><code>scrape_url</code></a></td><td><a href="https://get.brightdata.com/openosint-unlocker?sid1=docs&amp;sid2=docs&amp;sid3=scrape_url&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs&amp;utm_content=scrape_url" target="_blank" rel="noopener sponsored">Bright Data Web Unlocker</a></td><td>Fetch any URL bypassing Cloudflare/CAPTCHA</td><td>touches target</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_UNLOCKER_ZONE</code>; <code>--allow-active</code></td></tr>
+<tr><td><a href="#search_footprint"><code>search_footprint</code></a></td><td><a href="https://get.brightdata.com/jx2wfi?sid1=docs&amp;sid2=docs&amp;sid3=search_footprint&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs&amp;utm_content=search_footprint" target="_blank" rel="noopener sponsored">Bright Data SERP API</a></td><td>Entity-type-aware SERP footprint + correlation graph</td><td>passive</td><td class="needs"><code>BRIGHTDATA_API_KEY</code>; <code>BRIGHTDATA_SERP_ZONE</code></td></tr>
 </table></div>
 <hr>
 <h2 id="search_email"><code>search_email</code></h2>
@@ -393,7 +393,7 @@
 
 <h2 id="search_dorks_live"><code>search_dorks_live</code></h2>
 <div class="indent">
-<p>Executes live Google dork queries through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=search_dorks_live" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
+<p>Executes live Google dork queries through the <a href="https://get.brightdata.com/jx2wfi?sid1=docs&sid2=docs&sid3=search_dorks_live&utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=search_dorks_live" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint search-dorks-live "john doe" --max-dorks 3
 [+] Dork: "john doe" site:linkedin.com
@@ -405,7 +405,7 @@
 
 <h2 id="scrape_url"><code>scrape_url</code></h2>
 <div class="indent">
-<p>Fetches any public URL through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=scrape_url" target="_blank" rel="noopener sponsored">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
+<p>Fetches any public URL through the <a href="https://get.brightdata.com/openosint-unlocker?sid1=docs&sid2=docs&sid3=scrape_url&utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=scrape_url" target="_blank" rel="noopener sponsored">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
 <p><b>MCP parameter:</b> <code>url</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_UNLOCKER_ZONE</code></p>
 <pre>$ openosint scrape https://example.com
 [Web Unlocker] URL: https://example.com
@@ -418,7 +418,7 @@ This domain is for use in illustrative examples in documents.</pre>
 
 <h2 id="search_footprint"><code>search_footprint</code></h2>
 <div class="indent">
-<p>Collects a target's public search-engine footprint via the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=search_footprint" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
+<p>Collects a target's public search-engine footprint via the <a href="https://get.brightdata.com/jx2wfi?sid1=docs&sid2=docs&sid3=search_footprint&utm_source=openosint&utm_medium=docs&utm_campaign=docs&utm_content=search_footprint" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint footprint johndoe99</pre>
 </div>
