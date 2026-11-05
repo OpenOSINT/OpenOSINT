@@ -64,13 +64,22 @@ class AnthropicAdapter {
     return { text, toolCalls, stopReason: data.stop_reason || 'end_turn', _rawContent: data.content };
   }
 
-  appendToolResult(messages, call, content) {
-    const assistantContent = call._rawContent || [{ type: 'tool_use', id: call.id, name: call.name, input: call.input }];
+  appendToolResults(messages, response, results) {
+    const assistantContent = response._rawContent || response.toolCalls.map(call => ({
+      type: 'tool_use', id: call.id, name: call.name, input: call.input,
+    }));
     return [
       ...messages,
       { role: 'assistant', content: assistantContent },
-      { role: 'user', content: [{ type: 'tool_result', tool_use_id: call.id, content }] },
+      { role: 'user', content: results.map(({ call, content, isError }) => ({
+        type: 'tool_result', tool_use_id: call.id, content,
+        ...(isError ? { is_error: true } : {}),
+      })) },
     ];
+  }
+
+  appendToolResult(messages, call, content, isError = false) {
+    return this.appendToolResults(messages, { toolCalls: [call], _rawContent: call._rawContent }, [{ call, content, isError }]);
   }
 }
 
@@ -147,6 +156,17 @@ class OpenAIAdapter {
     });
 
     return { text, toolCalls, stopReason: toolCalls.length ? 'tool_use' : 'end_turn' };
+  }
+
+  appendToolResults(messages, response, results) {
+    const rawCalls = response.toolCalls[0]?._rawCalls || response.toolCalls.map(call => ({
+      id: call.id, type: 'function', function: { name: call.name, arguments: JSON.stringify(call.input) },
+    }));
+    return [
+      ...messages,
+      { role: 'assistant', content: null, tool_calls: rawCalls },
+      ...results.map(({ call, content }) => ({ role: 'tool', tool_call_id: call.id, content })),
+    ];
   }
 
   appendToolResult(messages, call, content) {
@@ -227,6 +247,14 @@ class OllamaAdapter {
     });
 
     return { text, toolCalls, stopReason: toolCalls.length ? 'tool_use' : 'end_turn' };
+  }
+
+  appendToolResults(messages, response, results) {
+    return [
+      ...messages,
+      { role: 'assistant', content: '', tool_calls: response.toolCalls.map(call => ({ function: { name: call.name, arguments: call.input } })) },
+      ...results.map(({ content }) => ({ role: 'tool', content })),
+    ];
   }
 
   appendToolResult(messages, call, content) {

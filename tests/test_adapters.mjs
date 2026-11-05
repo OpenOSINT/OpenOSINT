@@ -71,6 +71,21 @@ console.log('\nAnthropicAdapter');
   assert(next[2].content[0].type === 'tool_result', 'tool_result content block');
   assert(next[2].content[0].tool_use_id === TOOL_USE_ID, 'tool_use_id matches');
   assert(next[2].content[0].content === 'IP result text', 'result content correct');
+
+  const parallelContent = [
+    { type: 'tool_use', id: 'toolu_a', name: 'search_ip', input: { input: '8.8.8.8' } },
+    { type: 'tool_use', id: 'toolu_b', name: 'search_ip', input: { input: '1.1.1.1' } },
+  ];
+  const parallelResponse = { _rawContent: parallelContent, toolCalls: parallelContent.map(block => ({
+    id: block.id, name: block.name, input: block.input, _rawContent: parallelContent,
+  })) };
+  const parallel = adapter.appendToolResults(msgs, parallelResponse, [
+    { call: parallelResponse.toolCalls[0], content: 'first' },
+    { call: parallelResponse.toolCalls[1], content: 'second', isError: true },
+  ]);
+  assert(parallel.filter(message => message.role === 'assistant').length === 1, 'parallel calls append one assistant turn');
+  assert(parallel[2].content.length === 2, 'parallel calls append all tool results together');
+  assert(parallel[2].content[1].is_error === true, 'tool errors use is_error');
 }
 
 // ---------------------------------------------------------------------------
