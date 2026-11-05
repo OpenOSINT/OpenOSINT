@@ -176,3 +176,5 @@ actors/*/.venv/
 
 # Apify Actors — local Docker-build wheel (see actors/build-local.sh), never committed
 actors/*/local-wheels/*.whl
+# Private business notes, never committed
+.private/
