@@ -22,10 +22,9 @@ from __future__ import annotations
 import re
 from enum import Enum
 
+from openosint.brightdata import BILLING_URL, TOKEN_URL
 from openosint.tools.exceptions import ToolExecutionError
 
-TOKEN_URL = "https://brightdata.com/cp/setting/users"
-BILLING_URL = "https://brightdata.com/cp/billing"
 # Official Bright Data status page, once one is confirmed (asked via the partner manager).
 # While empty, the outage message just says to contact Bright Data support.
 STATUS_PAGE_URL = ""

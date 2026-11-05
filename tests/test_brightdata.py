@@ -69,7 +69,9 @@ class TestSearchDorksLive:
 
         result = await run_dorks_live_osint("john doe")
         assert "BRIGHTDATA_SERP_ZONE" in result
-        assert "get.brightdata.com" in result
+        assert (
+            "Create a SERP API zone" in result and "get.brightdata.com" not in result
+        )  # has a token: no signup link
 
     async def test_does_not_raise_on_missing_key(self, monkeypatch):
         monkeypatch.delenv("BRIGHTDATA_API_KEY", raising=False)
@@ -586,7 +588,9 @@ class TestScrapeUrl:
 
         result = await run_scrape_url_osint("https://example.com")
         assert "BRIGHTDATA_UNLOCKER_ZONE" in result
-        assert "get.brightdata.com" in result
+        assert (
+            "Create a Web Unlocker zone" in result and "get.brightdata.com" not in result
+        )  # has a token: no signup link
 
     async def test_does_not_raise_on_missing_key(self, monkeypatch):
         monkeypatch.delenv("BRIGHTDATA_API_KEY", raising=False)

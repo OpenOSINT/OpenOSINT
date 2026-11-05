@@ -8,15 +8,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from openosint.brightdata import DISCLOSURE_PLACEHOLDER, LINK_PLACEHOLDER, resolve
+from openosint.brightdata import (
+    DISCLOSURE_PLACEHOLDER,
+    LINK_PLACEHOLDER,
+    current_surface,
+    resolve,
+    setup_steps,
+)
 from openosint.config_store import config_path
 
 GROUP_AI = "ai"
 GROUP_TOOLS = "tools"
 
-_IP2LOCATION_URL = (
-    "https://www.ip2location.io/pricing?utm_source=openosint&utm_medium=webui&utm_campaign=ip2location"
-)
+_IP2LOCATION_URL = "https://www.ip2location.io/pricing?utm_source=openosint&utm_medium=webui&utm_campaign=ip2location"
 
 
 @dataclass(frozen=True)
@@ -193,31 +197,66 @@ def public_catalog() -> list[dict]:
     ]
 
 
+_WEB_SURFACES = ("webui", "webui-remote", "demo")
+
+
+def _add_it_line(missing: list[str]) -> str:
+    """Where to put the missing settings, worded for the surface that is asking."""
+    names, cfg, surface = " and ".join(missing), config_path(), current_surface()
+    if surface == "mcp":
+        return (
+            f'Add it: put {names} in the "env" block of the openosint server in your MCP client config, '
+            f"or in {cfg} — then restart the MCP server and run this again."
+        )
+    if surface in _WEB_SURFACES:
+        return (
+            f'Add it: web UI → Settings → "Save keys to server", or set {names} in the '
+            f"environment, or put it in {cfg} — then run this again."
+        )
+    return f"Add it: set {names} in the environment or in {cfg} — then run this again."
+
+
+def missing_keys_details(missing: list[str]) -> list[str]:
+    """Everything after the two header lines: where to get it, the setup steps, where to put it."""
+    # Someone who already holds a Bright Data token has an account: no signup link for them.
+    has_account = (
+        any(n.startswith("BRIGHTDATA") for n in missing) and "BRIGHTDATA_API_KEY" not in missing
+    )
+    lines: list[str] = []
+    seen_urls: list[str] = []
+    for entry in (setting(name) for name in missing):
+        url = resolve(entry.url) if entry else ""
+        if not entry or url in seen_urls or (has_account and entry.key.startswith("BRIGHTDATA")):
+            continue
+        seen_urls.append(url)
+        note = resolve(entry.note)
+        suffix = f" — {note}" if note else ""
+        lines.append(f"Get one: {url}{suffix}")
+    return lines + setup_steps(missing) + [_add_it_line(missing)]
+
+
+def _labels(missing: list[str]) -> str:
+    entries = [setting(name) for name in missing]
+    return _join([e.label if e else name for e, name in zip(entries, missing)])
+
+
 def missing_keys_message(tool: str, missing: list[str]) -> str:
     """The one human-readable result a tool returns when it lacks its credentials."""
-    entries = [setting(name) for name in missing]
-    labels = [e.label if e else name for e, name in zip(entries, missing)]
-    lines = [
-        f"Scan error: {tool} cannot run: {_join(labels)} not set.",
+    header = [
+        f"Scan error: {tool} cannot run: {_labels(missing)} not set.",
         f"[key_required] {', '.join(missing)}",
     ]
-    seen_urls: list[str] = []
-    for entry in entries:
-        url = resolve(entry.url) if entry else ""
-        if entry and url not in seen_urls:
-            seen_urls.append(url)
-            note = resolve(entry.note)
-            suffix = f" — {note}" if note else ""
-            lines.append(f"Get one: {url}{suffix}")
-    names = " and ".join(missing)
-    lines.append(
-        f"Add it: web UI → Settings → \"Save keys to server\", or set {names} in the "
-        f"environment, or put it in {config_path()} — then run this again."
-    )
-    return "\n".join(lines)
+    return "\n".join(header + missing_keys_details(missing))
 
 
-def missing_from(names: list[str], supplied: dict[str, str] | None, environ: dict[str, str]) -> list[str]:
+def missing_keys_extra(tool: str, missing: list[str]) -> str:
+    """The same guidance as a follow-on to another refusal (e.g. passive mode), without the error header."""
+    return "\n".join([f"{tool} also needs {_labels(missing)}."] + missing_keys_details(missing))
+
+
+def missing_from(
+    names: list[str], supplied: dict[str, str] | None, environ: dict[str, str]
+) -> list[str]:
     supplied = supplied or {}
     return [n for n in names if not (supplied.get(n) or environ.get(n, "")).strip()]
 

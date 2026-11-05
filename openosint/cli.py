@@ -44,6 +44,7 @@ from openosint.tool_policy import (  # noqa: E402
     humanize,
     is_tool_enabled,
 )
+from openosint.tools.scrape_url import also_needed as scrape_also_needed  # noqa: E402
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
@@ -1266,7 +1267,8 @@ async def _async_main() -> None:
         os.environ[ENV_ALLOW_ACTIVE] = "1"
     disabled_tool = _COMMAND_TOOLS.get(args.command or "")
     if disabled_tool and not is_tool_enabled(disabled_tool):
-        print(humanize(disabled_result(disabled_tool)), file=sys.stderr)
+        extra = scrape_also_needed() if disabled_tool == "scrape_url" else ""
+        print(humanize(disabled_result(disabled_tool, also_needed=extra)), file=sys.stderr)
         sys.exit(2)
 
     set_cli_proxy_url(getattr(args, "proxy", None))

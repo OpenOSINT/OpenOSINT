@@ -31,7 +31,7 @@ import re
 import requests
 
 from openosint.brightdata_response import Kind, classify
-from openosint.settings_catalog import missing_from, missing_keys_message
+from openosint.settings_catalog import missing_from, missing_keys_extra, missing_keys_message
 from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -85,7 +85,21 @@ def _fetch_unlocker(url: str, api_key: str, zone: str, timeout: int) -> tuple[in
     return target_status, response.text
 
 
-@requires_active("scrape_url")
+_REQUIRED_SETTINGS = ["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"]
+
+
+def also_needed(
+    url: str = "",
+    timeout_seconds: int = _DEFAULT_TIMEOUT,
+    *,
+    api_keys: dict[str, str] | None = None,
+) -> str:
+    """Setup guidance to add to a refusal (passive mode) when the Bright Data settings are missing too, else ""."""
+    missing = missing_from(_REQUIRED_SETTINGS, api_keys, os.environ)
+    return missing_keys_extra("scrape_url", missing) if missing else ""
+
+
+@requires_active("scrape_url", also_needed=also_needed)
 async def run_scrape_url_osint(
     url: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,
@@ -111,7 +125,7 @@ async def run_scrape_url_osint(
         Markdown content with a URL header line, or descriptive error message.
     """
     _k = api_keys or {}
-    missing = missing_from(["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"], _k, os.environ)
+    missing = missing_from(_REQUIRED_SETTINGS, _k, os.environ)
     if missing:
         return missing_keys_message("scrape_url", missing)
     api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ["BRIGHTDATA_API_KEY"]

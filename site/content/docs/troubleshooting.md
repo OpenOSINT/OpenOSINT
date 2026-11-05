@@ -14,7 +14,7 @@ The REPL needs an AI provider. Export a key (`export ANTHROPIC_API_KEY=sk-ant-..
 
 ## `Scan error: ... cannot run: ... not set.` and `[key_required]`
 
-A tool needs an API key you have not provided. The message names the variable and a link to get one. Set it as an environment variable, put it in `config.env` or `.env`, or save it in the web UI under Settings. See [Configuration](/docs/configuration/).
+A tool needs an API key you have not provided. The message names the variable and a link to get one, and the last line says where to put it for the interface you are using: the environment or `config.env` on the CLI, the `env` block of the MCP client config for the MCP server (restart it afterwards), or Settings in the web UI. For the Bright Data tools it also lists the dashboard steps for exactly the settings you are missing (token, then a SERP API or Web Unlocker zone). `scrape_url` also needs `--allow-active`; if both are missing you get one message listing both. See [Configuration](/docs/configuration/).
 
 ## `Bright Data ...` errors from `search_dorks_live`, `search_footprint` and `scrape_url`
 

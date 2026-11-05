@@ -22,6 +22,10 @@ from urllib.parse import urlencode
 _MAIN = "https://get.brightdata.com/984ni58s2oad"
 _PLAIN = "https://brightdata.com"
 
+# Dashboard pages for people who already have an account (no referral link on these).
+TOKEN_URL = "https://brightdata.com/cp/setting/users"
+BILLING_URL = "https://brightdata.com/cp/billing"
+
 OPT_OUT_ENV = "OPENOSINT_NO_REFERRAL_LINKS"
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 
@@ -104,3 +108,26 @@ def resolve(text: str) -> str:
         DISCLOSURE_PLACEHOLDER, disclosure()
     )
     return filled.replace(" ()", "").strip()  # "(…)" around a disclosure that opt-out removed
+
+
+_ZONE_STEPS = {
+    "BRIGHTDATA_SERP_ZONE": "Create a SERP API zone in your dashboard; its name goes in BRIGHTDATA_SERP_ZONE.",
+    "BRIGHTDATA_UNLOCKER_ZONE": (
+        "Create a Web Unlocker zone in your dashboard; its name goes in BRIGHTDATA_UNLOCKER_ZONE."
+    ),
+}
+
+
+def setup_steps(missing: list[str]) -> list[str]:
+    """Numbered dashboard steps for exactly the Bright Data settings still missing."""
+    if not any(name.startswith("BRIGHTDATA") for name in missing):
+        return []
+    steps = []
+    if "BRIGHTDATA_API_KEY" in missing:
+        steps.append("Sign up or log in (link above).")
+        steps.append(f"Copy your API token from {TOKEN_URL}; it goes in BRIGHTDATA_API_KEY.")
+    steps.extend(text for name, text in _ZONE_STEPS.items() if name in missing)
+    heading = "Set up Bright Data" + (
+        " (the free tier needs no credit card):" if "BRIGHTDATA_API_KEY" in missing else ":"
+    )
+    return [heading] + [f"  {i}. {step}" for i, step in enumerate(steps, start=1)]

@@ -53,23 +53,35 @@ class ToolPolicy:
 
 
 TOOL_POLICY: dict[str, ToolPolicy] = {
-    "generate_dorks": ToolPolicy(Noise.PASSIVE, "Builds Google search URLs locally; sends nothing."),
+    "generate_dorks": ToolPolicy(
+        Noise.PASSIVE, "Builds Google search URLs locally; sends nothing."
+    ),
     "search_breach": ToolPolicy(Noise.PASSIVE, "One request to haveibeenpwned.com."),
-    "search_whois": ToolPolicy(Noise.PASSIVE, "Queries the registry/registrar WHOIS server, not the target."),
-    "search_rdap": ToolPolicy(Noise.PASSIVE, "Queries IANA and the registry's RDAP server, not the target."),
+    "search_whois": ToolPolicy(
+        Noise.PASSIVE, "Queries the registry/registrar WHOIS server, not the target."
+    ),
+    "search_rdap": ToolPolicy(
+        Noise.PASSIVE, "Queries IANA and the registry's RDAP server, not the target."
+    ),
     "search_ip": ToolPolicy(Noise.PASSIVE, "One request to ipinfo.io."),
     "search_ip2location": ToolPolicy(Noise.PASSIVE, "One request to api.ip2location.io."),
     "search_abuseipdb": ToolPolicy(Noise.PASSIVE, "One request to api.abuseipdb.com."),
     "search_github": ToolPolicy(Noise.PASSIVE, "A few requests to api.github.com."),
     "search_paste": ToolPolicy(Noise.PASSIVE, "One request to psbdmp.ws."),
     "search_censys": ToolPolicy(Noise.PASSIVE, "Censys API; returns data Censys already holds."),
-    "search_shodan": ToolPolicy(Noise.PASSIVE, "Shodan API; reads Shodan's existing index, requests no new scan."),
-    "search_gdelt_geo": ToolPolicy(Noise.PASSIVE, "Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine."),
+    "search_shodan": ToolPolicy(
+        Noise.PASSIVE, "Shodan API; reads Shodan's existing index, requests no new scan."
+    ),
+    "search_gdelt_geo": ToolPolicy(
+        Noise.PASSIVE,
+        "Downloads GDELT's public news feed and filters it locally; your search term never leaves your machine.",
+    ),
     "search_dorks_live": ToolPolicy(
         Noise.PASSIVE, "Google results via Bright Data; the target is sent to those two services."
     ),
     "search_footprint": ToolPolicy(
-        Noise.PASSIVE, "Up to 3 Google queries via Bright Data; the target is sent to those two services."
+        Noise.PASSIVE,
+        "Up to 3 Google queries via Bright Data; the target is sent to those two services.",
     ),
     "search_dns": ToolPolicy(
         Noise.PASSIVE,
@@ -97,7 +109,8 @@ TOOL_POLICY: dict[str, ToolPolicy] = {
         "Runs phoneinfoga; what it sends over the network has not been verified with a traffic capture.",
     ),
     "search_username": ToolPolicy(
-        Noise.NOISY, "sherlock sends requests from your IP to hundreds of sites; expect rate limits and WAF blocks."
+        Noise.NOISY,
+        "sherlock sends requests from your IP to hundreds of sites; expect rate limits and WAF blocks.",
     ),
     "search_email": ToolPolicy(
         Noise.NOISY,
@@ -105,13 +118,15 @@ TOOL_POLICY: dict[str, ToolPolicy] = {
         "may notify the account owner or trigger security alerts.",
     ),
     "search_domain": ToolPolicy(
-        Noise.NOISY, "sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks."
+        Noise.NOISY,
+        "sublist3r scrapes several search engines and aggregators from your IP; expect captchas and blocks.",
     ),
     "investigate_graph": ToolPolicy(
         Noise.INHERITS, "Chains tools from a seed; in passive mode it routes only to passive tools."
     ),
     "investigate_multi": ToolPolicy(
-        Noise.INHERITS, "Runs one agent per target under a shared tool-call cap; passive unless active is enabled."
+        Noise.INHERITS,
+        "Runs one agent per target under a shared tool-call cap; passive unless active is enabled.",
     ),
     "graph_export": ToolPolicy(Noise.PASSIVE, "Reads the local graph database only."),
     "graph_neighbors": ToolPolicy(Noise.PASSIVE, "Reads the local graph database only."),
@@ -124,7 +139,9 @@ TOOL_POLICY: dict[str, ToolPolicy] = {
 
 # True = this context (a public/restricted web request) can never use active
 # tools, whatever the environment says. Nothing can force-enable.
-_force_passive: contextvars.ContextVar[bool] = contextvars.ContextVar("openosint_force_passive", default=False)
+_force_passive: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "openosint_force_passive", default=False
+)
 
 
 def env_allows_active() -> bool:
@@ -192,18 +209,21 @@ def enable_hint() -> str:
     )
 
 
-def disabled_result(name: str, detail: str = "") -> str:
+def disabled_result(name: str, detail: str = "", also_needed: str = "") -> str:
     """Structured JSON string returned when a non-passive tool/mode is requested in passive mode."""
     policy = TOOL_POLICY.get(name)
-    return json.dumps(
-        {
-            "status": "disabled_in_passive_mode",
-            "tool": name,
-            "noise": policy.noise.value if policy else "unknown",
-            "reason": detail or (policy.note if policy else "Not a registered tool."),
-            "how_to_enable": enable_hint(),
-        }
-    )
+    payload = {
+        "status": "disabled_in_passive_mode",
+        "tool": name,
+        "noise": policy.noise.value if policy else "unknown",
+        "reason": detail or (policy.note if policy else "Not a registered tool."),
+        "how_to_enable": enable_hint(),
+    }
+    if (
+        also_needed
+    ):  # e.g. missing credentials, so the user sees one complete list instead of two walls
+        payload["also_needed"] = also_needed
+    return json.dumps(payload)
 
 
 def humanize(result: str) -> str:
@@ -214,10 +234,11 @@ def humanize(result: str) -> str:
         data = json.loads(result)
     except ValueError:
         return result
-    return (
+    text = (
         f"[passive mode] {data['tool']} is disabled ({data['noise']}): {data['reason']}\n"
         f"{data['how_to_enable']}"
     )
+    return f"{text}\n\n{data['also_needed']}" if data.get("also_needed") else text
 
 
 def filter_definitions(definitions: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -234,15 +255,22 @@ def filter_definitions(definitions: list[dict[str, Any]]) -> list[dict[str, Any]
 _F = TypeVar("_F", bound=Callable[..., Awaitable[Any]])
 
 
-def requires_active(name: str) -> Callable[[_F], _F]:
+def requires_active(
+    name: str, *, also_needed: Callable[..., str] | None = None
+) -> Callable[[_F], _F]:
     """Decorator for async ``run_*_osint`` tools that are non-passive: the choke point
-    every surface (CLI, web, MCP, cloud, playbooks, pivot) goes through."""
+    every surface (CLI, web, MCP, cloud, playbooks, pivot) goes through.
+
+    ``also_needed`` gets the call's arguments and returns extra guidance (or "") to include in
+    the refusal, so a tool that is both disabled and unconfigured reports both at once."""
 
     def wrap(fn: _F) -> _F:
         @functools.wraps(fn)
         async def inner(*args: Any, **kwargs: Any) -> Any:
             if not is_tool_enabled(name):
-                return disabled_result(name)
+                return disabled_result(
+                    name, also_needed=also_needed(*args, **kwargs) if also_needed else ""
+                )
             return await fn(*args, **kwargs)
 
         return inner  # type: ignore[return-value]
@@ -299,7 +327,9 @@ class ToolBudget:
         )
 
 
-_budget: contextvars.ContextVar[ToolBudget | None] = contextvars.ContextVar("openosint_budget", default=None)
+_budget: contextvars.ContextVar[ToolBudget | None] = contextvars.ContextVar(
+    "openosint_budget", default=None
+)
 
 
 def current_budget() -> ToolBudget | None:
@@ -327,8 +357,12 @@ def markdown_table() -> str:
     rows = ["| Tool | Level | Default | What it actually sends, and where |", "|---|---|---|---|"]
     for name, policy in sorted(TOOL_POLICY.items()):
         default = "on" if policy.is_passive else "**off**"
-        note = policy.note + (f" **Active part:** {policy.active_part}" if policy.active_part else "")
-        rows.append(f"| `{_TABLE_LABELS.get(name, name)}` | {policy.noise.value} | {default} | {note} |")
+        note = policy.note + (
+            f" **Active part:** {policy.active_part}" if policy.active_part else ""
+        )
+        rows.append(
+            f"| `{_TABLE_LABELS.get(name, name)}` | {policy.noise.value} | {default} | {note} |"
+        )
     return "\n".join(rows)
 
 

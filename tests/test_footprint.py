@@ -66,7 +66,9 @@ class TestSearchFootprintConfig:
 
         result = await run_footprint_osint("john doe")
         assert "BRIGHTDATA_SERP_ZONE" in result
-        assert "get.brightdata.com" in result
+        assert (
+            "Create a SERP API zone" in result and "get.brightdata.com" not in result
+        )  # has a token: no signup link
 
     async def test_empty_target_returns_error(self, monkeypatch):
         monkeypatch.setenv("BRIGHTDATA_API_KEY", "test-key")
