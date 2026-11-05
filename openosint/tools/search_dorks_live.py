@@ -16,7 +16,7 @@ parsed SERP data directly as {"organic": [...]} — no envelope wrapper.
 Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE environment variables.
 
 OpenOSINT earns a referral commission if you sign up through our link.
-Free tier: 5,000 requests/month — see openosint.brightdata.BRIGHTDATA_LINK_CLI
+Free tier: 5,000 requests/month — see openosint.brightdata.referral_link
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ from collections import Counter
 
 import requests
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
+from openosint.brightdata import disclosure_suffix, referral_link
 from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 from openosint.tools.generate_dorks import _DORK_TEMPLATES
@@ -111,7 +111,7 @@ def _auth_error(response: requests.Response, api_key: str) -> SerpFetchError:
     body_preview = _redact((response.text or "")[:_BODY_PREVIEW_LEN], api_key)
     message = f"Bright Data SERP: {kind}. HTTP {response.status_code}, body={body_preview!r}"
     if response.status_code == 401:
-        message += f" Get a key: {BRIGHTDATA_LINK_CLI}"
+        message += f" Get a key: {referral_link(content='search_dorks_live')}{disclosure_suffix()}"
     if "token expired" in (response.text or "").lower():
         message += " — Bright Data API key expired — renew it in the Bright Data dashboard."
     return SerpFetchError(message, status_code=response.status_code, error_code="auth")

@@ -120,9 +120,9 @@ Level is the noise label: `passive` tools are on by default; anything else needs
 | [`search_censys`](https://openosint.tech/tools/#search_censys) | Censys API | passive | Required |
 | [`search_virustotal`](https://openosint.tech/tools/#search_virustotal) | VirusTotal API | passive | Required |
 | [`search_abuseipdb`](https://openosint.tech/tools/#search_abuseipdb) | AbuseIPDB v2 API | passive | Required |
-| [`search_dorks_live`](https://openosint.tech/tools/#search_dorks_live) | [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ | passive | Required |
-| [`search_footprint`](https://openosint.tech/tools/#search_footprint) | [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ | passive | Required |
-| [`scrape_url`](https://openosint.tech/tools/#scrape_url) | [Bright Data Web Unlocker](https://get.brightdata.com/984ni58s2oad?utm_source=github&utm_medium=readme)¹ | touches target | Required |
+| [`search_dorks_live`](https://openosint.tech/tools/#search_dorks_live) | [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=readme&utm_campaign=setup&utm_content=search_dorks_live)¹ | passive | Required |
+| [`search_footprint`](https://openosint.tech/tools/#search_footprint) | [Bright Data SERP API](https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=readme&utm_campaign=setup&utm_content=search_footprint)¹ | passive | Required |
+| [`scrape_url`](https://openosint.tech/tools/#scrape_url) | [Bright Data Web Unlocker](https://get.brightdata.com/984ni58s2oad?utm_source=openosint&utm_medium=readme&utm_campaign=setup&utm_content=scrape_url)¹ | touches target | Required |
 | [`search_username`](https://openosint.tech/tools/#search_username) | sherlock | noisy | No |
 | [`search_email`](https://openosint.tech/tools/#search_email) | holehe | noisy | No |
 | [`search_domain`](https://openosint.tech/tools/#search_domain) | sublist3r | noisy | No |

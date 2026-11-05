@@ -12,7 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Awaitable, Callable
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
+from openosint.brightdata import DISCLOSURE_PLACEHOLDER, LINK_PLACEHOLDER, resolve
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tools.search_breach import run_breach_osint
 from openosint.tool_policy import TOOL_POLICY, is_tool_enabled
@@ -66,7 +66,7 @@ TOOL_REQUIREMENTS: dict[str, _Req] = {
     "search_footprint": (
         ["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"],
         [],
-        f"Sign up at Bright Data to obtain your API key and SERP zone: {BRIGHTDATA_LINK_CLI}",
+        f"Sign up at Bright Data to obtain your API key and SERP zone: {LINK_PLACEHOLDER} ({DISCLOSURE_PLACEHOLDER})",
     ),
     "search_email": ([], ["holehe"], None),
     "search_breach": (["HIBP_API_KEY"], [], None),
@@ -135,7 +135,7 @@ def _missing_requirements(tool: str) -> tuple[list[str], str | None]:
     for binary in binaries:
         if shutil.which(binary) is None:
             missing.append(binary)
-    return missing, note
+    return missing, resolve(note) if note else note
 
 
 # ---------------------------------------------------------------------------

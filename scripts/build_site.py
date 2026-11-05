@@ -112,13 +112,14 @@ def tool_names() -> list[str]:
 
 
 def config_keys_markdown() -> str:
+    from openosint.brightdata import resolve_static
     from openosint.settings_catalog import SETTINGS
 
     rows = ["| Variable | Used by | Needed | Notes |", "|---|---|---|---|"]
     for s in sorted(SETTINGS, key=lambda s: (s.group != "ai", s.optional, s.key)):
         used = ", ".join(f"`{u}`" for u in s.used_by)
         needed = "optional" if s.optional else ("one provider" if s.group == "ai" else "required for those tools")
-        rows.append(f"| `{s.key}` | {used} | {needed} | {s.note} |")
+        rows.append(f"| `{s.key}` | {used} | {needed} | {resolve_static(s.note)} |")
     return "\n".join(rows)
 
 
@@ -130,12 +131,16 @@ def noise_markdown() -> str:
 
 def token_values() -> dict[str, str]:
     from openosint.agent import DEFAULT_ANTHROPIC_MODEL
-    from openosint.brightdata import BRIGHTDATA_LINK_SITE_DOCS
+    from openosint.brightdata import static_link
     from openosint.tool_policy import DEFAULT_MAX_CALLS, DEFAULT_MAX_CALLS_MULTI
 
     return {
         "VERSION": project_version(),
-        "BRIGHTDATA_LINK_DOCS": BRIGHTDATA_LINK_SITE_DOCS,
+        "BRIGHTDATA_LINK_DOCS": static_link("docs", "docs"),
+        **{
+            f"BRIGHTDATA_LINK_{tool.upper()}": static_link("docs", "docs", content=tool)
+            for tool in ("search_dorks_live", "scrape_url", "search_footprint")
+        },
         "MAX_CALLS": str(DEFAULT_MAX_CALLS),
         "MAX_CALLS_MULTI": str(DEFAULT_MAX_CALLS_MULTI),
         "DEFAULT_MODEL": DEFAULT_ANTHROPIC_MODEL,
@@ -145,7 +150,7 @@ def token_values() -> dict[str, str]:
 
 
 def tools_table_html() -> str:
-    from openosint.brightdata import BRIGHTDATA_LINK_SITE_TOOLS
+    from openosint.brightdata import static_link
     from openosint.settings_catalog import SETTINGS
     from openosint.tool_policy import TOOL_POLICY
 
@@ -163,7 +168,8 @@ def tools_table_html() -> str:
             needs.append("<code>--allow-active</code>")
         method = html.escape(info["method"])
         if info["method"].startswith("Bright Data"):
-            method = f'<a href="{html.escape(BRIGHTDATA_LINK_SITE_TOOLS)}" target="_blank" rel="noopener">{method}</a>'
+            link = html.escape(static_link("docs", "docs", content=name))
+            method = f'<a href="{link}" target="_blank" rel="noopener sponsored">{method}</a>'
         rows.append(
             f'<tr><td><a href="#{name}"><code>{name}</code></a></td><td>{method}</td>'
             f'<td>{html.escape(info["finds"])}</td><td>{policy.noise.value}</td>'
@@ -368,7 +374,7 @@ def special_pages(posts: list[dict]) -> list[dict]:
     )
     tools_meta, tools_intro = split_front_matter(SITE / "content" / "tools.html")
     tools_meta, tools_intro = expand_meta(tools_meta), expand_tokens(tools_intro)
-    detail = (SITE / "content" / "partials" / "tools-detail.html").read_text(encoding="utf-8")
+    detail = expand_tokens((SITE / "content" / "partials" / "tools-detail.html").read_text(encoding="utf-8"))
     tools_crumbs = [
         {"name": "Home", "url": "/"}, {"name": "Docs", "url": "/docs/"}, {"name": "Tools reference", "url": "/tools/"}
     ]

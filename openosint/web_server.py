@@ -49,7 +49,7 @@ from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 
 from openosint.agent import default_anthropic_model
-from openosint.brightdata import BRIGHTDATA_LINK_WEB
+from openosint.brightdata import LINK_PLACEHOLDER, resolve, set_surface
 from openosint.env import load_env_or_exit
 from openosint.tools.generate_dorks import run_dork_osint
 from openosint.tool_policy import (
@@ -157,6 +157,18 @@ def _restriction_lifted_by_declaration(host: str | None) -> bool:
     if host is None or _is_loopback_host(host):
         return False
     return os.environ.get("OPENOSINT_PUBLISHED_BIND", "").strip() in _SAFE_BIND_HOSTS
+
+
+PUBLIC_DEMO_HOST = "demo.openosint.tech"
+
+
+def _compute_web_surface(host: str | None) -> str:
+    """The Bright Data link surface: loopback -> webui; the configured public demo host ->
+    demo; any other network-exposed server (or an undeterminable bind) -> webui-remote."""
+    if _is_loopback_host(host):
+        return "webui"
+    allowed = {h.strip().lower().rsplit(":", 1)[0] for h in os.environ.get("OPENOSINT_ALLOWED_HOSTS", "").split(",")}
+    return "demo" if PUBLIC_DEMO_HOST in allowed else "webui-remote"
 
 
 def _compute_demo_mode(host: str | None) -> bool:
@@ -735,7 +747,7 @@ _TOOL_CATALOG: list[dict] = [
         "requires_binary": [],
         "requires_env": ["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"],
         "env_hints": {
-            "BRIGHTDATA_API_KEY": BRIGHTDATA_LINK_WEB,
+            "BRIGHTDATA_API_KEY": LINK_PLACEHOLDER,
             "BRIGHTDATA_SERP_ZONE": "Your Bright Data SERP zone name",
         },
     },
@@ -753,7 +765,7 @@ _TOOL_CATALOG: list[dict] = [
         "requires_binary": [],
         "requires_env": ["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"],
         "env_hints": {
-            "BRIGHTDATA_API_KEY": BRIGHTDATA_LINK_WEB,
+            "BRIGHTDATA_API_KEY": LINK_PLACEHOLDER,
             "BRIGHTDATA_UNLOCKER_ZONE": "Your Bright Data Web Unlocker zone name",
         },
     },
@@ -772,7 +784,7 @@ _TOOL_CATALOG: list[dict] = [
         "requires_binary": [],
         "requires_env": ["BRIGHTDATA_API_KEY", "BRIGHTDATA_SERP_ZONE"],
         "env_hints": {
-            "BRIGHTDATA_API_KEY": BRIGHTDATA_LINK_WEB,
+            "BRIGHTDATA_API_KEY": LINK_PLACEHOLDER,
             "BRIGHTDATA_SERP_ZONE": "Your Bright Data SERP zone name",
         },
     },
@@ -867,7 +879,7 @@ def _check_available(meta: dict) -> tuple[bool, str | None]:
             return False, f"{binary} is not installed — {hint}"
     for key in meta.get("requires_env", []):
         if not os.environ.get(key, "").strip():
-            hint = meta.get("env_hints", {}).get(key, "")
+            hint = resolve(meta.get("env_hints", {}).get(key, ""))
             suffix = f" — {hint}" if hint else ""
             return False, f"{key} not set{suffix}"
     return True, None
@@ -1735,6 +1747,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
     global DEMO_MODE, DEMO_REASON
     DEMO_MODE = _compute_demo_mode(host)
     DEMO_REASON = _compute_demo_reason(host)
+    set_surface(_compute_web_surface(host))
 
     app = FastAPI(
         title="OpenOSINT",
@@ -2027,7 +2040,7 @@ def create_app(host: str | None = None, port: int | None = None) -> FastAPI:
                     if not supplied.get(k) and not os.environ.get(k, "").strip()
                 ]
             if missing:
-                how_to_get = {k: meta.get("env_hints", {}).get(k, "") for k in missing}
+                how_to_get = {k: resolve(meta.get("env_hints", {}).get(k, "")) for k in missing}
                 error_message = (
                     f"API key required — {restriction_reason}, so a locally-held key "
                     "cannot be used for this lookup. Pass your own key in the api_keys "

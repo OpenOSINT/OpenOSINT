@@ -19,7 +19,7 @@ parsed SERP data directly as {"organic": [...]} — no envelope wrapper.
 Requires BRIGHTDATA_API_KEY and BRIGHTDATA_SERP_ZONE environment variables.
 
 OpenOSINT earns a referral commission if you sign up through our link.
-Free tier: 5,000 requests/month — see openosint.brightdata.BRIGHTDATA_LINK_CLI
+Free tier: 5,000 requests/month — see openosint.brightdata.referral_link
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
+from openosint.brightdata import disclosure_suffix, referral_link
 from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.regexes import detect_entity_kind
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
@@ -105,7 +105,7 @@ def _fetch_serp(url: str, api_key: str, zone: str, timeout: int) -> dict:
         raise OSINTError(f"Network error querying Bright Data SERP: {exc}") from exc
 
     if response.status_code == 401:
-        raise OSINTError(f"Bright Data SERP: invalid API key. Get a key: {BRIGHTDATA_LINK_CLI}")
+        raise OSINTError(f"Bright Data SERP: invalid API key. Get a key: {referral_link(content='search_footprint')}{disclosure_suffix()}")
     if response.status_code == 403:
         raise OSINTError("Bright Data SERP: forbidden — check zone permissions.")
     if response.status_code == 429:

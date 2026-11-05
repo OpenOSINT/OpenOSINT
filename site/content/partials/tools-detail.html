@@ -207,9 +207,11 @@
 
 <hr>
 
+<p><b>Referral links.</b> The Bright Data links in the next three sections are referral links: OpenOSINT earns a commission if you sign up through them, at no extra cost to you.</p>
+
 <h2 id="search_dorks_live"><code>search_dorks_live</code></h2>
 <div class="indent">
-<p>Executes live Google dork queries through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
+<p>Executes live Google dork queries through the <a href="%%BRIGHTDATA_LINK_SEARCH_DORKS_LIVE%%" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint search-dorks-live "john doe" --max-dorks 3
 [+] Dork: "john doe" site:linkedin.com
@@ -221,10 +223,11 @@
 
 <h2 id="scrape_url"><code>scrape_url</code></h2>
 <div class="indent">
-<p>Fetches any public URL through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
+<p>Fetches any public URL through the <a href="%%BRIGHTDATA_LINK_SCRAPE_URL%%" target="_blank" rel="noopener sponsored">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
 <p><b>MCP parameter:</b> <code>url</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_UNLOCKER_ZONE</code></p>
 <pre>$ openosint scrape https://example.com
-[Web Unlocker] Remote status: 200
+[Web Unlocker] URL: https://example.com
+
 # Example Domain
 This domain is for use in illustrative examples in documents.</pre>
 </div>
@@ -233,7 +236,7 @@ This domain is for use in illustrative examples in documents.</pre>
 
 <h2 id="search_footprint"><code>search_footprint</code></h2>
 <div class="indent">
-<p>Collects a target's public search-engine footprint via the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
+<p>Collects a target's public search-engine footprint via the <a href="%%BRIGHTDATA_LINK_SEARCH_FOOTPRINT%%" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint footprint johndoe99</pre>
 </div>

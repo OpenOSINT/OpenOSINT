@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from openosint.brightdata import BRIGHTDATA_LINK_WEB
+from openosint.brightdata import DISCLOSURE_PLACEHOLDER, LINK_PLACEHOLDER, resolve
 from openosint.config_store import config_path
 
 GROUP_AI = "ai"
@@ -124,30 +124,27 @@ SETTINGS: tuple[SettingKey, ...] = (
         "BRIGHTDATA_API_KEY",
         "Bright Data API key",
         GROUP_TOOLS,
-        BRIGHTDATA_LINK_WEB,
+        LINK_PLACEHOLDER,
         used_by=("search_dorks_live", "scrape_url", "search_footprint"),
-        note=(
-            "A free tier (5,000 requests/month) is available. "
-            "OpenOSINT earns a referral commission if you sign up through this link."
-        ),
+        note=f"A free tier (5,000 requests/month) is available. {DISCLOSURE_PLACEHOLDER}",
     ),
     SettingKey(
         "BRIGHTDATA_SERP_ZONE",
         "Bright Data SERP zone name",
         GROUP_TOOLS,
-        BRIGHTDATA_LINK_WEB,
+        LINK_PLACEHOLDER,
         used_by=("search_dorks_live", "search_footprint"),
         secret=False,
-        note="Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard.",
+        note=f"Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard. {DISCLOSURE_PLACEHOLDER}",
     ),
     SettingKey(
         "BRIGHTDATA_UNLOCKER_ZONE",
         "Bright Data Web Unlocker zone name",
         GROUP_TOOLS,
-        BRIGHTDATA_LINK_WEB,
+        LINK_PLACEHOLDER,
         used_by=("scrape_url",),
         secret=False,
-        note="Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard.",
+        note=f"Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard. {DISCLOSURE_PLACEHOLDER}",
     ),
     SettingKey(
         "IPINFO_TOKEN",
@@ -186,11 +183,11 @@ def public_catalog() -> list[dict]:
             "key": s.key,
             "label": s.label,
             "group": s.group,
-            "url": s.url,
+            "url": resolve(s.url),
             "used_by": list(s.used_by),
             "secret": s.secret,
             "optional": s.optional,
-            "note": s.note,
+            "note": resolve(s.note),
         }
         for s in ordered
     ]
@@ -206,10 +203,12 @@ def missing_keys_message(tool: str, missing: list[str]) -> str:
     ]
     seen_urls: list[str] = []
     for entry in entries:
-        if entry and entry.url not in seen_urls:
-            seen_urls.append(entry.url)
-            suffix = f" — {entry.note}" if entry.note else ""
-            lines.append(f"Get one: {entry.url}{suffix}")
+        url = resolve(entry.url) if entry else ""
+        if entry and url not in seen_urls:
+            seen_urls.append(url)
+            note = resolve(entry.note)
+            suffix = f" — {note}" if note else ""
+            lines.append(f"Get one: {url}{suffix}")
     names = " and ".join(missing)
     lines.append(
         f"Add it: web UI → Settings → \"Save keys to server\", or set {names} in the "

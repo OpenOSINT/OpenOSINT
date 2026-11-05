@@ -15,7 +15,7 @@ the HTTP status code of the /request call itself.
 Requires BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE environment variables.
 
 OpenOSINT earns a referral commission if you sign up through our link.
-Free tier: 5,000 requests/month — see openosint.brightdata.BRIGHTDATA_LINK_CLI
+Free tier: 5,000 requests/month — see openosint.brightdata.referral_link
 
 # TODO: Future PR — add search_profile_social tool for social-media profile
 #       extraction once ToS and rate-limit guidance is confirmed with Bright Data.
@@ -30,7 +30,7 @@ import re
 
 import requests
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
+from openosint.brightdata import disclosure_suffix, referral_link
 from openosint.settings_catalog import missing_from, missing_keys_message
 from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
@@ -63,7 +63,7 @@ def _fetch_unlocker(url: str, api_key: str, zone: str, timeout: int) -> str:
 
     if response.status_code == 401:
         raise OSINTError(
-            f"Bright Data Web Unlocker: invalid API key. Get a key: {BRIGHTDATA_LINK_CLI}"
+            f"Bright Data Web Unlocker: invalid API key. Get a key: {referral_link(content='scrape_url')}{disclosure_suffix()}"
         )
     if response.status_code == 403:
         raise OSINTError("Bright Data Web Unlocker: forbidden — check zone permissions.")
