@@ -63,6 +63,7 @@ holehe, sherlock, sublist3r, phoneinfoga — must be present in PATH
 - [MCP server](https://openosint.tech/docs/mcp/) — Claude Desktop, Claude Code, Cursor and other MCP clients
 - [Web UI](https://openosint.tech/docs/web-ui/) — local chat, globe and graph
 - [Configuration](https://openosint.tech/docs/configuration/) — API keys and environment variables
+- [Using OpenOSINT with Bright Data](https://openosint.tech/docs/bright-data/) — setup, cost, example output and errors for `search_dorks_live`, `search_footprint` and `scrape_url`
 - [Safety](https://openosint.tech/docs/safety/) — passive mode, tool-call cap, noise labels, responsible use
 - [Exposure report](https://openosint.tech/docs/exposure/) — `openosint exposure` external domain grade (beta)
 - [Entity graph](https://openosint.tech/docs/entity-graph/) — chat graph view and the optional graph store

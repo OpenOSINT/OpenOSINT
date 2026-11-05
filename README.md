@@ -130,6 +130,8 @@ Level is the noise label: `passive` tools are on by default; anything else needs
 
 Sherlock, holehe, sublist3r and phoneinfoga are wrapped as local binaries; install them yourself and enable active tools to use them.
 
+Setting up the three Bright Data tools: [Using OpenOSINT with Bright Data](https://openosint.tech/docs/bright-data/).
+
 ## Passive by default
 
 Agents and MCP clients are only offered tools that query third-party data sources or compute locally. Anything that touches the target or sends many requests from your IP is **off until you opt in**, and is not listed in an MCP client's `tools/list` at all.
