@@ -6,8 +6,7 @@ import tempfile
 import pytest
 
 # Point OPENOSINT_HOME at a throwaway directory BEFORE any openosint module is
-# imported: openosint.env loads (and may migrate a legacy .env into) the data
-# directory's config.env at import time, and session_history resolves its
+# imported: openosint.env reads the data directory's config.env at import time, and session_history resolves its
 # directory at import time. Without this, a test run would read and write the
 # developer's real ~/.openosint.
 os.environ["OPENOSINT_HOME"] = tempfile.mkdtemp(prefix="openosint-test-home-")

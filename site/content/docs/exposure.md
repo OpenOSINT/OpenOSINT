@@ -4,7 +4,7 @@ label: "Exposure report"
 seo_title: "OpenOSINT exposure report: grade a domain from outside"
 description: "openosint exposure grades one domain A to F from outside: SPF, DMARC, DKIM, TLS, registration and security headers. No AI or key needed. Beta."
 group: Reference
-order: 8
+order: 10
 ---
 `openosint exposure` checks one domain from the outside and gives it a grade from A to F. It is passive and point-in-time, needs no AI provider and no API key, and is in **beta**: checks, scoring and the report format may change between releases.
 

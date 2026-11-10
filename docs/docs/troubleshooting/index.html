@@ -18,14 +18,14 @@
 <meta property="og:title" content="OpenOSINT troubleshooting: common errors and fixes">
 <meta property="og:description" content="Fixes for common OpenOSINT errors: missing API key, ANTHROPIC_API_KEY not set, disabled_in_passive_mode, port in use, Host not allowed, tool not installed.">
 <meta property="og:url" content="https://openosint.tech/docs/troubleshooting/">
-<meta property="og:image" content="https://openosint.tech/assets/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OpenOSINT troubleshooting: common errors and fixes">
 <meta name="twitter:description" content="Fixes for common OpenOSINT errors: missing API key, ANTHROPIC_API_KEY not set, disabled_in_passive_mode, port in use, Host not allowed, tool not installed.">
-<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -87,6 +87,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -95,16 +96,18 @@
     <li><a href="/docs/mcp/">MCP server</a></li>
     <li><a href="/docs/web-ui/">Web UI</a></li>
     <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
   </ul>
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
     <li><a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a></li>
   </ul>
-  <p class="docs-version">Version 2.36.1</p>
+  <p class="docs-version">Version 2.38.0</p>
 </div>
 </nav>
     <article class="prose">
@@ -115,6 +118,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -123,16 +127,18 @@
     <li><a href="/docs/mcp/">MCP server</a></li>
     <li><a href="/docs/web-ui/">Web UI</a></li>
     <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
   </ul>
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
     <li><a href="/docs/troubleshooting/" aria-current="page">Troubleshooting</a></li>
   </ul>
-  <p class="docs-version">Version 2.36.1</p>
+  <p class="docs-version">Version 2.38.0</p>
 </div>
 
       </details>
@@ -148,7 +154,17 @@
 <h2 id="anthropic_api_key-is-not-set"><code>ANTHROPIC_API_KEY is not set.</code></h2>
 <p>The REPL needs an AI provider. Export a key (<code>export ANTHROPIC_API_KEY=sk-ant-...</code>), or start with <code>--provider ollama</code> or <code>--provider openai</code>. Direct commands such as <code>openosint dns example.com</code> need none.</p>
 <h2 id="scan-error-cannot-run-not-set-and-key_required"><code>Scan error: ... cannot run: ... not set.</code> and <code>[key_required]</code></h2>
-<p>A tool needs an API key you have not provided. The message names the variable and a link to get one. Set it as an environment variable, put it in <code>config.env</code> or <code>.env</code>, or save it in the web UI under Settings. See <a href="/docs/configuration/">Configuration</a>.</p>
+<p>A tool needs an API key you have not provided. The message names the variable and a link to get one, and the last line says where to put it for the interface you are using: the environment or <code>config.env</code> on the CLI, the <code>env</code> block of the MCP client config for the MCP server (restart it afterwards), or Settings in the web UI. For the Bright Data tools it also lists the dashboard steps for exactly the settings you are missing (token, then a SERP API or Web Unlocker zone). <code>scrape_url</code> also needs <code>--allow-active</code>; if both are missing you get one message listing both. See <a href="/docs/configuration/">Configuration</a>.</p>
+<h2 id="bright-data-errors-from-search_dorks_live-search_footprint-and-scrape_url"><code>Bright Data ...</code> errors from <code>search_dorks_live</code>, <code>search_footprint</code> and <code>scrape_url</code></h2>
+<p>These tools stop at the first account-level failure instead of retrying every query, and the message says which kind it is:</p>
+<ul>
+<li><strong><code>rejected the API token (HTTP 401)</code></strong>: the token is wrong, revoked or expired. Check or regenerate it in your Bright Data account settings, and set <code>BRIGHTDATA_API_KEY</code> to the token only.</li>
+<li><strong><code>zone 'NAME' not found</code></strong>: the zone does not exist in your account. Create a SERP API zone (for <code>search_dorks_live</code> and <code>search_footprint</code>) or a Web Unlocker zone (for <code>scrape_url</code>), or set <code>BRIGHTDATA_SERP_ZONE</code> / <code>BRIGHTDATA_UNLOCKER_ZONE</code> to an existing zone name.</li>
+<li><strong><code>reported a usage limit (client_10100) ... may mean your free credits are used up</code></strong>: a best-effort hint. Bright Data's free tier is 5,000 credits a month, shared across its products and renewed on the 1st; without deposited funds requests stop at the limit. Check usage and add funds on the Bright Data billing page. Bright Data does not document the exact response, so this message says "may".</li>
+<li><strong><code>Bright Data-side error</code></strong> (HTTP 500, 502, 503 or 504 from <code>api.brightdata.com</code>): not your key or zone. Retry in a few minutes; if it persists, contact Bright Data support.</li>
+<li><strong><code>the target blocked the request</code></strong> (a CAPTCHA or protection page): the website refused the fetch. A retry can help; some targets cannot be fetched.</li>
+<li><strong><code>[Target returned HTTP 404]</code></strong> (or 410, 401, 5xx) at the top of a <code>scrape_url</code> result: not a failure. The site itself answered with that status, and the page body follows. A removed page or profile can be a finding in its own right.</li>
+</ul>
 <h2 id="disabled_in_passive_mode"><code>disabled_in_passive_mode</code></h2>
 <p>The tool is active (it touches the target or is noisy) and active tools are off. Pass <code>--allow-active</code>, set <code>OPENOSINT_ALLOW_ACTIVE=1</code>, or use the web UI switch, after reading <a href="/docs/safety/">Safety</a>. A public or demo instance cannot enable them.</p>
 <h2 id="tool-call-limit-reached-n-calls-for-this-request"><code>Tool call limit reached (N calls for this request)</code></h2>
@@ -169,6 +185,15 @@
 <p>The app launched with a minimal <code>PATH</code> and cannot find <code>uvx</code>. Use the absolute path from <code>which uvx</code> (macOS, Linux) or <code>where uvx</code> (Windows) as the <code>command</code>. See <a href="/docs/mcp/">MCP server</a>.</p>
 <h2 id="a-env-file-is-ignored">A <code>.env</code> file is ignored</h2>
 <p><code>.env</code> is searched upward from the directory you run <code>openosint</code> from. The MCP server has an unrelated working directory, so set <code>OPENOSINT_ENV_FILE=/absolute/path/to/.env</code> in the client's <code>env</code> block.</p>
+<h2 id="limitations">Limitations</h2>
+<ul>
+<li><strong>Authorized use only.</strong> OpenOSINT queries public and semi-public sources. It does not bypass authentication, exploit systems, or access anything you are not already entitled to see. You are responsible for the law and for the terms of service of every source you query. See the <a href="https://github.com/OpenOSINT/OpenOSINT/blob/main/DISCLAIMER.md">disclaimer</a>.</li>
+<li><strong>No aggregation guarantees.</strong> Each tool reports what its upstream source currently returns. A negative result (no breach found, no accounts found) means the source did not report a match, not that no exposure exists.</li>
+<li><strong>Many tools depend on third-party services you do not control.</strong> The keyed tools (Shodan, VirusTotal, Censys, AbuseIPDB, IP2Location, HaveIBeenPwned and the three <a href="https://get.brightdata.com/openosint-signup?sid1=docs&amp;sid2=docs&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs">Bright Data</a>-backed tools) are subject to that provider's uptime, rate limits and pricing. Free tiers are small; heavy use needs a paid plan with the provider, not with OpenOSINT. The Bright Data link is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.</li>
+<li><strong>Local binaries are unsandboxed subprocesses.</strong> <code>holehe</code>, <code>sherlock</code>, <code>sublist3r</code> and <code>phoneinfoga</code> run as external processes on your machine. Keep them updated yourself; OpenOSINT does not patch or vet them.</li>
+<li><strong>The entity graph module is additive, not authoritative.</strong> <code>same_as</code> links are scored candidates for human review, not verified identity matches. See <a href="/docs/entity-graph/">Entity graph</a>.</li>
+<li><strong>AI output is a lead, not proof.</strong> The agent can only call OpenOSINT's tools (by default only the passive ones). Tool results come from real executions and are shown with the tool call that produced them, but the model can still misread, misattribute or over-weight a result, and its tool selection can be wrong or incomplete for a given target. Check the raw tool output before acting on a conclusion.</li>
+</ul>
 <h2 id="still-stuck">Still stuck</h2>
 <p>Run with <code>-v</code> for debug logging, then <a href="https://github.com/OpenOSINT/OpenOSINT/issues">open an issue</a> with the command and the message. Remove any keys first.</p>
       <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/entity-graph/" rel="prev"><small>Previous</small>Entity graph</a>

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT Agent Skill and Claude Code plugin: install</title>
+<meta name="description" content="Install the OpenOSINT Agent Skill or Claude Code plugin for passive OSINT and exposure checks. Install steps per agent, passive rules and troubleshooting.">
+<link rel="canonical" href="https://openosint.tech/docs/agent-skill/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT Agent Skill and Claude Code plugin: install">
+<meta property="og:description" content="Install the OpenOSINT Agent Skill or Claude Code plugin for passive OSINT and exposure checks. Install steps per agent, passive rules and troubleshooting.">
+<meta property="og:url" content="https://openosint.tech/docs/agent-skill/">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT Agent Skill and Claude Code plugin: install">
+<meta name="twitter:description" content="Install the OpenOSINT Agent Skill or Claude Code plugin for passive OSINT and exposure checks. Install steps per agent, passive rules and troubleshooting.">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Agent Skill & plugin",
+      "item": "https://openosint.tech/docs/agent-skill/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/" aria-current="page">Agent Skill &amp; plugin</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.38.0</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/" aria-current="page">Agent Skill &amp; plugin</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.38.0</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Agent Skill &amp; plugin</li>
+        </ol>
+      </nav>
+      <h1>Agent Skill and Claude Code plugin</h1>
+      <p>OpenOSINT ships as an <a href="https://agentskills.io/">Agent Skill</a> and as a Claude Code plugin. An agent that has it can investigate a domain, IP address or organization with real, passive tools, and must cite the tool call behind every finding. It needs <a href="https://docs.astral.sh/uv/getting-started/installation/"><code>uv</code></a> and network access. It needs no API key and no OpenOSINT AI provider: your agent is the model.</p>
+<h2 id="install">Install</h2>
+<h3 id="claude-code-plugin">Claude Code (plugin)</h3>
+<p>The plugin bundles both skills and a passive <a href="/docs/mcp/">MCP server</a>, pinned to release 2.38.0.</p>
+<pre><code class="language-text">/plugin marketplace add OpenOSINT/OpenOSINT
+/plugin install openosint@openosint
+/openosint:osint example.com
+</code></pre>
+<h3 id="any-agent-that-supports-agent-skills">Any agent that supports Agent Skills</h3>
+<p>Codex, Gemini CLI, Cursor and other Agent Skills clients can install the skills only (no MCP server):</p>
+<pre><code class="language-bash">npx skills add OpenOSINT/OpenOSINT
+</code></pre>
+<p>Then ask your agent in plain words, or invoke the skill by name, for example <code>/osint example.com</code> in Claude Code. See <a href="#osint-or-openosintosint-does-nothing">the namespacing note</a> below.</p>
+<h3 id="by-hand">By hand</h3>
+<p>Copy <code>skills/osint/</code> and <code>skills/exposure/</code> from the <a href="https://github.com/OpenOSINT/OpenOSINT/tree/main/skills">repository</a> into the skills folder your agent reads (for Claude Code, <code>~/.claude/skills/</code> or <code>.claude/skills/</code> in a project).</p>
+<h2 id="what-the-skills-do">What the skills do</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Skill</th>
+<th>Use it for</th>
+<th>What it runs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>osint</code></td>
+<td>Recon on a domain, IP address or organization</td>
+<td><code>exposure</code>, <code>dns</code>, <code>rdap</code>, <code>whois</code>, <code>dorks</code>, <code>gdelt</code> and <code>ip</code> as the target needs, then a Markdown report</td>
+</tr>
+<tr>
+<td><code>exposure</code></td>
+<td>"How exposed is this domain?"</td>
+<td><code>openosint exposure DOMAIN</code>: an A to F grade for email authentication, TLS, registration and security headers</td>
+</tr>
+</tbody>
+</table></div>
+<p>Both call the <a href="/docs/cli/">CLI</a> with <code>--json</code> through <code>uvx --from openosint==2.38.0 openosint ...</code>, so they work on any agent without an MCP server. When the <code>openosint</code> MCP server is already connected, the <code>osint</code> skill uses its tools instead; they return the same data.</p>
+<p>The report has four parts: target and scope, findings (each with its citation), what was not checked or needs a key, and leads to verify.</p>
+<h2 id="the-passive-rules">The passive rules</h2>
+<p>The skills hold the agent to these rules:</p>
+<ol>
+<li><strong>Passive by default.</strong> No <code>--allow-active</code>, no <code>OPENOSINT_ALLOW_ACTIVE</code>, and no <code>scrape</code>, <code>username</code>, <code>email</code> or subdomain brute-force unless you ask for that tool by name. If an active tool would help, the agent says so and asks.</li>
+<li><strong>Authorization.</strong> Only targets you own or are authorized to assess. If the target looks like a private individual, the agent stops and asks what the legitimate purpose is. OpenOSINT is not designed for people search.</li>
+<li><strong>Every finding cites its tool call</strong>, written as <code>claim [tool: args]</code>. No citation, no finding.</li>
+<li><strong>Summaries are leads, not proof.</strong> The agent reports what a tool returned, and shows errors and empty results as such.</li>
+<li><strong>A missing key is named, not skipped.</strong> The agent tells you which variable to set. See <a href="/docs/configuration/">Configuration</a>.</li>
+</ol>
+<p>One thing still contacts the target: the <code>exposure</code> TLS and header checks make a connection on port 443. For zero contact, ask for <code>exposure DOMAIN --checks email,registration</code> (DNS and registry only, not graded). More in <a href="/docs/safety/">Safety</a>.</p>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="uvx-is-not-found"><code>uvx</code> is not found</h3>
+<p>Install uv (<code>curl -LsSf https://astral.sh/uv/install.sh | sh</code> on macOS and Linux), then open a new terminal so it is on your <code>PATH</code>. Desktop apps often start with a minimal <code>PATH</code>: for the plugin's MCP server, or any MCP client, use the absolute path from <code>which uvx</code> (macOS, Linux) or <code>where uvx</code> (Windows) as the command.</p>
+<h3 id="osint-or-openosintosint-does-nothing"><code>/osint</code> or <code>/openosint:osint</code> does nothing</h3>
+<p>Skills installed by the Claude Code plugin are namespaced by the plugin name, so they are <code>/openosint:osint</code> and <code>/openosint:exposure</code>. Skills installed on their own (<code>npx skills add</code>, or copied by hand) are not namespaced, so the same skill is <code>/osint</code>. If a command is not found, type <code>/</code> and look at the list to see which form you have.</p>
+<h3 id="the-first-run-is-slow-or-fails-offline">The first run is slow, or fails offline</h3>
+<p><code>uvx</code> downloads the pinned OpenOSINT release the first time and caches it. That needs network access; later runs start from the cache.</p>
+<h3 id="a-tool-says-a-key-is-missing">A tool says a key is missing</h3>
+<p>That is expected for the keyed tools (Shodan, Censys, VirusTotal, AbuseIPDB, HaveIBeenPwned). The default flow does not use them. See <a href="/docs/configuration/">Configuration</a> for the variable names, or <a href="/docs/troubleshooting/">Troubleshooting</a>.</p>
+<h3 id="i-want-the-noisy-tools">I want the noisy tools</h3>
+<p>Ask for the tool by name and set <code>OPENOSINT_ALLOW_ACTIVE=1</code> yourself. Read the <a href="/docs/safety/">noise table</a> first: those tools send traffic from your IP or to the target.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/" rel="prev"><small>Previous</small>Overview</a><a class="next" href="/docs/install/" rel="next"><small>Next</small>Install</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/agent-skill.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

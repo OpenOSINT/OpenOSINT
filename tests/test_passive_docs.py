@@ -23,12 +23,14 @@ def _repo_text_files():
             yield rel, (root / rel).read_text(encoding="utf-8", errors="ignore")
 
 
-def test_readme_noise_table_is_generated_from_tool_policy():
+def test_safety_page_noise_table_is_generated_from_tool_policy():
     from pathlib import Path
 
-    readme = (Path(__file__).parent.parent / "README.md").read_text(encoding="utf-8")
-    block = readme.split("<!-- NOISE-TABLE:START", 1)[1].split("-->", 1)[1].split("<!-- NOISE-TABLE:END", 1)[0]
-    assert block.strip() == tp.markdown_table().strip(), "run `python -m openosint.tool_policy` and paste into README"
+    # The table is expanded from tool_policy.markdown_table() at site build time; `build_site.py --check`
+    # fails when docs/ is stale, so this only has to prove the page asks for the generated block.
+    source = (Path(__file__).parent.parent / "site" / "content" / "docs" / "safety.md").read_text(encoding="utf-8")
+    assert "<!-- gen:noise -->" in source
+    assert tp.markdown_table().strip()
 
 
 @pytest.mark.parametrize(

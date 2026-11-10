@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # CLI/web priority. A bad OPENOSINT_ENV_FILE path is logged here before
 # the process exits, not left to crash silently on an unhandled traceback.
 from openosint import __version__  # noqa: E402
+from openosint.brightdata import set_surface  # noqa: E402
 from openosint.env import load_env_or_exit  # noqa: E402
 
 load_env_or_exit(prefer_package_root=True)
@@ -768,6 +769,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     if parser.parse_args(argv).allow_active:
         os.environ[ENV_ALLOW_ACTIVE] = "1"
+    set_surface("mcp")
     asyncio.run(_serve())
 
 

@@ -153,7 +153,7 @@
 [AbuseIPDB] Abuse Confidence Score: 87%
 [AbuseIPDB] Total Reports: 143
 &#9888;&#65039;  HIGH ABUSE CONFIDENCE &mdash; flagged by AbuseIPDB</pre>
-<p>See <a href="/blog/ip-reputation-osint.html">the IP reputation guide</a> for a detailed walkthrough.</p>
+<p>The warning line appears when the confidence score exceeds 50%. See <a href="/blog/ip-reputation-osint.html">the IP reputation guide</a> for a detailed walkthrough.</p>
 </div>
 
 <hr>
@@ -195,13 +195,23 @@
 <p><b>MCP parameters:</b> <code>query</code> (string, required), <code>timespan</code> (minutes, 15&ndash;1440, capped at the loaded window), <code>maxpoints</code> (1&ndash;500), <code>bbox</code> (array) &nbsp;|&nbsp; <b>No API key required</b></p>
 <pre>GDELT geolocated news for 'ukraine': 53 location(s), 471 article mention(s). Coverage: the last 6 h.
 [+] Kyiv, Kyyiv, Ukraine (50.4333, 30.5167) — 38 article(s)</pre>
+<p>Country-level mentions are dropped so dots mark cities and regions, not the middle of a country. Nothing is downloaded until the tool is first used. After the first search, upstream traffic is one small file per 15 minutes however many searches you run. In the web UI, select an area on the globe (Shift+drag) to search only inside it. Failures (feed down, oversized or corrupt file) return one <code>[service_unavailable] search_gdelt_geo</code> result, and the globe shows a notice instead of an empty layer.</p>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Purpose</th></tr>
+<tr><td><code>OPENOSINT_GDELT_WINDOW_HOURS</code></td><td><code>6</code></td><td>How far back articles are kept (1&ndash;24). A full 6-hour window holds roughly 23,000 articles and adds about 65 MB of memory.</td></tr>
+<tr><td><code>OPENOSINT_GDELT_MAX_ARTICLES</code></td><td><code>30000</code></td><td>Hard cap on stored articles; the oldest are dropped first.</td></tr>
+<tr><td><code>OPENOSINT_GDELT_USE_PROXY</code></td><td>off</td><td>Route GDELT downloads through <code>OPENOSINT_PROXY_URL</code> (bypassed by default: the feed is public).</td></tr>
+</table>
+<p><b>Attribution and terms.</b> News data: <a href="https://www.gdeltproject.org/" target="_blank" rel="noopener">The GDELT Project</a>. GDELT's <a href="https://gdeltproject.org/about.html" target="_blank" rel="noopener">terms of use</a> say: &ldquo;all datasets released by the GDELT Project are available for unlimited and unrestricted use for any academic, commercial, or governmental use of any kind without fee.&rdquo; and &ldquo;any use or redistribution of the data must include a citation to the GDELT Project and a link to this website (https://www.gdeltproject.org/).&rdquo; (quoted 2026-10-06). The globe keeps the GDELT credit in its map attribution. Headlines and links come from third-party news sites and are shown as plain text.</p>
 </div>
 
 <hr>
 
+<p><b>Referral links.</b> The Bright Data links in the next three sections are referral links: OpenOSINT earns a commission if you sign up through them, at no extra cost to you.</p>
+
 <h2 id="search_dorks_live"><code>search_dorks_live</code></h2>
 <div class="indent">
-<p>Executes live Google dork queries through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
+<p>Executes live Google dork queries through the <a href="%%BRIGHTDATA_LINK_SEARCH_DORKS_LIVE%%" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>, returning structured results (title, URL, snippet). Defaults to 5 dorks per run; each is a separate billable API call.</p>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint search-dorks-live "john doe" --max-dorks 3
 [+] Dork: "john doe" site:linkedin.com
@@ -213,10 +223,11 @@
 
 <h2 id="scrape_url"><code>scrape_url</code></h2>
 <div class="indent">
-<p>Fetches any public URL through the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
+<p>Fetches any public URL through the <a href="%%BRIGHTDATA_LINK_SCRAPE_URL%%" target="_blank" rel="noopener sponsored">Bright Data Web Unlocker</a> API, bypassing Cloudflare/CAPTCHA. Returns clean Markdown.</p>
 <p><b>MCP parameter:</b> <code>url</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_UNLOCKER_ZONE</code></p>
 <pre>$ openosint scrape https://example.com
-[Web Unlocker] Remote status: 200
+[Web Unlocker] URL: https://example.com
+
 # Example Domain
 This domain is for use in illustrative examples in documents.</pre>
 </div>
@@ -225,7 +236,30 @@ This domain is for use in illustrative examples in documents.</pre>
 
 <h2 id="search_footprint"><code>search_footprint</code></h2>
 <div class="indent">
-<p>Collects a target's public search-engine footprint via the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=tools" target="_blank" rel="noopener">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
+<p>Collects a target's public search-engine footprint via the <a href="%%BRIGHTDATA_LINK_SEARCH_FOOTPRINT%%" target="_blank" rel="noopener sponsored">Bright Data SERP API</a>. Detects entity type (email, username, domain, phone, or full name) and runs entity-type-aware Google queries, returning structured results plus Entity Correlation Graph nodes/edges.</p>
 <p><b>MCP parameter:</b> <code>target</code> (string) &nbsp;|&nbsp; <b>Requires:</b> <code>BRIGHTDATA_API_KEY</code> + <code>BRIGHTDATA_SERP_ZONE</code></p>
 <pre>$ openosint footprint johndoe99</pre>
 </div>
+
+<hr>
+
+<h2 id="integrations">Integrations</h2>
+<table>
+<tr><th>Service</th><th>Tool</th><th>Tier</th><th>Auth</th></tr>
+<tr><td><a href="https://www.ip2location.io" target="_blank" rel="noopener">IP2Location.io</a></td><td><code>search_ip2location</code></td><td>Featured (sponsored)</td><td>API key, free tier</td></tr>
+<tr><td><a href="https://www.abuseipdb.com" target="_blank" rel="noopener">AbuseIPDB</a></td><td><code>search_abuseipdb</code></td><td>Community</td><td>API key, free tier</td></tr>
+<tr><td><a href="https://censys.io" target="_blank" rel="noopener">Censys</a></td><td><code>search_censys</code></td><td>Community</td><td>API key, free tier</td></tr>
+<tr><td><a href="https://github.com" target="_blank" rel="noopener">GitHub</a></td><td><code>search_github</code></td><td>Community</td><td>Token optional</td></tr>
+<tr><td><a href="https://haveibeenpwned.com" target="_blank" rel="noopener">HaveIBeenPwned</a></td><td><code>search_breach</code></td><td>Community</td><td>API key, paid</td></tr>
+<tr><td><a href="https://github.com/megadose/holehe" target="_blank" rel="noopener">holehe</a></td><td><code>search_email</code></td><td>Community</td><td>None, local binary</td></tr>
+<tr><td><a href="https://ipinfo.io" target="_blank" rel="noopener">ipinfo.io</a></td><td><code>search_ip</code></td><td>Community</td><td>Token optional</td></tr>
+<tr><td><a href="https://github.com/sundowndev/phoneinfoga" target="_blank" rel="noopener">phoneinfoga</a></td><td><code>search_phone</code></td><td>Community</td><td>None, local binary</td></tr>
+<tr><td><a href="https://psbdmp.ws" target="_blank" rel="noopener">psbdmp.ws</a></td><td><code>search_paste</code></td><td>Community</td><td>None</td></tr>
+<tr><td><a href="https://github.com/sherlock-project/sherlock" target="_blank" rel="noopener">Sherlock</a></td><td><code>search_username</code></td><td>Community</td><td>None, local binary</td></tr>
+<tr><td><a href="https://shodan.io" target="_blank" rel="noopener">Shodan</a></td><td><code>search_shodan</code></td><td>Community</td><td>API key, free tier</td></tr>
+<tr><td><a href="https://github.com/aboul3la/Sublist3r" target="_blank" rel="noopener">sublist3r</a></td><td><code>search_domain</code></td><td>Community</td><td>None, local binary</td></tr>
+<tr><td><a href="https://www.virustotal.com" target="_blank" rel="noopener">VirusTotal</a></td><td><code>search_virustotal</code></td><td>Community</td><td>API key, free tier</td></tr>
+<tr><td><a href="https://www.iana.org/whois" target="_blank" rel="noopener">WHOIS (IANA)</a></td><td><code>search_whois</code></td><td>Community</td><td>None</td></tr>
+<tr><td>DNS (system resolver)</td><td><code>search_dns</code></td><td>Community</td><td>None</td></tr>
+<tr><td><a href="https://www.google.com" target="_blank" rel="noopener">Google Search</a></td><td><code>generate_dorks</code></td><td>Community</td><td>None</td></tr>
+</table>

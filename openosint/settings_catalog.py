@@ -8,15 +8,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from openosint.brightdata import BRIGHTDATA_LINK_WEB
+from openosint.brightdata import (
+    DISCLOSURE_PLACEHOLDER,
+    LINK_PLACEHOLDER,
+    current_surface,
+    resolve,
+    setup_steps,
+)
 from openosint.config_store import config_path
 
 GROUP_AI = "ai"
 GROUP_TOOLS = "tools"
 
-_IP2LOCATION_URL = (
-    "https://www.ip2location.io/pricing?utm_source=openosint&utm_medium=webui&utm_campaign=ip2location"
-)
+_IP2LOCATION_URL = "https://www.ip2location.io/pricing?utm_source=openosint&utm_medium=webui&utm_campaign=ip2location"
 
 
 @dataclass(frozen=True)
@@ -124,30 +128,27 @@ SETTINGS: tuple[SettingKey, ...] = (
         "BRIGHTDATA_API_KEY",
         "Bright Data API key",
         GROUP_TOOLS,
-        BRIGHTDATA_LINK_WEB,
+        LINK_PLACEHOLDER,
         used_by=("search_dorks_live", "scrape_url", "search_footprint"),
-        note=(
-            "A free tier (5,000 requests/month) is available. "
-            "OpenOSINT earns a referral commission if you sign up through this link."
-        ),
+        note=f"A free tier (5,000 requests/month) is available. {DISCLOSURE_PLACEHOLDER}",
     ),
     SettingKey(
         "BRIGHTDATA_SERP_ZONE",
         "Bright Data SERP zone name",
         GROUP_TOOLS,
-        BRIGHTDATA_LINK_WEB,
+        LINK_PLACEHOLDER,
         used_by=("search_dorks_live", "search_footprint"),
         secret=False,
-        note="Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard.",
+        note=f"Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard. {DISCLOSURE_PLACEHOLDER}",
     ),
     SettingKey(
         "BRIGHTDATA_UNLOCKER_ZONE",
         "Bright Data Web Unlocker zone name",
         GROUP_TOOLS,
-        BRIGHTDATA_LINK_WEB,
+        LINK_PLACEHOLDER,
         used_by=("scrape_url",),
         secret=False,
-        note="Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard.",
+        note=f"Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard. {DISCLOSURE_PLACEHOLDER}",
     ),
     SettingKey(
         "IPINFO_TOKEN",
@@ -186,39 +187,76 @@ def public_catalog() -> list[dict]:
             "key": s.key,
             "label": s.label,
             "group": s.group,
-            "url": s.url,
+            "url": resolve(s.url),
             "used_by": list(s.used_by),
             "secret": s.secret,
             "optional": s.optional,
-            "note": s.note,
+            "note": resolve(s.note),
         }
         for s in ordered
     ]
 
 
+_WEB_SURFACES = ("webui", "webui-remote", "demo")
+
+
+def _add_it_line(missing: list[str]) -> str:
+    """Where to put the missing settings, worded for the surface that is asking."""
+    names, cfg, surface = " and ".join(missing), config_path(), current_surface()
+    if surface == "mcp":
+        return (
+            f'Add it: put {names} in the "env" block of the openosint server in your MCP client config, '
+            f"or in {cfg} — then restart the MCP server and run this again."
+        )
+    if surface in _WEB_SURFACES:
+        return (
+            f'Add it: web UI → Settings → "Save keys to server", or set {names} in the '
+            f"environment, or put it in {cfg} — then run this again."
+        )
+    return f"Add it: set {names} in the environment or in {cfg} — then run this again."
+
+
+def missing_keys_details(missing: list[str]) -> list[str]:
+    """Everything after the two header lines: where to get it, the setup steps, where to put it."""
+    # Someone who already holds a Bright Data token has an account: no signup link for them.
+    has_account = (
+        any(n.startswith("BRIGHTDATA") for n in missing) and "BRIGHTDATA_API_KEY" not in missing
+    )
+    lines: list[str] = []
+    seen_urls: list[str] = []
+    for entry in (setting(name) for name in missing):
+        url = resolve(entry.url) if entry else ""
+        if not entry or url in seen_urls or (has_account and entry.key.startswith("BRIGHTDATA")):
+            continue
+        seen_urls.append(url)
+        note = resolve(entry.note)
+        suffix = f" — {note}" if note else ""
+        lines.append(f"Get one: {url}{suffix}")
+    return lines + setup_steps(missing) + [_add_it_line(missing)]
+
+
+def _labels(missing: list[str]) -> str:
+    entries = [setting(name) for name in missing]
+    return _join([e.label if e else name for e, name in zip(entries, missing)])
+
+
 def missing_keys_message(tool: str, missing: list[str]) -> str:
     """The one human-readable result a tool returns when it lacks its credentials."""
-    entries = [setting(name) for name in missing]
-    labels = [e.label if e else name for e, name in zip(entries, missing)]
-    lines = [
-        f"Scan error: {tool} cannot run: {_join(labels)} not set.",
+    header = [
+        f"Scan error: {tool} cannot run: {_labels(missing)} not set.",
         f"[key_required] {', '.join(missing)}",
     ]
-    seen_urls: list[str] = []
-    for entry in entries:
-        if entry and entry.url not in seen_urls:
-            seen_urls.append(entry.url)
-            suffix = f" — {entry.note}" if entry.note else ""
-            lines.append(f"Get one: {entry.url}{suffix}")
-    names = " and ".join(missing)
-    lines.append(
-        f"Add it: web UI → Settings → \"Save keys to server\", or set {names} in the "
-        f"environment, or put it in {config_path()} — then run this again."
-    )
-    return "\n".join(lines)
+    return "\n".join(header + missing_keys_details(missing))
 
 
-def missing_from(names: list[str], supplied: dict[str, str] | None, environ: dict[str, str]) -> list[str]:
+def missing_keys_extra(tool: str, missing: list[str]) -> str:
+    """The same guidance as a follow-on to another refusal (e.g. passive mode), without the error header."""
+    return "\n".join([f"{tool} also needs {_labels(missing)}."] + missing_keys_details(missing))
+
+
+def missing_from(
+    names: list[str], supplied: dict[str, str] | None, environ: dict[str, str]
+) -> list[str]:
     supplied = supplied or {}
     return [n for n in names if not (supplied.get(n) or environ.get(n, "")).strip()]
 

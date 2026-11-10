@@ -18,14 +18,14 @@
 <meta property="og:title" content="OpenOSINT configuration: API keys and environment variables">
 <meta property="og:description" content="Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code.">
 <meta property="og:url" content="https://openosint.tech/docs/configuration/">
-<meta property="og:image" content="https://openosint.tech/assets/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OpenOSINT configuration: API keys and environment variables">
 <meta name="twitter:description" content="Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code.">
-<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -87,6 +87,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -95,16 +96,18 @@
     <li><a href="/docs/mcp/">MCP server</a></li>
     <li><a href="/docs/web-ui/">Web UI</a></li>
     <li><a href="/docs/configuration/" aria-current="page">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
   </ul>
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
     <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
   </ul>
-  <p class="docs-version">Version 2.36.1</p>
+  <p class="docs-version">Version 2.38.0</p>
 </div>
 </nav>
     <article class="prose">
@@ -115,6 +118,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -123,16 +127,18 @@
     <li><a href="/docs/mcp/">MCP server</a></li>
     <li><a href="/docs/web-ui/">Web UI</a></li>
     <li><a href="/docs/configuration/" aria-current="page">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
   </ul>
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
     <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
   </ul>
-  <p class="docs-version">Version 2.36.1</p>
+  <p class="docs-version">Version 2.38.0</p>
 </div>
 
       </details>
@@ -152,6 +158,8 @@
 <li><code>config.env</code> in the data directory: <code>~/.openosint/config.env</code>, or <code>$OPENOSINT_HOME/config.env</code>. The web UI saves keys here with user-only permissions where the OS supports it.</li>
 <li>A <code>.env</code> file, found by searching upward from the directory you run <code>openosint</code> from, or the file named by <code>OPENOSINT_ENV_FILE</code>.</li>
 </ol>
+<p>OpenOSINT reads a <code>.env</code> in place and never copies it into <code>config.env</code> on its own. To copy settings on purpose, run <code>openosint config import</code> (optionally <code>--from PATH</code> and <code>--only KEY,KEY</code>). It lists the setting names, asks for confirmation (<code>--yes</code> when there is no terminal), never overwrites a value already in <code>config.env</code>, and leaves your <code>.env</code> untouched. It never prints values.</p>
+<p>If <code>config.env</code> and a <code>.env</code> hold different values for the same setting, <code>config.env</code> wins. Startup prints a warning that names both files and the settings, so a stale key in <code>config.env</code> cannot silently override the one you just changed in <code>.env</code>.</p>
 <p>For the MCP server, set the variables in the client's <code>env</code> block; see <a href="/docs/mcp/">MCP server</a>.</p>
 <h2 id="api-keys-and-tokens">API keys and tokens</h2>
 <p>This table is generated from the key catalog in the code, so it matches the version you install.</p>
@@ -205,13 +213,13 @@
 <td><code>BRIGHTDATA_SERP_ZONE</code></td>
 <td><code>search_dorks_live</code>, <code>search_footprint</code></td>
 <td>required for those tools</td>
-<td>Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard.</td>
+<td>Your Bright Data SERP API zone name (e.g. 'serp_api1'); create the zone in the dashboard. OpenOSINT earns a referral commission if you sign up through this link.</td>
 </tr>
 <tr>
 <td><code>BRIGHTDATA_UNLOCKER_ZONE</code></td>
 <td><code>scrape_url</code></td>
 <td>required for those tools</td>
-<td>Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard.</td>
+<td>Your Bright Data Web Unlocker zone name (e.g. 'web_unlocker1'); create the zone in the dashboard. OpenOSINT earns a referral commission if you sign up through this link.</td>
 </tr>
 <tr>
 <td><code>CENSYS_API_ID</code></td>
@@ -263,7 +271,8 @@
 </tr>
 </tbody>
 </table></div>
-<p>The Bright Data key and zones are created in the <a href="https://get.brightdata.com/984ni58s2oad?utm_source=site&amp;utm_medium=docs">Bright Data dashboard</a> (a free tier is available). That is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.</p>
+<p><code>openosint setup brightdata</code> walks through the Bright Data settings: it asks before opening the signup page, reads the token hidden, checks it by listing your zones, and can create the SERP API and Web Unlocker zones after an explicit yes. It saves what you confirm to <code>config.env</code> (user-only), never replaces a saved value without asking, and never calls the billable request endpoint. It needs an interactive terminal.</p>
+<p>The Bright Data key and zones are created in the <a href="https://get.brightdata.com/openosint-signup?sid1=docs&amp;sid2=docs&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs">Bright Data dashboard</a> (a free tier is available). That is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.</p>
 <p>These tools need no key: <code>search_email</code>, <code>search_username</code>, <code>search_whois</code>, <code>search_ip</code>, <code>search_domain</code>, <code>generate_dorks</code>, <code>search_paste</code>, <code>search_phone</code>, <code>search_github</code>, <code>search_rdap</code>, <code>search_dns</code>, <code>search_gdelt_geo</code>. Tools that are noisy or touch the target also need <code>--allow-active</code>; see the <a href="/tools/">tools reference</a>.</p>
 <h2 id="behaviour-settings">Behaviour settings</h2>
 <div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
@@ -358,7 +367,7 @@
 <pre><code class="language-bash">ANTHROPIC_API_KEY=sk-ant-...
 SHODAN_API_KEY=your-key
 </code></pre>
-      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/web-ui/" rel="prev"><small>Previous</small>Web UI</a><a class="next" href="/docs/safety/" rel="next"><small>Next</small>Safety</a>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/web-ui/" rel="prev"><small>Previous</small>Web UI</a><a class="next" href="/docs/bright-data/" rel="next"><small>Next</small>Bright Data</a>
       </nav>
       <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/configuration.md" rel="noopener">Edit this page on GitHub</a></p>
     </article>

@@ -4,7 +4,7 @@ label: "Configuration"
 seo_title: "OpenOSINT configuration: API keys and environment variables"
 description: "Every OpenOSINT API key and environment variable, which tools need one, where settings live and the order they load in. Generated from the code."
 group: Use
-order: 6
+order: 7
 ---
 OpenOSINT starts with zero configuration. A key is only needed by the tool that uses it, plus one AI provider if you use the chat or REPL.
 
@@ -16,6 +16,10 @@ Highest priority first. The first source to set a variable wins.
 2. `config.env` in the data directory: `~/.openosint/config.env`, or `$OPENOSINT_HOME/config.env`. The web UI saves keys here with user-only permissions where the OS supports it.
 3. A `.env` file, found by searching upward from the directory you run `openosint` from, or the file named by `OPENOSINT_ENV_FILE`.
 
+OpenOSINT reads a `.env` in place and never copies it into `config.env` on its own. To copy settings on purpose, run `openosint config import` (optionally `--from PATH` and `--only KEY,KEY`). It lists the setting names, asks for confirmation (`--yes` when there is no terminal), never overwrites a value already in `config.env`, and leaves your `.env` untouched. It never prints values.
+
+If `config.env` and a `.env` hold different values for the same setting, `config.env` wins. Startup prints a warning that names both files and the settings, so a stale key in `config.env` cannot silently override the one you just changed in `.env`.
+
 For the MCP server, set the variables in the client's `env` block; see [MCP server](/docs/mcp/).
 
 ## API keys and tokens
@@ -23,6 +27,8 @@ For the MCP server, set the variables in the client's `env` block; see [MCP serv
 This table is generated from the key catalog in the code, so it matches the version you install.
 
 <!-- gen:config-keys -->
+
+`openosint setup brightdata` walks through the Bright Data settings: it asks before opening the signup page, reads the token hidden, checks it by listing your zones, and can create the SERP API and Web Unlocker zones after an explicit yes. It saves what you confirm to `config.env` (user-only), never replaces a saved value without asking, and never calls the billable request endpoint. It needs an interactive terminal.
 
 The Bright Data key and zones are created in the [Bright Data dashboard](%%BRIGHTDATA_LINK_DOCS%%) (a free tier is available). That is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.
 

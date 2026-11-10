@@ -4,7 +4,7 @@ label: "Safety"
 seo_title: "OpenOSINT safety: passive mode, tool-call cap, noise labels"
 description: "OpenOSINT is passive by default. How active tools are enabled, the per-request tool-call cap of %%MAX_CALLS%%, what each noise label means, and responsible use."
 group: Reference
-order: 7
+order: 9
 ---
 OpenOSINT is built so that a default install does not touch your target and cannot run away with requests.
 

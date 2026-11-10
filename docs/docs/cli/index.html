@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenOSINT CLI reference: every subcommand and flag</title>
+<meta name="description" content="Every openosint subcommand and global flag: keyless commands (dns, whois, rdap, ip, gdelt, dorks, exposure), keyed tools, web and REPL commands.">
+<link rel="canonical" href="https://openosint.tech/docs/cli/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="OpenOSINT CLI reference: every subcommand and flag">
+<meta property="og:description" content="Every openosint subcommand and global flag: keyless commands (dns, whois, rdap, ip, gdelt, dorks, exposure), keyed tools, web and REPL commands.">
+<meta property="og:url" content="https://openosint.tech/docs/cli/">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OpenOSINT CLI reference: every subcommand and flag">
+<meta name="twitter:description" content="Every openosint subcommand and global flag: keyless commands (dns, whois, rdap, ip, gdelt, dorks, exposure), keyed tools, web and REPL commands.">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "CLI reference",
+      "item": "https://openosint.tech/docs/cli/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/" aria-current="page">CLI reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.38.0</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/" aria-current="page">CLI reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.38.0</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>CLI reference</li>
+        </ol>
+      </nav>
+      <h1>CLI reference</h1>
+      <p>Run <code>openosint</code> with no arguments for the interactive REPL. Run <code>openosint COMMAND</code> for a direct call with no AI provider involved. Put global flags (such as <code>--json</code> and <code>--allow-active</code>) <strong>before</strong> the subcommand: <code>openosint --json dns example.com</code>.</p>
+<h2 id="keyless-commands">Keyless commands</h2>
+<p>These need no API key and no AI provider. They are passive unless the Level column says otherwise.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+<th>Level</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>openosint dns DOMAIN [-t N]</code></td>
+<td>A, AAAA, MX, NS, TXT, SOA records plus SPF and DMARC. DKIM selector probing needs <code>--allow-active</code></td>
+<td>passive</td>
+</tr>
+<tr>
+<td><code>openosint whois DOMAIN [-t N]</code></td>
+<td>WHOIS registration data</td>
+<td>passive</td>
+</tr>
+<tr>
+<td><code>openosint rdap DOMAIN [-t N]</code></td>
+<td>RDAP registrar, dates, name servers, status</td>
+<td>passive</td>
+</tr>
+<tr>
+<td><code>openosint ip ADDRESS [-t N]</code></td>
+<td>Geolocation, ASN, hostname via ipinfo.io. <code>IPINFO_TOKEN</code> is optional and raises the rate limit</td>
+<td>passive</td>
+</tr>
+<tr>
+<td><code>openosint gdelt QUERY [-t N]</code></td>
+<td>Recent geolocated news mentions from GDELT</td>
+<td>passive</td>
+</tr>
+<tr>
+<td><code>openosint dorks TARGET</code></td>
+<td>Builds Google dork URLs and sends nothing</td>
+<td>passive</td>
+</tr>
+<tr>
+<td><code>openosint exposure DOMAIN [options]</code></td>
+<td>External exposure report graded A to F; see <a href="/docs/exposure/">Exposure report</a></td>
+<td>email and registration passive; TLS and headers touch the target</td>
+</tr>
+</tbody>
+</table></div>
+<p>Options for <code>exposure</code>:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--json</code></td>
+<td>Structured JSON</td>
+</tr>
+<tr>
+<td><code>--report PATH.html</code></td>
+<td>Also write a self-contained HTML report</td>
+</tr>
+<tr>
+<td><code>--lang {en,it}</code></td>
+<td>Report language, with <code>--report</code></td>
+</tr>
+<tr>
+<td><code>--lookalikes</code></td>
+<td>Also look for registered typo, homoglyph and TLD-swap domains (DNS only, never graded)</td>
+</tr>
+<tr>
+<td><code>--resolver IP</code></td>
+<td>Recursive resolver for lookups outside the domain's own nameservers</td>
+</tr>
+<tr>
+<td><code>--checks NAMES</code></td>
+<td>Run only <code>email</code>, <code>registration</code>, <code>tls</code>, <code>http_headers</code>. A selection is not graded</td>
+</tr>
+<tr>
+<td><code>--public-only</code></td>
+<td>Refuse targets that resolve to non-public addresses and vet every redirect hop; for hosted use</td>
+</tr>
+</tbody>
+</table></div>
+<p>Real output for several of these is on the <a href="/docs/quickstart/">Quickstart</a>.</p>
+<h2 id="keyed-commands">Keyed commands</h2>
+<p>Each needs the API key named in <a href="/docs/configuration/">Configuration</a>.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Needs</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>openosint shodan QUERY [-t N]</code></td>
+<td><code>SHODAN_API_KEY</code></td>
+<td>IP gives a host lookup; anything else is a banner or keyword search</td>
+</tr>
+<tr>
+<td><code>openosint virustotal TARGET [-t N]</code></td>
+<td><code>VIRUSTOTAL_API_KEY</code></td>
+<td>IP, domain, URL or file hash</td>
+</tr>
+<tr>
+<td><code>openosint censys TARGET [-t N]</code></td>
+<td><code>CENSYS_API_ID</code>, <code>CENSYS_SECRET</code></td>
+<td>IP gives a host view; a domain gives a certificate search</td>
+</tr>
+<tr>
+<td><code>openosint abuseipdb IP [-t N]</code></td>
+<td><code>ABUSEIPDB_API_KEY</code></td>
+<td>Abuse confidence score and reports</td>
+</tr>
+<tr>
+<td><code>openosint ip2location IP [-t N]</code></td>
+<td><code>IP2LOCATION_API_KEY</code></td>
+<td>Geolocation, ISP, VPN, proxy, Tor and datacenter flags</td>
+</tr>
+<tr>
+<td><code>openosint github QUERY [-t N]</code></td>
+<td><code>GITHUB_TOKEN</code> (optional)</td>
+<td>Profile, repos, commit-discovered emails, or a keyword search</td>
+</tr>
+<tr>
+<td><code>openosint search-dorks-live TARGET [--max-dorks N] [-t N]</code></td>
+<td>Bright Data key and SERP zone</td>
+<td>Live Google results for dork queries. Default 5, max 12; each is billable</td>
+</tr>
+<tr>
+<td><code>openosint footprint TARGET [--max-queries N] [-t N]</code></td>
+<td>Bright Data key and SERP zone</td>
+<td>Entity-type-aware search-engine footprint. Default 3 queries, each billable</td>
+</tr>
+<tr>
+<td><code>openosint scrape URL [-t N]</code></td>
+<td>Bright Data key and Unlocker zone</td>
+<td>Fetch a URL through Bright Data Web Unlocker as Markdown. Touches the target</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bright Data is the provider behind the last three: <a href="https://get.brightdata.com/openosint-signup?sid1=docs&amp;sid2=docs&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs">get an account</a>. This is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you.</p>
+<h2 id="active-commands">Active commands</h2>
+<p>These are noisy and off by default. They need the local binary installed and <code>--allow-active</code> (or <code>OPENOSINT_ALLOW_ACTIVE=1</code>). See <a href="/docs/safety/">Safety</a>.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Binary</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>openosint --allow-active email ADDRESS [-t N]</code></td>
+<td><code>holehe</code></td>
+<td>Services with an account on that email</td>
+</tr>
+<tr>
+<td><code>openosint --allow-active username HANDLE [-t N]</code></td>
+<td><code>sherlock</code></td>
+<td>The handle across hundreds of platforms</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="sessions-servers-and-helpers">Sessions, servers and helpers</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>openosint</code> or <code>openosint shell</code></td>
+<td>Interactive AI REPL</td>
+</tr>
+<tr>
+<td><code>openosint web [--port N] [--host H] [--no-browser] [--allow-remote]</code></td>
+<td>Local browser UI; see <a href="/docs/web-ui/">Web UI</a></td>
+</tr>
+<tr>
+<td><code>openosint multi TARGETS</code></td>
+<td>Investigate several targets in parallel (AI). <code>TARGETS</code> is a comma-separated list or a file with one target per line; the maximum is 10</td>
+</tr>
+<tr>
+<td><code>openosint playbook RECIPE TARGET</code></td>
+<td>Run a fixed investigation recipe with no AI. <code>RECIPE</code> is a name such as <code>domain</code> or a YAML file</td>
+</tr>
+<tr>
+<td><code>openosint history [--all] [--last N] [open N \| clear]</code></td>
+<td>List, open or delete saved REPL sessions</td>
+</tr>
+<tr>
+<td><code>openosint proxy-test</code></td>
+<td>Fetch your exit IP through the configured proxy</td>
+</tr>
+<tr>
+<td><code>openosint setup brightdata</code></td>
+<td>Guided setup for the Bright Data tools: checks your token, lists or creates the SERP API and Web Unlocker zones, saves them to <code>config.env</code>. Interactive only; asks before every change</td>
+</tr>
+<tr>
+<td><code>openosint config import [--from PATH] [--only KEY,...] [--yes]</code></td>
+<td>Copy settings from a <code>.env</code> into <code>~/.openosint/config.env</code> after confirmation</td>
+</tr>
+<tr>
+<td><code>openosint sponsors</code></td>
+<td>List current sponsors and featured integrations</td>
+</tr>
+<tr>
+<td><code>openosint-mcp [--allow-active]</code></td>
+<td>The <a href="/docs/mcp/">MCP server</a> (a separate executable)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="global-flags">Global flags</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--allow-active</code></td>
+<td>Enable active tools (noisy, or they touch the target). Off by default; same as <code>OPENOSINT_ALLOW_ACTIVE=1</code></td>
+</tr>
+<tr>
+<td><code>--json</code></td>
+<td>Structured JSON output</td>
+</tr>
+<tr>
+<td><code>-v</code>, <code>--verbose</code></td>
+<td>Debug logging to stderr</td>
+</tr>
+<tr>
+<td><code>--parallel</code></td>
+<td>Run complementary tools concurrently</td>
+</tr>
+<tr>
+<td><code>--no-pdf</code></td>
+<td>Do not write a PDF report</td>
+</tr>
+<tr>
+<td><code>--proxy URL</code></td>
+<td>Route requests through an upstream proxy</td>
+</tr>
+<tr>
+<td><code>--provider {anthropic,ollama,openai}</code></td>
+<td>AI provider for the REPL and <code>multi</code> (default <code>anthropic</code>)</td>
+</tr>
+<tr>
+<td><code>--api-key KEY</code></td>
+<td>Anthropic API key (overrides the environment)</td>
+</tr>
+<tr>
+<td><code>--ollama-model MODEL</code>, <code>--ollama-host URL</code></td>
+<td>Ollama model (default <code>llama3.2</code>) and server (default <code>http://localhost:11434</code>)</td>
+</tr>
+<tr>
+<td><code>--openai-base-url URL</code>, <code>--openai-model MODEL</code>, <code>--openai-api-key KEY</code></td>
+<td>An OpenAI-compatible endpoint (env: <code>OPENAI_BASE_URL</code>, <code>OPENAI_MODEL</code>, <code>OPENAI_API_KEY</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The per-command <code>-t SECONDS</code> / <code>--timeout</code> flag overrides that command's timeout.</p>
+<h2 id="repl-commands">REPL commands</h2>
+<p>Inside the REPL, type a target (an email, username, domain, IP or name) and the agent picks and chains the tools.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;target&gt;</code></td>
+<td>Investigate any target</td>
+</tr>
+<tr>
+<td><code>clear</code></td>
+<td>Reset conversation memory</td>
+</tr>
+<tr>
+<td><code>save</code></td>
+<td>Save the last report to <code>reports/</code></td>
+</tr>
+<tr>
+<td><code>tools</code></td>
+<td>List available tools and their status</td>
+</tr>
+<tr>
+<td><code>config</code></td>
+<td>Show the current configuration</td>
+</tr>
+<tr>
+<td><code>history</code></td>
+<td>Browse saved sessions</td>
+</tr>
+<tr>
+<td><code>help</code></td>
+<td>Show all commands</td>
+</tr>
+<tr>
+<td><code>exit</code> or Ctrl-D</td>
+<td>Exit</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sessions are saved to <code>~/.openosint/history/</code>. For an OpenAI-compatible backend:</p>
+<pre><code class="language-bash">pip install &quot;openosint[openai]&quot;
+openosint --provider openai \
+  --openai-base-url http://localhost:4000/v1 \
+  --openai-model gpt-4o-mini
+</code></pre>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/bright-data/" rel="prev"><small>Previous</small>Bright Data</a><a class="next" href="/docs/safety/" rel="next"><small>Next</small>Safety</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/cli.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

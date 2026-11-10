@@ -28,8 +28,9 @@ Security researchers, analysts and developers who want repeatable lookups on dom
 
 ## Where to go next
 
-1. [Install](/docs/install/) it.
-2. Run your first investigation in the [quickstart](/docs/quickstart/).
-3. Browse the [tools reference](/tools/).
+1. Using an AI agent? Add the [Agent Skill or Claude Code plugin](/docs/agent-skill/).
+2. [Install](/docs/install/) the CLI.
+3. Run your first investigation in the [quickstart](/docs/quickstart/).
+4. Browse the [CLI reference](/docs/cli/) and the [tools reference](/tools/).
 
 For a hosted version with no setup, see [Monitor and Diligence](https://app.openosint.tech/?utm_source=openosint.tech&utm_medium=referral&utm_campaign=docs).

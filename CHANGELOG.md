@@ -9,6 +9,38 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.38.0] — 2026-11-05
+
+### Added
+
+- `openosint setup brightdata`: a guided, opt-in setup for the Bright Data tools. It explains what Bright Data is used for, asks before opening the signup page (a plain `brightdata.com` link with `OPENOSINT_NO_REFERRAL_LINKS=1`), reads the token hidden, validates it by listing your zones (`GET /zone/get_active_zones`, never the billable request endpoint), then uses an existing zone or, only after an explicit yes, creates a SERP API or Web Unlocker zone (`POST /zone`, documented as "Add a Zone"; Admin or Ops role). Values are saved to `config.env` at 0600, a saved value is replaced only after asking, and a user who is already set up is told so with no signup link. It refuses to run without a terminal (exit 2). The missing-key message now mentions it. The signup step also tells you that signing up with a work email is the safer choice if you use Bright Data at work.
+- New docs page "Using OpenOSINT with Bright Data" (`/docs/bright-data/`) with the setup steps and the exact messages you can see. A test fails if the quoted output drifts from the code.
+
+### Changed
+
+- Bright Data referral links are built in one place (`openosint/brightdata.py`) and routed per placement: signup steps use the Signup link, `search_dorks_live` and `search_footprint` the SERP API link, `scrape_url` the Web Unlocker link, anything else the base link. Each link carries `sid1` (surface), `sid2` (moment) and `sid3` (tool) next to the UTMs, and every place a link appears states that OpenOSINT earns a commission. `OPENOSINT_NO_REFERRAL_LINKS=1` still replaces all of them with plain `https://brightdata.com` and drops the commission wording.
+- The missing-key message is worded for where it is shown. The last line names the right place per interface (CLI: environment or `config.env`; MCP: the client's `env` block, then restart; web UI and demo: Settings). For the Bright Data tools it lists the dashboard steps for exactly the settings still missing (sign up, copy the token from account settings, create a SERP API or Web Unlocker zone) and no longer drops the zone guidance. A user who already has a token and only lacks a zone is not shown the signup link. `scrape_url` no longer makes a new user hit the passive-mode refusal and then the missing-key error in sequence: the refusal now carries an `also_needed` field and both are shown together.
+- Bright Data errors are now classified in one place (`openosint/brightdata_response.py`) for `search_dorks_live`, `search_footprint` and `scrape_url`. `search_dorks_live` and `search_footprint` stop at the first account-level failure instead of sending every query, and the result names the cause: token rejected (with the account settings page), zone not found (with the variable to set), a possible usage limit (`x-brd-err-code: client_10100`, worded "may mean your free credits are used up" because Bright Data does not document it), or a Bright Data-side 500/502/503/504 (never blamed on your key; retry, then contact Bright Data support). Results gathered before the stop are kept.
+- `scrape_url` and `search_footprint` now read Bright Data's `x-brd-*` outcome headers, as `search_dorks_live` already did. `scrape_url` now tells a block from the target's own answer: a CAPTCHA or protection page is an error, while the target's own HTTP status (404, 410, 401, 5xx) is returned as a `[Target returned HTTP N]` line followed by the page body, because a removed page or profile is itself a finding. For the SERP tools a non-200 from the search engine is still a failure.
+- Invalid-key and wrong-zone messages no longer include the Bright Data signup link: you already have an account, so they point at your token page or billing page instead.
+
+## [2.37.1] — 2026-11-05
+
+### Security hardening
+
+- A legacy package-root `.env` is no longer copied into `~/.openosint/config.env` automatically. Before this change, the first start of the CLI, web server or MCP server from a source or editable checkout (and only when `config.env` did not exist yet) copied every known setting from that `.env` (up to 16 names, 11 of them secrets: Anthropic, OpenAI, Shodan, VirusTotal, Bright Data and others) into the data directory without asking. The copy was announced on stderr only, which MCP hosts and the web UI usually hide. The file was created user-only (0600), but the directory kept its existing mode if it already existed. The copy also made the stale-key problem below possible.
+- Stale-key shadowing: `config.env` takes priority over a legacy `.env`, so after you rotated a key in the `.env`, the older copied value kept winning silently. When both files define the same setting with different values, startup now prints a warning that names the winning file, the overridden file and the setting names (never values).
+- New explicit command: `openosint config import [--from PATH] [--only KEY,...] [--yes]` copies settings from a `.env` after listing the names and asking for confirmation (non-interactive use needs `--yes`). It never overwrites a value already in `config.env`, leaves the `.env` in place, and offers to set the data directory to 0700 when it is readable by other users. A startup hint tells you when a package-root `.env` has settings that are not saved.
+- Migrating: nothing breaks. Your `.env` is still read as before at lower priority than `config.env`. If an earlier version already copied it, `config.env` already holds those values; compare the two files and delete whichever you no longer want.
+
+## [2.37.0] — 2026-11-02
+
+### Added
+
+- Keyless CLI subcommands `openosint whois DOMAIN`, `rdap DOMAIN`, `ip ADDRESS`, `gdelt QUERY` and `dorks TARGET`, each with `--json` (same envelope as `dns`: `tool`, `target`, `timestamp`, `results`, `error`). They call the existing tool functions unchanged and go through `TOOL_POLICY` like the MCP tools (all five are passive). `gdelt` leaves out the raw GeoJSON block that only the web globe uses.
+- Test that fails when `.claude-plugin/plugin.json` `version` differs from `pyproject.toml`.
+- Agent Skill and Claude Code plugin. `skills/osint` (passive recon of a domain, IP or organization) and `skills/exposure` (wraps `openosint exposure`) follow the Agent Skills format and install with `npx skills add OpenOSINT/OpenOSINT`. `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json` and `.mcp.json` make `/plugin marketplace add OpenOSINT/OpenOSINT` then `/plugin install openosint@openosint` work, and register the MCP server in passive mode (`uvx --from openosint==2.37.0 openosint-mcp`, no `--allow-active`; the skills and `.mcp.json` pin the release they were written for). The skill calls the CLI first, so it works on any agent without the MCP server, and uses MCP tools only when the server is connected. The default flow needs no API keys; the skill names the variable to set when a keyed tool would help, and requires every finding to cite the tool call that produced it. No tool behaviour changed.
+
 ## [2.36.1] — 2026-10-19
 
 ### Changed

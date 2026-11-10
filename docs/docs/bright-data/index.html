@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Using OpenOSINT with Bright Data: setup, cost, errors</title>
+<meta name="description" content="Set up the Bright Data tools in OpenOSINT: guided setup, manual steps, example output, cost and what each error means.">
+<link rel="canonical" href="https://openosint.tech/docs/bright-data/">
+<meta name="theme-color" content="#16181b">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/assets/fonts/HankenGrotesk.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/style.css">
+<meta property="og:site_name" content="OpenOSINT">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Using OpenOSINT with Bright Data: setup, cost, errors">
+<meta property="og:description" content="Set up the Bright Data tools in OpenOSINT: guided setup, manual steps, example output, cost and what each error means.">
+<meta property="og:url" content="https://openosint.tech/docs/bright-data/">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Using OpenOSINT with Bright Data: setup, cost, errors">
+<meta name="twitter:description" content="Set up the Bright Data tools in OpenOSINT: guided setup, manual steps, example output, cost and what each error means.">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://openosint.tech/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Docs",
+      "item": "https://openosint.tech/docs/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Bright Data",
+      "item": "https://openosint.tech/docs/bright-data/"
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header">
+  <div class="wrap bar">
+    <a class="logo" href="/"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="2" y="2" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 6v10M6 11h10" stroke="currentColor" stroke-width="1.5"/></svg>OpenOSINT</a>
+    <nav class="nav" aria-label="Main">
+      <a href="/docs/" aria-current="page">Docs</a>
+      <a href="/tools/">Tools</a>
+      <a href="/blog/">Blog</a>
+      <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+    </nav>
+    <div class="bar-right">
+      <a class="btn btn-small" href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=nav">Hosted products</a>
+      <details class="menu">
+        <summary>Menu</summary>
+        <div class="menu-panel">
+          <a href="/docs/">Docs</a>
+          <a href="/tools/">Tools</a>
+          <a href="/blog/">Blog</a>
+          <a href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">GitHub</a>
+        </div>
+      </details>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap page">
+  <div class="docs">
+    <nav class="docs-side" aria-label="Documentation">
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/" aria-current="page">Bright Data</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.38.0</p>
+</div>
+</nav>
+    <article class="prose">
+      <details class="docs-menu">
+        <summary>Documentation menu</summary>
+        
+<div class="docs-links">
+  <h2>Get started</h2>
+  <ul>
+    <li><a href="/docs/">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
+    <li><a href="/docs/install/">Install</a></li>
+    <li><a href="/docs/quickstart/">Quickstart</a></li>
+  </ul>
+  <h2>Use</h2>
+  <ul>
+    <li><a href="/docs/mcp/">MCP server</a></li>
+    <li><a href="/docs/web-ui/">Web UI</a></li>
+    <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/" aria-current="page">Bright Data</a></li>
+  </ul>
+  <h2>Reference</h2>
+  <ul>
+    <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
+    <li><a href="/docs/safety/">Safety</a></li>
+    <li><a href="/docs/exposure/">Exposure report</a></li>
+    <li><a href="/docs/entity-graph/">Entity graph</a></li>
+    <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
+  </ul>
+  <p class="docs-version">Version 2.38.0</p>
+</div>
+
+      </details>
+      <nav class="crumbs" aria-label="Breadcrumb">
+        <ol>
+          <li><a href="/">Home</a></li>
+          <li><a href="/docs/">Docs</a></li>
+          <li>Bright Data</li>
+        </ol>
+      </nav>
+      <h1>Using OpenOSINT with Bright Data</h1>
+      <p><strong>Referral link.</strong> The Bright Data signup link on this page is a referral link: OpenOSINT earns a commission if you sign up through it, at no extra cost to you. The tools work the same either way, and every other tool in OpenOSINT needs no Bright Data account.</p>
+<p>Three OpenOSINT tools run through <a href="https://brightdata.com">Bright Data</a>:</p>
+<ul>
+<li><code>search_dorks_live</code> and <code>search_footprint</code> fetch Google results through the Bright Data <strong>SERP API</strong>.</li>
+<li><code>scrape_url</code> fetches pages that block direct access through <strong>Web Unlocker</strong>. It is an active tool and also needs <code>--allow-active</code>.</li>
+</ul>
+<p>Using them sends your targets (the search queries and URLs) to Bright Data. Read <a href="/docs/safety/">Safety</a> first.</p>
+<h2 id="cost">Cost</h2>
+<p>One request is one credit. Bright Data's free tier is 5,000 credits a month, shared across its products, and needs no credit card. <code>search_dorks_live</code> sends one request per dork (5 by default) and <code>search_footprint</code> one per query (3 by default), so <code>--max-dorks</code> and <code>--max-queries</code> set what a run costs.</p>
+<h2 id="fastest-setup">Fastest setup</h2>
+<pre><code class="language-bash">openosint setup brightdata
+</code></pre>
+<p>It asks before every change:</p>
+<ol>
+<li>Asks whether you already have an account, and opens the signup page only if you say yes.</li>
+<li>Reads your API token without echoing it, and checks it by listing your zones.</li>
+<li><strong>Reuses zones you already have.</strong> A SERP API zone and a Web Unlocker zone in your account are offered as the default, so you only press Enter.</li>
+<li>Creates a missing zone only after an explicit yes. If your token is not allowed to create zones (HTTP 403), it says so once, stops offering, and prints the dashboard steps below instead.</li>
+<li>Saves what you confirmed to <code>config.env</code>, readable only by you, and never replaces a saved value without asking.</li>
+</ol>
+<p>It needs an interactive terminal. If you stop halfway, run it again to finish the other zone.</p>
+<h2 id="manual-setup">Manual setup</h2>
+<ol>
+<li><a href="https://get.brightdata.com/openosint-signup?sid1=docs&amp;sid2=docs&amp;utm_source=openosint&amp;utm_medium=docs&amp;utm_campaign=docs" rel="sponsored noopener" target="_blank">Sign up for Bright Data</a>, or log in. Using this at work? Sign up with your work email so you can invite teammates and send invoices to your company. If you already have an account, skip this.</li>
+<li>Copy your API token from <a href="https://brightdata.com/cp/setting/users">brightdata.com/cp/setting/users</a>. It goes in <code>BRIGHTDATA_API_KEY</code>.</li>
+<li>Create a <strong>SERP API</strong> zone in your dashboard. Its name goes in <code>BRIGHTDATA_SERP_ZONE</code>.</li>
+<li>Create a <strong>Web Unlocker</strong> zone. Its name goes in <code>BRIGHTDATA_UNLOCKER_ZONE</code>.</li>
+</ol>
+<p>Set the three values where your interface reads them:</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th>Interface</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CLI and REPL</td>
+<td>The environment, or <code>config.env</code> in <code>~/.openosint/</code> (or <code>$OPENOSINT_HOME</code>)</td>
+</tr>
+<tr>
+<td>MCP server</td>
+<td>The <code>env</code> block of the <code>openosint</code> server in your MCP client config, then restart the server</td>
+</tr>
+<tr>
+<td>Web UI</td>
+<td>Settings, which saves to <code>config.env</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>See <a href="/docs/configuration/">Configuration</a> for the load order and <a href="/docs/mcp/">MCP server</a> for the <code>env</code> block. <code>OPENOSINT_NO_REFERRAL_LINKS=1</code> turns the referral links inside OpenOSINT's own messages into a plain <code>https://brightdata.com</code>.</p>
+<h2 id="example-output">Example output</h2>
+<p>The text below is what the tools return, as printed by the code. The CLI frames it in a <code>SCAN RESULTS</code> banner; an MCP client or the agent receives it as is. The results are placeholders from the reserved <code>example.com</code> domain, not a live capture.</p>
+<h3 id="search_dorks_live"><code>search_dorks_live</code></h3>
+<pre><code class="language-bash">openosint search-dorks-live example.com --max-dorks 1
+</code></pre>
+<pre><code class="language-text">Bright Data live dork search for 'example.com' (1 queries):
+
+[+] Dork: &quot;example.com&quot;
+    Title:   Example Domain
+    URL:     https://www.example.com/
+    Snippet: This domain is for use in illustrative examples in documents.
+
+    Title:   Example Domain - Example Org
+    URL:     https://www.example.org/about
+    Snippet: Another reserved example domain.
+</code></pre>
+<h3 id="search_footprint"><code>search_footprint</code></h3>
+<pre><code class="language-bash">openosint footprint example.com --max-queries 1
+</code></pre>
+<pre><code class="language-text">[Footprint] example.com  |  type: domain  |  1 query
+
+[+] Query 1/1: site:example.com
+    1. Example Domain
+       URL:     https://www.example.com/
+       Display: www.example.com
+       Snippet: This domain is for use in illustrative examples in documents.
+
+    2. Example Domain - Example Org
+       URL:     https://www.example.org/about
+       Display: www.example.org
+       Snippet: Another reserved example domain.
+
+── Discovered URLs ──────────────────────────────────────────
+[Footprint] URL: https://www.example.com/
+[Footprint] Domain: example.com
+[Footprint] URL: https://www.example.org/about
+[Footprint] Domain: example.org
+</code></pre>
+<p>The <code>[Footprint]</code> lines at the end feed the entity graph.</p>
+<h3 id="scrape_url"><code>scrape_url</code></h3>
+<pre><code class="language-bash">openosint --allow-active scrape https://example.com
+</code></pre>
+<pre><code class="language-text">[Web Unlocker] URL: https://example.com
+
+# Example Domain
+
+This domain is for use in illustrative examples in documents.
+</code></pre>
+<p>When the site itself answers with an error status, <code>scrape_url</code> reports it and still returns the body. A removed page or profile can be a finding, so this is not a failure:</p>
+<pre><code class="language-text">[Web Unlocker] URL: https://example.com/old-page
+[Target returned HTTP 404]
+
+# Not Found
+
+The requested page does not exist.
+</code></pre>
+<h2 id="usage-and-limits">Usage and limits</h2>
+<ul>
+<li>Check your remaining credits at <a href="https://brightdata.com/cp/billing/overview">brightdata.com/cp/billing/overview</a> and add funds at <a href="https://brightdata.com/cp/billing">brightdata.com/cp/billing</a>.</li>
+<li>At the end of the free credits, requests stop. You are not charged unless you have deposited funds. Credits renew on the 1st of each month and do not roll over.</li>
+<li>Accounts without deposited funds are limited to 1,000 requests a minute.</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<p>These tools stop at the first account-level failure instead of retrying every query. The messages are printed by the code, so you can search for them:</p>
+<pre><code class="language-text">Bright Data rejected the API token (HTTP 401, body='...'). Check or regenerate it at https://brightdata.com/cp/setting/users; BRIGHTDATA_API_KEY takes the token only.
+</code></pre>
+<p>The token is wrong, revoked or expired.</p>
+<pre><code class="language-text">Bright Data zone 'NAME' not found. Create a SERP API zone in your Bright Data dashboard, or set BRIGHTDATA_SERP_ZONE to the name of an existing one.
+</code></pre>
+<p>For <code>scrape_url</code> the message says Web Unlocker and <code>BRIGHTDATA_UNLOCKER_ZONE</code>.</p>
+<pre><code class="language-text">Bright Data reported a usage limit (client_10100). This may mean your free credits are used up — check https://brightdata.com/cp/billing. Requests resume when credits renew on the 1st of the month or after you add funds.
+</code></pre>
+<p>Bright Data does not document this response, so the message says "may".</p>
+<pre><code class="language-text">Bright Data's API returned HTTP 502. This is a Bright Data-side error, not a problem with your key or zone. Retry in a few minutes; if it persists, contact Bright Data support.
+</code></pre>
+<p>The same applies to HTTP 500, 503 and 504.</p>
+<pre><code class="language-text">Bright Data 403 reject_block — the target blocked the request (captcha or protection page); a retry may succeed
+</code></pre>
+<p>The website refused the fetch. Some targets cannot be fetched.</p>
+<p>More entries are in <a href="/docs/troubleshooting/">Troubleshooting</a>.</p>
+<h2 id="more">More</h2>
+<p>Bright Data's own walkthrough: <a href="https://brightdata.com/blog/how-tos/openosint-with-bright-data">OpenOSINT with Bright Data</a>.</p>
+      <nav class="pager" aria-label="Previous and next page"><a class="prev" href="/docs/configuration/" rel="prev"><small>Previous</small>Configuration</a><a class="next" href="/docs/cli/" rel="next"><small>Next</small>CLI reference</a>
+      </nav>
+      <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/bright-data.md" rel="noopener">Edit this page on GitHub</a></p>
+    </article>
+  </div>
+</div>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <ul class="footer-links">
+      <li><a href="/blog/">Blog</a></li>
+      <li><a href="/tools/">Tools</a></li>
+      <li><a href="/commercial/">Commercial</a></li>
+      <li><a href="/sponsors.html">Sponsors</a></li>
+      <li><a href="/terms/">Terms</a></li>
+      <li><a href="/privacy/">Privacy</a></li>
+      <li><a href="/acceptable-use/">Acceptable Use</a></li>
+      <li><a href="/subprocessors/">Subprocessors</a></li>
+      <li><a href="mailto:commercial@openosint.tech">Contact</a></li>
+    </ul>
+    <span>&copy; 2026 Tommaso Bertocchi, Trieste, Italy</span>
+  </div>
+</footer>
+<script>
+document.querySelectorAll("pre").forEach(function (pre) {
+  if (!navigator.clipboard) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.className = "copy"; b.textContent = "Copy"; b.setAttribute("aria-label", "Copy code");
+  b.addEventListener("click", function () {
+    var code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1500);
+    });
+  });
+  pre.appendChild(b);
+});
+</script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "8c1e6e8590b649a5803fbbd3356aa7d2"}'></script>
+</body>
+</html>

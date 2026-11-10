@@ -3,37 +3,28 @@
   <section class="intro" aria-label="Introduction">
     <div class="wrap">
       <h1>OpenOSINT</h1>
-      <p class="lead">{{ site.tool_count }} investigation tools for passive checks of public information: DNS, WHOIS and RDAP, IP intelligence, breaches, GitHub, news and more.</p>
+      <p class="lead">The OSINT toolkit for AI agents: Agent Skill, MCP server and CLI. Passive by default, no API keys needed to start, and every finding cites the tool call that produced it.</p>
       <div class="hero-actions">
-        <div class="install">
-          <pre><code>pip install openosint</code></pre>
-          <p class="muted">Python 3.10 or newer. <a href="/docs/install/">Other ways to install</a></p>
-        </div>
+        <a class="btn" href="/docs/agent-skill/">Add the Agent Skill</a>
         <a class="btn btn-secondary" href="https://github.com/OpenOSINT/OpenOSINT" rel="noopener">View on GitHub &middot; {{ site.stars_display }} stars</a>
       </div>
     </div>
   </section>
 
-  <section class="section" aria-labelledby="ways">
+  <section class="section" aria-labelledby="quickstart">
     <div class="wrap">
-      <h2 id="ways">Use it three ways</h2>
-      <div class="ways">
-        <a href="/docs/quickstart/">
-          <h3>CLI</h3>
-          <p>Direct subcommands and an interactive REPL that picks and chains the tools for you.</p>
-          <span class="card-link">Docs &rarr;</span>
-        </a>
-        <a href="/docs/mcp/">
-          <h3>MCP server</h3>
-          <p>The same tools inside Claude Desktop, Claude Code, Cursor or any MCP client.</p>
-          <span class="card-link">Docs &rarr;</span>
-        </a>
-        <a href="/docs/web-ui/">
-          <h3>Web UI</h3>
-          <p>Chat, globe and graph in your browser, running on your own machine.</p>
-          <span class="card-link">Docs &rarr;</span>
-        </a>
-      </div>
+      <h2 id="quickstart">Quickstart</h2>
+      <p class="muted">Needs <a href="https://docs.astral.sh/uv/getting-started/installation/" rel="noopener">uv</a>. No API keys for the default flow.</p>
+      <h3>Claude Code plugin</h3>
+      <pre><code>/plugin marketplace add OpenOSINT/OpenOSINT
+/plugin install openosint@openosint
+/openosint:osint example.com</code></pre>
+      <h3>Any agent</h3>
+      <pre><code>npx skills add OpenOSINT/OpenOSINT</code></pre>
+      <h3>MCP server and pip</h3>
+      <pre><code>claude mcp add openosint -- uvx --from openosint openosint-mcp
+pip install openosint &amp;&amp; openosint exposure example.com</code></pre>
+      <p>Details: <a href="/docs/agent-skill/">Agent Skill and plugin</a> &middot; <a href="/docs/mcp/">MCP clients</a> &middot; <a href="/docs/cli/">CLI reference</a> &middot; <a href="/docs/web-ui/">Web UI</a> &middot; <a href="/docs/install/">Install</a></p>
     </div>
   </section>
 

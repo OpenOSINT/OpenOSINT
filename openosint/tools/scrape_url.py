@@ -15,7 +15,7 @@ the HTTP status code of the /request call itself.
 Requires BRIGHTDATA_API_KEY and BRIGHTDATA_UNLOCKER_ZONE environment variables.
 
 OpenOSINT earns a referral commission if you sign up through our link.
-Free tier: 5,000 requests/month — see openosint.brightdata.BRIGHTDATA_LINK_CLI
+Free tier: 5,000 requests/month — see openosint.brightdata.referral_link
 
 # TODO: Future PR — add search_profile_social tool for social-media profile
 #       extraction once ToS and rate-limit guidance is confirmed with Bright Data.
@@ -30,8 +30,8 @@ import re
 
 import requests
 
-from openosint.brightdata import BRIGHTDATA_LINK_CLI
-from openosint.settings_catalog import missing_from, missing_keys_message
+from openosint.brightdata_response import Kind, classify
+from openosint.settings_catalog import missing_from, missing_keys_extra, missing_keys_message
 from openosint.tool_policy import requires_active
 from openosint.tools.exceptions import OSINTError, ToolExecutionError
 
@@ -46,8 +46,13 @@ def _is_valid_url(url: str) -> bool:
     return bool(_URL_RE.match(url.strip()))
 
 
-def _fetch_unlocker(url: str, api_key: str, zone: str, timeout: int) -> str:
-    """Return the markdown body string directly (format="raw" means no envelope)."""
+def _fetch_unlocker(url: str, api_key: str, zone: str, timeout: int) -> tuple[int | None, str]:
+    """Return (target's own HTTP status if it was not a success, markdown body).
+
+    format="raw" means no envelope: the body is the page. A block (CAPTCHA, anti-bot page) or a
+    Bright Data/account failure raises; the target's own 404/410/401/5xx is returned, because on
+    an OSINT target a removed page or profile is itself a finding.
+    """
     try:
         response = requests.post(
             _API_URL,
@@ -61,24 +66,40 @@ def _fetch_unlocker(url: str, api_key: str, zone: str, timeout: int) -> str:
     except requests.RequestException as exc:
         raise OSINTError(f"Network error querying Bright Data Web Unlocker: {exc}") from exc
 
-    if response.status_code == 401:
-        raise OSINTError(
-            f"Bright Data Web Unlocker: invalid API key. Get a key: {BRIGHTDATA_LINK_CLI}"
-        )
-    if response.status_code == 403:
-        raise OSINTError("Bright Data Web Unlocker: forbidden — check zone permissions.")
-    if response.status_code == 429:
-        raise OSINTError("Bright Data Web Unlocker: rate limit exceeded.")
-    if response.status_code != 200:
-        raise ToolExecutionError(
-            f"Bright Data Web Unlocker returned HTTP {response.status_code}."
-        )
+    error = classify(
+        response,
+        api_key=api_key,
+        zone=zone,
+        zone_env="BRIGHTDATA_UNLOCKER_ZONE",
+        product="Web Unlocker",
+    )
+    target_status = None
+    if error is not None:
+        if error.kind is not Kind.TARGET_STATUS:
+            raise error
+        target_status = error.status_code
+    elif response.status_code != 200:  # 2xx other than 200 carries no page
+        raise ToolExecutionError(f"Bright Data Web Unlocker returned HTTP {response.status_code}.")
 
     # format="raw": body is the plain markdown string — do not json.parse it
-    return response.text
+    return target_status, response.text
 
 
-@requires_active("scrape_url")
+_REQUIRED_SETTINGS = ["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"]
+
+
+def also_needed(
+    url: str = "",
+    timeout_seconds: int = _DEFAULT_TIMEOUT,
+    *,
+    api_keys: dict[str, str] | None = None,
+) -> str:
+    """Setup guidance to add to a refusal (passive mode) when the Bright Data settings are missing too, else ""."""
+    missing = missing_from(_REQUIRED_SETTINGS, api_keys, os.environ)
+    return missing_keys_extra("scrape_url", missing) if missing else ""
+
+
+@requires_active("scrape_url", also_needed=also_needed)
 async def run_scrape_url_osint(
     url: str,
     timeout_seconds: int = _DEFAULT_TIMEOUT,
@@ -104,7 +125,7 @@ async def run_scrape_url_osint(
         Markdown content with a URL header line, or descriptive error message.
     """
     _k = api_keys or {}
-    missing = missing_from(["BRIGHTDATA_API_KEY", "BRIGHTDATA_UNLOCKER_ZONE"], _k, os.environ)
+    missing = missing_from(_REQUIRED_SETTINGS, _k, os.environ)
     if missing:
         return missing_keys_message("scrape_url", missing)
     api_key = _k.get("BRIGHTDATA_API_KEY") or os.environ["BRIGHTDATA_API_KEY"]
@@ -116,9 +137,12 @@ async def run_scrape_url_osint(
 
     logger.info("Starting Web Unlocker fetch for: %s", url)
     try:
-        markdown = await asyncio.to_thread(_fetch_unlocker, url, api_key, zone, timeout_seconds)
+        target_status, markdown = await asyncio.to_thread(
+            _fetch_unlocker, url, api_key, zone, timeout_seconds
+        )
         content = markdown.strip() if markdown.strip() else "(empty response body)"
-        result = f"[Web Unlocker] URL: {url}\n\n{content}"
+        status_line = f"\n[Target returned HTTP {target_status}]" if target_status else ""
+        result = f"[Web Unlocker] URL: {url}{status_line}\n\n{content}"
         logger.info("Web Unlocker fetch complete for: %s", url)
         return result
     except OSINTError as exc:

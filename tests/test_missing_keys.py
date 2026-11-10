@@ -79,10 +79,12 @@ def test_catalog_form_lists_the_ai_provider_first_and_every_key_has_a_link():
 
 
 def test_sponsor_and_referral_links_carry_utm_parameters():
-    urls = {s.key: s.url for s in SETTINGS}
+    from openosint.brightdata import resolve
+
+    urls = {s.key: resolve(s.url) for s in SETTINGS}
 
     assert "utm_source=openosint" in urls["IP2LOCATION_API_KEY"]
-    assert "utm_source=" in urls["BRIGHTDATA_API_KEY"]
+    assert "utm_source=openosint" in urls["BRIGHTDATA_API_KEY"]
 
 
 async def test_web_pre_check_still_reports_key_required_json(monkeypatch):

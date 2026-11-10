@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OpenOSINT documentation | CLI, MCP server and web UI</title>
-<meta name="description" content="Docs for OpenOSINT 2.36.1, an MIT-licensed engine with 21 passive OSINT tools. Use it as a CLI, an MCP server or a local web UI.">
+<meta name="description" content="Docs for OpenOSINT 2.38.0, an MIT-licensed engine with 21 passive OSINT tools. Use it as a CLI, an MCP server or a local web UI.">
 <link rel="canonical" href="https://openosint.tech/docs/">
 <meta name="theme-color" content="#16181b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -16,16 +16,16 @@
 <meta property="og:site_name" content="OpenOSINT">
 <meta property="og:type" content="website">
 <meta property="og:title" content="OpenOSINT documentation | CLI, MCP server and web UI">
-<meta property="og:description" content="Docs for OpenOSINT 2.36.1, an MIT-licensed engine with 21 passive OSINT tools. Use it as a CLI, an MCP server or a local web UI.">
+<meta property="og:description" content="Docs for OpenOSINT 2.38.0, an MIT-licensed engine with 21 passive OSINT tools. Use it as a CLI, an MCP server or a local web UI.">
 <meta property="og:url" content="https://openosint.tech/docs/">
-<meta property="og:image" content="https://openosint.tech/assets/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="OpenOSINT: open-source engine for passive checks of public information">
+<meta property="og:image" content="https://openosint.tech/assets/social-card.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="OpenOSINT documentation | CLI, MCP server and web UI">
-<meta name="twitter:description" content="Docs for OpenOSINT 2.36.1, an MIT-licensed engine with 21 passive OSINT tools. Use it as a CLI, an MCP server or a local web UI.">
-<meta name="twitter:image" content="https://openosint.tech/assets/og.png">
+<meta name="twitter:description" content="Docs for OpenOSINT 2.38.0, an MIT-licensed engine with 21 passive OSINT tools. Use it as a CLI, an MCP server or a local web UI.">
+<meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -93,6 +93,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/" aria-current="page">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -101,16 +102,18 @@
     <li><a href="/docs/mcp/">MCP server</a></li>
     <li><a href="/docs/web-ui/">Web UI</a></li>
     <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
   </ul>
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
     <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
   </ul>
-  <p class="docs-version">Version 2.36.1</p>
+  <p class="docs-version">Version 2.38.0</p>
 </div>
 </nav>
     <article class="prose">
@@ -121,6 +124,7 @@
   <h2>Get started</h2>
   <ul>
     <li><a href="/docs/" aria-current="page">Overview</a></li>
+    <li><a href="/docs/agent-skill/">Agent Skill &amp; plugin</a></li>
     <li><a href="/docs/install/">Install</a></li>
     <li><a href="/docs/quickstart/">Quickstart</a></li>
   </ul>
@@ -129,16 +133,18 @@
     <li><a href="/docs/mcp/">MCP server</a></li>
     <li><a href="/docs/web-ui/">Web UI</a></li>
     <li><a href="/docs/configuration/">Configuration</a></li>
+    <li><a href="/docs/bright-data/">Bright Data</a></li>
   </ul>
   <h2>Reference</h2>
   <ul>
     <li><a href="/tools/">Tools reference</a></li>
+    <li><a href="/docs/cli/">CLI reference</a></li>
     <li><a href="/docs/safety/">Safety</a></li>
     <li><a href="/docs/exposure/">Exposure report</a></li>
     <li><a href="/docs/entity-graph/">Entity graph</a></li>
     <li><a href="/docs/troubleshooting/">Troubleshooting</a></li>
   </ul>
-  <p class="docs-version">Version 2.36.1</p>
+  <p class="docs-version">Version 2.38.0</p>
 </div>
 
       </details>
@@ -150,7 +156,7 @@
       </nav>
       <h1>OpenOSINT documentation</h1>
       <p>OpenOSINT is an open-source engine for passive checks of public information. It wraps 21 investigation tools (DNS, WHOIS and RDAP, IP intelligence, breach lookups, GitHub, news and more) behind one interface. An AI agent can pick and chain the tools for you, or you can run each one directly.</p>
-<p>This documentation covers version <strong>2.36.1</strong>. The code is MIT licensed and needs Python 3.10 or newer.</p>
+<p>This documentation covers version <strong>2.38.0</strong>. The code is MIT licensed and needs Python 3.10 or newer.</p>
 <h2 id="who-it-is-for">Who it is for</h2>
 <p>Security researchers, analysts and developers who want repeatable lookups on domains, IP addresses, emails and usernames, with every finding shown next to the tool call that produced it. Use it only on targets you are allowed to investigate; see <a href="/docs/safety/">Safety</a>.</p>
 <h2 id="three-ways-to-use-it">Three ways to use it</h2>
@@ -167,12 +173,13 @@
 </ul>
 <h2 id="where-to-go-next">Where to go next</h2>
 <ol>
-<li><a href="/docs/install/">Install</a> it.</li>
+<li>Using an AI agent? Add the <a href="/docs/agent-skill/">Agent Skill or Claude Code plugin</a>.</li>
+<li><a href="/docs/install/">Install</a> the CLI.</li>
 <li>Run your first investigation in the <a href="/docs/quickstart/">quickstart</a>.</li>
-<li>Browse the <a href="/tools/">tools reference</a>.</li>
+<li>Browse the <a href="/docs/cli/">CLI reference</a> and the <a href="/tools/">tools reference</a>.</li>
 </ol>
 <p>For a hosted version with no setup, see <a href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=docs">Monitor and Diligence</a>.</p>
-      <nav class="pager" aria-label="Previous and next page"><a class="next" href="/docs/install/" rel="next"><small>Next</small>Install</a>
+      <nav class="pager" aria-label="Previous and next page"><a class="next" href="/docs/agent-skill/" rel="next"><small>Next</small>Agent Skill &amp; plugin</a>
       </nav>
       <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/index.md" rel="noopener">Edit this page on GitHub</a></p>
     </article>

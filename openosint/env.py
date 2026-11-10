@@ -15,9 +15,10 @@ set a variable wins:
   B. the data-directory config, `$OPENOSINT_HOME/config.env` (where the web UI
      saves keys; see openosint/config_store.py)
   C. legacy `.env` files, resolved as below
-A legacy `.env` at the package root, when it is the one that would be loaded, is
-copied into B once on first run (see `config_store.migrate_legacy_env`); the old
-file stays and keeps working.
+A legacy `.env` is read in place and never copied implicitly. When the package-root
+one is loaded and B does not exist yet, a one-line stderr hint points at the explicit
+`openosint config import`. When B and the legacy file give a variable different
+values, B wins and a stderr warning names both files and the variable (never values).
 
 Legacy `.env` resolution (first match wins):
   1. `$OPENOSINT_ENV_FILE`, if set — fail loudly on a bad path rather than
@@ -48,9 +49,14 @@ import os
 import sys
 from pathlib import Path
 
-from dotenv import find_dotenv, load_dotenv
+from dotenv import dotenv_values, find_dotenv, load_dotenv
 
-from openosint.config_store import config_path, migrate_legacy_env
+from openosint.config_store import (
+    config_path,
+    legacy_candidates,
+    read_config,
+    shadowed_keys,
+)
 from openosint.settings_catalog import SAVEABLE_NAMES
 
 _loaded_path: str | None = None
@@ -106,6 +112,39 @@ def _resolve_path(*, prefer_package_root: bool = False) -> str:
     return ""
 
 
+def _hint_import(legacy: Path, config_file: Path) -> None:
+    count = len(legacy_candidates(legacy, SAVEABLE_NAMES))
+    if count:
+        print(
+            f"[*] {count} setting(s) in {legacy} are not saved to {config_file} "
+            "(not copied automatically). Run `openosint config import` to copy them.",
+            file=sys.stderr,
+        )
+
+
+def _warn_shadowed(config_file: Path, legacy: Path, preset: set[str]) -> None:
+    """Warn, by name only, about variables where config.env silently beats the .env."""
+    if not config_file.is_file():
+        return
+    try:
+        legacy_values = {k: v for k, v in dotenv_values(legacy).items() if v is not None}
+    except OSError:
+        return
+    names = [k for k in shadowed_keys(read_config(), legacy_values) if k not in preset]
+    if names:
+        print(
+            f"[!] {config_file} overrides {legacy} for {', '.join(names)}: the two files "
+            f"hold different values and the {config_file.name} one is used. Update or remove "
+            "that entry in config.env if the .env value is the one you want.",
+            file=sys.stderr,
+        )
+
+
+def loaded_env_path() -> Path | None:
+    """The legacy .env that load_env() picked, if any (no loading is triggered)."""
+    return Path(_loaded_path) if _loaded_path else None
+
+
 def load_env(*, prefer_package_root: bool = False) -> Path | None:
     """Load `.env` once per process and return the path loaded, or None.
 
@@ -124,23 +163,23 @@ def load_env(*, prefer_package_root: bool = False) -> Path | None:
 
     path = _resolve_path(prefer_package_root=prefer_package_root)
 
-    # Migrate only a package-root .env that this process would actually have loaded
-    # (not one shadowed by a cwd or OPENOSINT_ENV_FILE choice), so migrating never
-    # changes which legacy file wins.
+    config_file = config_path()
     package_env = Path(__file__).resolve().parent.parent / ".env"
-    if path and Path(path).resolve() == package_env.resolve():
-        migrate_legacy_env(package_env, SAVEABLE_NAMES)
+    preset = {name for name, value in os.environ.items() if value.strip()}
 
     # Config first: with override=False the first loader to set a variable wins,
     # so this is what puts it above every legacy .env.
-    config_file = config_path()
-    if config_file.is_file():
+    config_exists = config_file.is_file()
+    if config_exists:
         _load_file(config_file, "config")
         print(f"[*] Loaded config: {config_file}", file=sys.stderr)
 
     if path:
         _load_file(path, "legacy")
         print(f"[*] Loaded .env: {path}", file=sys.stderr)
+        _warn_shadowed(config_file, Path(path), preset)
+        if not config_exists and Path(path).resolve() == package_env.resolve():
+            _hint_import(Path(path), config_file)
 
     _loaded_path = path or None
     _load_attempted = True

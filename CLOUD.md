@@ -2,7 +2,7 @@
 
 Hosted REST and MCP API for IP and domain infrastructure intelligence.  One call, one bill, no infra to manage.  Hosted on Heroku.  Access is invite-only — contact commercial@openosint.tech; there is no self-serve checkout or billing processor wired up.
 
-**Scope:** IP geolocation, ISP/ASN, proxy/VPN/datacenter/Tor detection, IP abuse reputation, DNS records, subdomain enumeration.  This service does **not** search for personal data about individuals and does not use leaked or breached data sources.
+**Scope:** IP geolocation, ISP/ASN, proxy/VPN/datacenter/Tor detection, IP abuse reputation, DNS records, subdomain enumeration.  Not designed for people search; prohibited by the acceptable use policy; all activity is audit-logged.  It does not use leaked or breached data sources.
 
 ---
 

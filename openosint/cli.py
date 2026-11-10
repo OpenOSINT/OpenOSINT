@@ -45,6 +45,8 @@ from openosint.tool_policy import (  # noqa: E402
     humanize,
     is_tool_enabled,
 )
+from openosint.tools.generate_dorks import run_dork_osint  # noqa: E402
+from openosint.tools.scrape_url import also_needed as scrape_also_needed  # noqa: E402
 from openosint.tools.scrape_url import run_scrape_url_osint  # noqa: E402
 from openosint.tools.search_abuseipdb import run_abuseipdb_osint  # noqa: E402
 from openosint.tools.search_breach import run_breach_osint  # noqa: E402
@@ -53,12 +55,16 @@ from openosint.tools.search_dns import run_dns_osint  # noqa: E402
 from openosint.tools.search_dorks_live import run_dorks_live_osint  # noqa: E402
 from openosint.tools.search_email import run_email_osint  # noqa: E402
 from openosint.tools.search_footprint import run_footprint_osint  # noqa: E402
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence  # noqa: E402
 from openosint.tools.search_github import run_github_osint  # noqa: E402
+from openosint.tools.search_ip import run_ip_osint  # noqa: E402
 from openosint.tools.search_ip2location import run_ip2location_osint  # noqa: E402
 from openosint.tools.search_paste import run_paste_osint  # noqa: E402
+from openosint.tools.search_rdap import run_rdap_osint  # noqa: E402
 from openosint.tools.search_shodan import run_shodan_osint  # noqa: E402
 from openosint.tools.search_username import run_username_osint  # noqa: E402
 from openosint.tools.search_virustotal import run_virustotal_osint  # noqa: E402
+from openosint.tools.search_whois import run_whois_osint  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -404,6 +410,20 @@ def _build_parser() -> argparse.ArgumentParser:
         help="DNS query timeout (default: 10).",
     )
 
+    # whois / rdap / gdelt / dorks: keyless, passive wrappers (no AI)
+    for name, arg, metavar, help_text in _KEYLESS_COMMANDS:
+        keyless_cmd = subparsers.add_parser(name, help=help_text)
+        keyless_cmd.add_argument(arg, type=str, metavar=metavar)
+        if name != "dorks":
+            keyless_cmd.add_argument(
+                "-t",
+                "--timeout",
+                type=int,
+                default=30,
+                metavar="SECONDS",
+                help="Request timeout (default: 30).",
+            )
+
     # exposure
     exposure_cmd = subparsers.add_parser(
         "exposure",
@@ -657,6 +677,46 @@ def _build_parser() -> argparse.ArgumentParser:
 
     history_sub.add_parser("clear", help="Delete all session history files.")
 
+    # config
+    config_parser = subparsers.add_parser(
+        "config",
+        help="Manage saved settings in ~/.openosint/config.env.",
+    )
+    config_sub = config_parser.add_subparsers(dest="config_action", metavar="action", required=True)
+    config_import = config_sub.add_parser(
+        "import",
+        help="Copy settings from a legacy .env into config.env (never done automatically).",
+    )
+    config_import.add_argument(
+        "--from",
+        dest="config_source",
+        metavar="PATH",
+        default=None,
+        help="The .env to read (default: the .env this run loaded).",
+    )
+    config_import.add_argument(
+        "--only",
+        metavar="KEY[,KEY...]",
+        default=None,
+        help="Copy only these setting names.",
+    )
+    config_import.add_argument(
+        "--yes",
+        action="store_true",
+        help="Do not ask for confirmation (required when stdin is not a terminal).",
+    )
+
+    # setup
+    setup_parser = subparsers.add_parser(
+        "setup",
+        help="Guided, opt-in setup for an integration.",
+    )
+    setup_sub = setup_parser.add_subparsers(dest="setup_target", metavar="integration", required=True)
+    setup_sub.add_parser(
+        "brightdata",
+        help="Check or create your Bright Data token and zones (asks before every change).",
+    )
+
     # sponsors
     subparsers.add_parser(
         "sponsors",
@@ -689,8 +749,18 @@ def _build_parser() -> argparse.ArgumentParser:
 # ---------------------------------------------------------------------------
 
 
-# Direct subcommands that run one non-passive tool; refused up front in passive mode.
-_COMMAND_TOOLS = {"email": "search_email", "username": "search_username", "scrape": "scrape_url"}
+# Direct subcommands that run one tool; refused up front when TOOL_POLICY disables it
+# (non-passive tools in passive mode).
+_COMMAND_TOOLS = {
+    "email": "search_email",
+    "username": "search_username",
+    "scrape": "scrape_url",
+    "whois": "search_whois",
+    "rdap": "search_rdap",
+    "ip": "search_ip",
+    "gdelt": "search_gdelt_geo",
+    "dorks": "generate_dorks",
+}
 
 
 def _print_result(result: str) -> None:
@@ -845,6 +915,42 @@ async def _handle_github(
     result = await run_github_osint(query=query, timeout_seconds=timeout)
     if json_output:
         _emit_json(format_tool_result("search_github", query, result))
+    else:
+        _print_result(result)
+
+
+async def _run_gdelt(query: str, timeout: int) -> str:
+    # Raw GeoJSON is for the web globe; drop it from terminal/JSON output.
+    return split_geojson_fence(await run_gdelt_geo_osint(query=query, timeout_seconds=timeout))[0]
+
+
+# (command, positional dest, metavar, help) for the keyless subcommands
+_KEYLESS_COMMANDS = (
+    ("whois", "domain", "DOMAIN", "WHOIS registration data for a domain (no AI, no key)."),
+    ("rdap", "domain", "DOMAIN", "RDAP registration data for a domain (no AI, no key)."),
+    ("ip", "address", "ADDRESS", "IP geolocation and ASN via ipinfo.io (no AI; IPINFO_TOKEN optional)."),
+    ("gdelt", "query", "QUERY", "News mentions via GDELT (no AI, no key)."),
+    ("dorks", "target", "TARGET", "Google dork URLs for a target; sends nothing (no AI, no key)."),
+)
+
+# command -> (tool name, runner(target, timeout))
+_KEYLESS_HANDLERS = {
+    "whois": ("search_whois", lambda t, s: run_whois_osint(domain=t, timeout_seconds=s)),
+    "rdap": ("search_rdap", lambda t, s: run_rdap_osint(domain=t, timeout_seconds=s)),
+    "ip": ("search_ip", lambda t, s: run_ip_osint(ip=t, timeout_seconds=s)),
+    "gdelt": ("search_gdelt_geo", _run_gdelt),
+    "dorks": ("generate_dorks", lambda t, s: run_dork_osint(target=t)),
+}
+
+
+async def _handle_keyless(
+    command: str, target: str, timeout: int, json_output: bool = False
+) -> None:
+    tool, runner = _KEYLESS_HANDLERS[command]
+    print(f"[*] {command}: {target}", file=sys.stderr)
+    result = await runner(target, timeout)
+    if json_output:
+        _emit_json(format_tool_result(tool, target, result))
     else:
         _print_result(result)
 
@@ -1121,6 +1227,35 @@ async def _handle_web(
 
 
 # ---------------------------------------------------------------------------
+# Config command handler
+# ---------------------------------------------------------------------------
+
+
+def _handle_config(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    from openosint.config_cli import run_config_import
+    from openosint.env import loaded_env_path
+
+    source = Path(args.config_source).expanduser() if args.config_source else loaded_env_path()
+    only = [n.strip() for n in args.only.split(",") if n.strip()] if args.only else None
+    sys.exit(
+        run_config_import(source, only, args.yes, interactive=sys.stdin.isatty() and sys.stdout.isatty())
+    )
+
+
+# ---------------------------------------------------------------------------
+# Setup command handler
+# ---------------------------------------------------------------------------
+
+
+def _handle_setup() -> None:
+    from openosint.setup_brightdata import run_setup_brightdata
+
+    sys.exit(run_setup_brightdata(interactive=sys.stdin.isatty() and sys.stdout.isatty()))
+
+
+# ---------------------------------------------------------------------------
 # History command handler
 # ---------------------------------------------------------------------------
 
@@ -1182,7 +1317,8 @@ async def _async_main() -> None:
         os.environ[ENV_ALLOW_ACTIVE] = "1"
     disabled_tool = _COMMAND_TOOLS.get(args.command or "")
     if disabled_tool and not is_tool_enabled(disabled_tool):
-        print(humanize(disabled_result(disabled_tool)), file=sys.stderr)
+        extra = scrape_also_needed() if disabled_tool == "scrape_url" else ""
+        print(humanize(disabled_result(disabled_tool, also_needed=extra)), file=sys.stderr)
         sys.exit(2)
 
     set_cli_proxy_url(getattr(args, "proxy", None))
@@ -1264,6 +1400,16 @@ async def _async_main() -> None:
         await _handle_github(args.query, args.timeout, json_output=json_output)
     elif args.command == "dns":
         await _handle_dns(args.domain, args.timeout, json_output=json_output)
+    elif args.command in _KEYLESS_HANDLERS:
+        await _handle_keyless(
+            args.command,
+            getattr(args, "domain", None)
+            or getattr(args, "address", None)
+            or getattr(args, "query", None)
+            or args.target,
+            getattr(args, "timeout", 30),
+            json_output=json_output,
+        )
     elif args.command == "exposure":
         await _handle_exposure(
             args.domain, json_output=json_output, report_path=args.report, lang=args.lang, lookalikes=args.lookalikes, resolver=args.resolver,
@@ -1304,6 +1450,10 @@ async def _async_main() -> None:
         )
     elif args.command == "history":
         _handle_history(args)
+    elif args.command == "config":
+        _handle_config(args)
+    elif args.command == "setup":
+        _handle_setup()
     elif args.command == "sponsors":
         _handle_sponsors()
     elif args.command == "proxy-test":

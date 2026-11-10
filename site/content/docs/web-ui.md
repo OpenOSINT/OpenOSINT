@@ -4,7 +4,7 @@ label: "Web UI"
 seo_title: "OpenOSINT web UI: chat, globe and graph on your machine"
 description: "Run openosint web to get a local browser app with AI chat, a worldwide news globe and a graph view. Default port 8080, loopback only, no account needed."
 group: Use
-order: 5
+order: 6
 ---
 The web UI is a local browser app. It starts without any API key; keyless tools work at once and the chat needs a provider.
 
@@ -45,7 +45,19 @@ Active tools are off by default. On a local install, Settings has an "Enable act
 
 ## Reaching it by another name
 
-On a loopback bind the server only answers requests whose `Host` is `127.0.0.1`, `localhost` or `::1`, and browser requests to `/api/*` must come from the UI's own origin. If you use another host name, such as a LAN name or reverse proxy, set `OPENOSINT_ALLOWED_HOSTS=osint.lan,localhost`. A separate front end on another origin needs `OPENOSINT_ALLOWED_ORIGINS`.
+On a loopback bind the server only answers requests whose `Host` is `127.0.0.1`, `localhost` or `::1`, and browser requests to `/api/*` must come from the UI's own origin. If you use another host name, such as a LAN name or reverse proxy, set `OPENOSINT_ALLOWED_HOSTS=osint.lan,localhost`. A separate front end on another origin needs `OPENOSINT_ALLOWED_ORIGINS`. On a non-loopback bind (`--allow-remote`, Docker) the `Host` check only runs when `OPENOSINT_ALLOWED_HOSTS` is set, so set it there.
+
+### Keys follow the bind address (v2.28 and later)
+
+Bound to `127.0.0.1` or `localhost` (the default), keys in your `.env` work as before. Bound to any other interface (`--host 0.0.0.0`, which already requires `--allow-remote`), the web UI never uses a key from your environment to serve a request: every caller must supply their own, and breach lookups (`search_breach`) are disabled outright. This applies regardless of any environment variable, including `OPENOSINT_DEMO_MODE`, which can only add restriction. If you were exposing the web UI on a LAN with your own keys and no per-caller authentication in front of it, that pattern no longer works.
+
+### Behind a reverse proxy
+
+A loopback bind only means the OS accepted the connection from this machine; it says nothing about who can reach it if nginx, Caddy, a Docker or Kubernetes sidecar, or a tunnel forwards requests from elsewhere. By default, a request carrying proxy-forwarding headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `Forwarded`, `CF-Connecting-IP`) is treated like a non-loopback bind: your local keys are never used, breach lookups are blocked, and the caller is told why.
+
+To make requests relayed by your own proxy behave like a normal local instance, set `OPENOSINT_TRUSTED_PROXY=true`. This is separate from the older `TRUSTED_PROXY`, which only affects which IP a rate-limit bucket is attributed to; reusing it would have silently upgraded a rate-limit-only setting into one that also permits credentialed access. Setting `OPENOSINT_TRUSTED_PROXY` does not blindly trust the forwarded headers' content: internally inconsistent values (for example two disagreeing `X-Forwarded-Proto` values on one request) are still treated as public.
+
+Setting it means you choose to serve credentialed lookups to whoever your reverse proxy relays to this instance, and you are the controller for their queries, as any operator of a hosted service is for its users. Put real authentication in front of it if "whoever the proxy relays" is broader than you intend.
 
 ## Docker
 
