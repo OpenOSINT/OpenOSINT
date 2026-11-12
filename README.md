@@ -1,7 +1,10 @@
-mcp-name: io.github.OpenOSINT/openosint
+<!-- mcp-name: io.github.OpenOSINT/openosint -->
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/logo.svg" alt="OpenOSINT" width="200" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo-light.svg" alt="OpenOSINT" width="270">
+  </picture>
   <h1>OpenOSINT</h1>
   <p><strong>OpenOSINT is an open-source OSINT agent for investigators and security researchers: 21 public-source tools behind a natural-language interface, with an MCP server.</strong></p>
 </div>
@@ -29,18 +32,22 @@ mcp-name: io.github.OpenOSINT/openosint
 Needs [`uv`](https://docs.astral.sh/uv/). No API keys for these commands.
 
 ```bash
-uvx openosint web                    # local web app with chat, graph and globe
-uvx openosint exposure example.com   # or one direct, no-AI check
+# Local web app with chat, graph and globe
+uvx openosint web
+
+# Or one direct check, no AI involved
+uvx openosint exposure example.com
 ```
 
 ```text
 Grade: B  Score: 88/100
-Checks:  email OK [passive] · registration OK [passive] · tls OK [touches target] · http_headers OK [touches target]
+Checks: email OK, registration OK (passive)
+        tls OK, http_headers OK (these touch the target)
   [LOW] DMARC has no aggregate report address (dmarc_no_rua)
   [LOW] Strict-Transport-Security header missing (hsts_missing)
 ```
 
-Real output, trimmed. More commands: [CLI reference](https://openosint.tech/docs/cli/) · [install guide](https://openosint.tech/docs/install/).
+Real output, trimmed and re-wrapped. More commands: [CLI reference](https://openosint.tech/docs/cli/) · [install guide](https://openosint.tech/docs/install/).
 
 ## What you can do
 
@@ -94,7 +101,8 @@ Agents and MCP clients are only offered tools that query third-party sources or 
 
 ```bash
 claude mcp add openosint -- uvx --from openosint openosint-mcp
-npx skills add OpenOSINT/OpenOSINT   # Codex, Gemini CLI, Cursor, other Agent Skills clients
+# Codex, Gemini CLI, Cursor and other Agent Skills clients
+npx skills add OpenOSINT/OpenOSINT
 ```
 
 ![OpenOSINT in Claude Code: add the marketplace, install the plugin, run /openosint:osint example.com and get a report where every finding cites its tool call](assets/demo/skill-demo.gif)
