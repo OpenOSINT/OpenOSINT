@@ -33,4 +33,16 @@ Security researchers, analysts and developers who want repeatable lookups on dom
 3. Run your first investigation in the [quickstart](/docs/quickstart/).
 4. Browse the [CLI reference](/docs/cli/) and the [tools reference](/tools/).
 
-For a hosted version with no setup, see [Monitor and Diligence](https://app.openosint.tech/?utm_source=openosint.tech&utm_medium=referral&utm_campaign=docs).
+For a hosted version with no setup, see [OpenOSINT Cloud](https://app.openosint.tech/?utm_source=docs&utm_medium=referral&utm_campaign=docs) (first check free, no account).
+
+## Compared with other tools
+
+| | Prompt-only OSINT skills | SpiderFoot | OpenOSINT |
+|---|---|---|---|
+| What runs the lookups | Nothing: the skill is instructions, and the agent improvises | Its own 200+ modules | Python tools shipped with it |
+| Breadth | Whatever the agent can reach | Much broader: 200+ modules and a correlation engine, per its README | A focused tool set |
+| Built to be driven by an agent | Yes, that is the format | Web UI or CLI, per its README | Agent Skill, Claude Code plugin, MCP server, CLI and web UI |
+| Passive/noisy labels, off by default | No | Not claimed here | Yes, per tool |
+| License | Varies | MIT | MIT |
+
+SpiderFoot is the better choice when you want a large standalone scanner. OpenOSINT is for agents that need a small set of real, labelled tools.

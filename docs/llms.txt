@@ -70,10 +70,9 @@ holehe, sherlock, sublist3r, phoneinfoga — must be present in PATH
 - [Troubleshooting](https://openosint.tech/docs/troubleshooting/) — common errors and fixes
 - [Tools reference](https://openosint.tech/tools/) — every tool, its noise level and the key it needs
 
-## Hosted products
-The engine is open source; these hosted products are built on it:
-- [OpenOSINT Monitor](https://app.openosint.tech/monitor?utm_source=llms&utm_medium=llms-txt&utm_campaign=monitor) — weekly external checks of a domain's email authentication, TLS, security headers and lookalike domains, with an email when something changes. Free for one domain.
-- [OpenOSINT Diligence](https://app.openosint.tech/diligence?utm_source=llms&utm_medium=llms-txt&utm_campaign=diligence) — official company records compared with the company's public footprint, each signal with its source and retrieval time.
+## Hosted version
+The engine is open source; a hosted version is built on it:
+- [OpenOSINT Cloud](https://app.openosint.tech/?utm_source=llms&utm_medium=llms-txt&utm_campaign=llms) — chat about a domain, an IP address or a company, with a source on every claim. First check free, no account.
 
 ## License
 MIT
