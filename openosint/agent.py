@@ -7,6 +7,7 @@ Implements the agentic loop using either:
   - A local Ollama model (``provider="ollama"``).
   - Any OpenAI-compatible chat-completions endpoint (``provider="openai"``) —
     LiteLLM, llama-swap, vLLM, LM Studio, etc.
+  - MiniMax text models on a selected global or CN endpoint (``provider="minimax"``).
 
 All agents share the same ``run()`` interface and return an ``AgentResponse``.
 No manual JSON parsing.  The model issues hard stops when it needs a tool,
@@ -24,27 +25,6 @@ from typing import Any
 
 import anthropic
 
-from openosint.tools.generate_dorks import run_dork_osint
-from openosint.tools.scrape_url import run_scrape_url_osint
-from openosint.tools.search_abuseipdb import run_abuseipdb_osint
-from openosint.tools.search_breach import run_breach_osint
-from openosint.tools.search_censys import run_censys_osint
-from openosint.tools.search_dns import run_dns_osint
-from openosint.tools.search_rdap import run_rdap_osint
-from openosint.tools.search_domain import run_domain_osint
-from openosint.tools.search_dorks_live import run_dorks_live_osint
-from openosint.tools.search_email import run_email_osint
-from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
-from openosint.tools.search_github import run_github_osint
-from openosint.tools.search_ip import run_ip_osint
-from openosint.tools.search_ip2location import run_ip2location_osint
-from openosint.tools.search_paste import run_paste_osint
-from openosint.tools.search_phone import run_phone_osint
-from openosint.tools.search_shodan import run_shodan_osint
-from openosint.tools.search_username import run_username_osint
-from openosint.tools.search_virustotal import run_virustotal_osint
-from openosint.tools.search_whois import run_whois_osint
-from openosint.tools.search_footprint import run_footprint_osint
 from openosint.pivot import investigate_graph_for_agent
 from openosint.tool_policy import (
     ToolBudget,
@@ -54,6 +34,27 @@ from openosint.tool_policy import (
     is_tool_enabled,
     use_budget,
 )
+from openosint.tools.generate_dorks import run_dork_osint
+from openosint.tools.scrape_url import run_scrape_url_osint
+from openosint.tools.search_abuseipdb import run_abuseipdb_osint
+from openosint.tools.search_breach import run_breach_osint
+from openosint.tools.search_censys import run_censys_osint
+from openosint.tools.search_dns import run_dns_osint
+from openosint.tools.search_domain import run_domain_osint
+from openosint.tools.search_dorks_live import run_dorks_live_osint
+from openosint.tools.search_email import run_email_osint
+from openosint.tools.search_footprint import run_footprint_osint
+from openosint.tools.search_gdelt_geo import run_gdelt_geo_osint, split_geojson_fence
+from openosint.tools.search_github import run_github_osint
+from openosint.tools.search_ip import run_ip_osint
+from openosint.tools.search_ip2location import run_ip2location_osint
+from openosint.tools.search_paste import run_paste_osint
+from openosint.tools.search_phone import run_phone_osint
+from openosint.tools.search_rdap import run_rdap_osint
+from openosint.tools.search_shodan import run_shodan_osint
+from openosint.tools.search_username import run_username_osint
+from openosint.tools.search_virustotal import run_virustotal_osint
+from openosint.tools.search_whois import run_whois_osint
 
 logger = logging.getLogger(__name__)
 
@@ -982,9 +983,14 @@ async def _process_openai_tool_turn(
     tool_calls: list[ToolCall],
     on_tool_call: Any,
     openai_msg: Any,
+    preserve_response: bool = False,
 ) -> None:
     """Execute all tool calls from one OpenAI response and append results to messages."""
-    messages.append(_build_openai_assistant_message(openai_msg))
+    messages.append(
+        openai_msg.model_dump(exclude_none=True)
+        if preserve_response
+        else _build_openai_assistant_message(openai_msg)
+    )
     for openai_tool_call in openai_msg.tool_calls:
         tool_name = openai_tool_call.function.name
         raw_args = openai_tool_call.function.arguments
@@ -1016,6 +1022,11 @@ class OpenAICompatibleAgent(_BudgetedRun):
     tool_call → execute real binary → feed real output back → loop until done.
     """
 
+    provider_name = "OpenAI-compatible"
+    api_key_env = "OPENAI_API_KEY"
+    retry_command = "openosint --provider openai"
+    _preserve_response_history = False
+
     def __init__(
         self,
         model: str = "gpt-4o-mini",
@@ -1025,7 +1036,7 @@ class OpenAICompatibleAgent(_BudgetedRun):
         self.model = model
         self.base_url = base_url
         # Many local servers ignore the key, but the SDK requires a non-empty string.
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY", "") or "sk-no-key-required"
+        self.api_key = api_key or os.environ.get(self.api_key_env, "") or "sk-no-key-required"
         self.history: list[dict[str, Any]] = []
 
     def clear_history(self) -> None:
@@ -1041,7 +1052,7 @@ class OpenAICompatibleAgent(_BudgetedRun):
                 error=(
                     "The 'openai' Python library is not installed.\n"
                     "Install it with:  pip install openai\n\n"
-                    "Then retry:  openosint --provider openai"
+                    f"Then retry:  {self.retry_command}"
                 ),
             )
 
@@ -1067,31 +1078,46 @@ class OpenAICompatibleAgent(_BudgetedRun):
                     return AgentResponse(
                         content="",
                         error=(
-                            f"OpenAI endpoint returned no choices from {self.base_url}. "
+                            f"{self.provider_name} endpoint returned no choices "
+                            f"from {self.base_url}. "
                             "Verify the model supports tool/function calling."
                         ),
                     )
                 msg = response.choices[0].message
                 if not msg.tool_calls:
                     text = msg.content or ""
-                    self.history.append({"role": "assistant", "content": text})
+                    if self._preserve_response_history:
+                        # MiniMax requires complete reasoning and tool history on later turns.
+                        self.history = [*messages[1:], msg.model_dump(exclude_none=True)]
+                    else:
+                        self.history.append({"role": "assistant", "content": text})
                     return AgentResponse(content=text, tool_calls=tool_calls)
-                await _process_openai_tool_turn(messages, tool_calls, on_tool_call, msg)
+                await _process_openai_tool_turn(
+                    messages, tool_calls, on_tool_call, msg, self._preserve_response_history
+                )
+                if self._preserve_response_history:
+                    self.history = messages[1:]
                 if budget.denied:
                     return _capped_response(budget, tool_calls, msg.content or "", self.history)
         except openai.AuthenticationError:
             return AgentResponse(
                 content="",
                 error=(
-                    f"Authentication failed for the OpenAI-compatible endpoint at "
-                    f"{self.base_url}.  Check your API key (OPENAI_API_KEY)."
+                    f"Authentication failed for the {self.provider_name} endpoint at "
+                    f"{self.base_url}.  Check your API key ({self.api_key_env})."
                 ),
             )
         except openai.APIConnectionError:
             return AgentResponse(
                 content="",
                 error=(
-                    f"[ERROR] Cannot reach the OpenAI-compatible server at {self.base_url}\n\n"
+                    (
+                        f"[ERROR] Cannot reach the {self.provider_name} server at {self.base_url}\n\n"
+                        "Verify the base URL is correct and the server is running, then retry:\n"
+                        f"  {self.retry_command}"
+                    )
+                    if self.provider_name == "MiniMax"
+                    else f"[ERROR] Cannot reach the OpenAI-compatible server at {self.base_url}\n\n"
                     "This provider expects a self-hosted OpenAI-compatible gateway "
                     "(LiteLLM, vLLM, LM Studio, llama.cpp, …) — it does NOT talk to "
                     "OpenAI's own API by default. Verify your server is running, e.g.:\n"
@@ -1107,3 +1133,45 @@ class OpenAICompatibleAgent(_BudgetedRun):
         except Exception as exc:
             logger.exception("Unexpected error in OpenAI-compatible agent loop.")
             return AgentResponse(content="", error=str(exc))
+
+
+# ---------------------------------------------------------------------------
+# MiniMax agent
+# ---------------------------------------------------------------------------
+
+
+MINIMAX_MODELS = ("MiniMax-M3.1-Flash", "MiniMax-M3")
+MINIMAX_BASE_URLS = {
+    "global": "https://api.minimax.io/v1",
+    "cn": "https://api.minimaxi.com/v1",
+}
+
+
+class MiniMaxAgent(OpenAICompatibleAgent):
+    """OpenAI-compatible MiniMax agent with built-in model and region settings."""
+
+    provider_name = "MiniMax"
+    api_key_env = "MINIMAX_API_KEY"
+    retry_command = "openosint --provider minimax"
+    _preserve_response_history = True
+
+    def __init__(
+        self,
+        model: str = MINIMAX_MODELS[0],
+        region: str = "global",
+        api_key: str | None = None,
+    ) -> None:
+        try:
+            base_url = MINIMAX_BASE_URLS[region]
+        except KeyError as exc:
+            supported_regions = ", ".join(MINIMAX_BASE_URLS)
+            raise ValueError(
+                f"Unsupported MiniMax region {region!r}; choose one of: {supported_regions}."
+            ) from exc
+
+        super().__init__(
+            model=model,
+            base_url=base_url,
+            api_key=api_key,
+        )
+        self.region = region

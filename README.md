@@ -135,6 +135,11 @@ Works in Claude Desktop, Claude Code, Cursor and any MCP client. [Client configs
 
 Keys go in the web UI Settings, `~/.openosint/config.env` or the environment. [All variables](https://openosint.tech/docs/configuration/) · [CLI reference](https://openosint.tech/docs/cli/)
 
+For MiniMax in the CLI/REPL, install `openosint[openai]`, set `MINIMAX_API_KEY`,
+and run `openosint --provider minimax`. The default model is
+`MiniMax-M3.1-Flash`; use `--minimax-model MiniMax-M3` to select M3 and
+`--minimax-region cn` to use the CN endpoint instead of the global endpoint.
+
 ### Docker
 
 `docker compose up --build`, then open <http://localhost:8080>. [Docker notes](https://openosint.tech/docs/web-ui/#docker)
