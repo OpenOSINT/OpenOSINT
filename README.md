@@ -2,10 +2,9 @@
 
 <div align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
-    <img src="docs/assets/logo-light.svg" alt="OpenOSINT" width="270">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/docs/readme-conversion/docs/assets/logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/docs/readme-conversion/docs/assets/logo-light.svg" alt="OpenOSINT" width="270">
   </picture>
-  <h1>OpenOSINT</h1>
   <p><strong>OpenOSINT is an open-source OSINT agent for investigators and security researchers: 21 public-source tools behind a natural-language interface, with an MCP server.</strong></p>
 </div>
 
