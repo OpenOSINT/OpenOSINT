@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- Source of docs/assets/social.png (1280x640). Re-render: see CONTRIBUTING.md -->
+<html><head><meta charset="utf-8"><style>
+@font-face { font-family: "Inter Tight"; font-weight: 100 900;
+  src: url("fonts/InterTight-latin.woff2") format("woff2"); }
+html, body { margin: 0; }
+body { width: 1280px; height: 640px; background: #15171A; color: #E6E6E6; font-family: "Inter Tight"; position: relative; overflow: hidden; }
+.mark { position: absolute; left: 72px; top: 64px; display: flex; align-items: center; gap: 14px; font-size: 30px; font-weight: 500; letter-spacing: -0.01em; }
+h1 { position: absolute; left: 72px; bottom: 72px; margin: 0; width: 580px; font-size: 80px; line-height: 1.02; font-weight: 300; letter-spacing: -0.03em; color: #F2F2F2; }
+#globe { position: absolute; left: 680px; top: 0; }
+</style></head><body>
+<div class="mark"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#E6E6E6" stroke-width="1.8" stroke-linecap="square"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>OpenOSINT</div>
+<h1>Open-source OSINT agent.</h1>
+<svg id="globe" width="600" height="640" viewBox="0 0 600 640">
+  <circle cx="310" cy="320" r="270" fill="#1A1D20" stroke="#41464C"/>
+  <path id="grat" fill="none" stroke="#34383D"/><path id="dots" fill="#6B7178"/>
+  <path id="arcs" fill="none" stroke="#A9ADB2" stroke-dasharray="4 5"/><path id="pts" fill="#E6E6E6"/>
+</svg>
+<script>
+// The same sphere as static/globe.js (Fibonacci dots, 30-degree graticule, four register points), one frozen frame.
+var R = 270, CX = 310, CY = 320, RAD = Math.PI / 180, P0 = 34 * RAD, ROT = 22, DOTS = 900, GOLDEN = Math.PI * (3 - Math.sqrt(5));
+var POINTS = [[51.5, -0.13], [47.56, 7.59], [50.85, 4.35], [38.9, -77.04]];
+function proj(lat, lon) {
+  var p = lat * RAD, l = lon * RAD, l0 = -ROT * RAD;
+  return { x: CX + R * Math.cos(p) * Math.sin(l - l0),
+    y: CY - R * (Math.cos(P0) * Math.sin(p) - Math.sin(P0) * Math.cos(p) * Math.cos(l - l0)),
+    v: Math.sin(P0) * Math.sin(p) + Math.cos(P0) * Math.cos(p) * Math.cos(l - l0) };
+}
+function circle(x, y, r) { return "M" + (x - r).toFixed(1) + " " + y.toFixed(1) + "a" + r.toFixed(1) + " " + r.toFixed(1) + " 0 1 0 " + (2 * r).toFixed(1) + " 0a" + r.toFixed(1) + " " + r.toFixed(1) + " 0 1 0 " + (-2 * r).toFixed(1) + " 0"; }
+function trace(count, at) {
+  var out = "", pen = false;
+  for (var i = 0; i <= count; i++) { var q = proj.apply(null, at(i / count)); if (q.v > 0) { out += (pen ? "L" : "M") + q.x.toFixed(1) + " " + q.y.toFixed(1) + " "; pen = true; } else pen = false; }
+  return out;
+}
+var g = "", d = "", a = "", h = "", i, lat, lon, q;
+for (lat = -60; lat <= 60; lat += 30) g += trace(90, function (t) { return [lat, -180 + 360 * t]; });
+for (lon = -180; lon < 180; lon += 30) g += trace(43, function (t) { return [-86 + 172 * t, lon]; });
+for (i = 0; i < DOTS; i++) { lat = Math.asin(1 - (i / (DOTS - 1)) * 2) / RAD; lon = ((i * GOLDEN) / RAD) % 360 - 180; q = proj(lat, lon); if (q.v > 0.05) d += circle(q.x, q.y, 0.9 + q.v * 1.4); }
+POINTS.forEach(function (p) { q = proj(p[0], p[1]); if (q.v > 0) h += circle(q.x, q.y, 5); });
+for (var k = 3; k < POINTS.length; k++) a += trace(24, function (t) { return [POINTS[0][0] + (POINTS[k][0] - POINTS[0][0]) * t + Math.sin(t * Math.PI) * 6, POINTS[0][1] + (POINTS[k][1] - POINTS[0][1]) * t]; });
+grat.setAttribute("d", g); dots.setAttribute("d", d); arcs.setAttribute("d", a); pts.setAttribute("d", h);
+</script></body></html>

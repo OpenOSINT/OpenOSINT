@@ -82,6 +82,10 @@ git add docs/assets/demo-web-graph.*
 
 See [`scripts/record-demo/README.md`](scripts/record-demo/README.md) for prerequisites and pipeline details.
 
+## Regenerating the social preview
+
+`docs/assets/social.png` (1280x640) is rendered from `docs/assets/social.html`: edit the HTML, then run `python -c "from playwright.sync_api import sync_playwright as s; p=s().start(); b=p.chromium.launch(); g=b.new_page(viewport={'width':1280,'height':640}); g.goto('file://'+__import__('os').path.abspath('docs/assets/social.html')); g.wait_for_timeout(500); g.screenshot(path='docs/assets/social.png'); b.close()"` (needs `playwright install chromium`).
+
 ## Regenerating the plugin demo
 
 `assets/demo/skill-demo.tape` drives a real Claude Code session with [VHS](https://github.com/charmbracelet/vhs)
