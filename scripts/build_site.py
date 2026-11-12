@@ -274,7 +274,7 @@ def org_ld() -> dict:
         "name": "OpenOSINT",
         "url": BASE_URL + "/",
         "logo": BASE_URL + "/logo.svg",
-        "description": "Open-source engine for passive checks of public information, with hosted products Monitor and Diligence.",
+        "description": "Open-source engine for passive checks of public information, with a hosted version, OpenOSINT Cloud.",
         "email": "commercial@openosint.tech",
         "sameAs": [REPO_URL, "https://app.openosint.tech/"],
     }

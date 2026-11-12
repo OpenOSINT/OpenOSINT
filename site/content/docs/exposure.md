@@ -61,4 +61,4 @@ Every finding carries its evidence and a suggested fix. The HTML report footer s
 
 ## Hosted version
 
-[OpenOSINT Monitor](https://app.openosint.tech/monitor?utm_source=openosint.tech&utm_medium=referral&utm_campaign=docs) runs checks like these on a schedule and emails you when something changes.
+Prefer a hosted version? [OpenOSINT Cloud](https://app.openosint.tech/?utm_source=docs&utm_medium=referral&utm_campaign=exposure) answers questions about a domain with a source on every claim; first check free, no account.

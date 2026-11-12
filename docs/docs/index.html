@@ -178,7 +178,51 @@
 <li>Run your first investigation in the <a href="/docs/quickstart/">quickstart</a>.</li>
 <li>Browse the <a href="/docs/cli/">CLI reference</a> and the <a href="/tools/">tools reference</a>.</li>
 </ol>
-<p>For a hosted version with no setup, see <a href="https://app.openosint.tech/?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=docs">Monitor and Diligence</a>.</p>
+<p>For a hosted version with no setup, see <a href="https://app.openosint.tech/?utm_source=docs&amp;utm_medium=referral&amp;utm_campaign=docs">OpenOSINT Cloud</a> (first check free, no account).</p>
+<h2 id="compared-with-other-tools">Compared with other tools</h2>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Table"><table>
+<thead>
+<tr>
+<th></th>
+<th>Prompt-only OSINT skills</th>
+<th>SpiderFoot</th>
+<th>OpenOSINT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>What runs the lookups</td>
+<td>Nothing: the skill is instructions, and the agent improvises</td>
+<td>Its own 200+ modules</td>
+<td>Python tools shipped with it</td>
+</tr>
+<tr>
+<td>Breadth</td>
+<td>Whatever the agent can reach</td>
+<td>Much broader: 200+ modules and a correlation engine, per its README</td>
+<td>A focused tool set</td>
+</tr>
+<tr>
+<td>Built to be driven by an agent</td>
+<td>Yes, that is the format</td>
+<td>Web UI or CLI, per its README</td>
+<td>Agent Skill, Claude Code plugin, MCP server, CLI and web UI</td>
+</tr>
+<tr>
+<td>Passive/noisy labels, off by default</td>
+<td>No</td>
+<td>Not claimed here</td>
+<td>Yes, per tool</td>
+</tr>
+<tr>
+<td>License</td>
+<td>Varies</td>
+<td>MIT</td>
+<td>MIT</td>
+</tr>
+</tbody>
+</table></div>
+<p>SpiderFoot is the better choice when you want a large standalone scanner. OpenOSINT is for agents that need a small set of real, labelled tools.</p>
       <nav class="pager" aria-label="Previous and next page"><a class="next" href="/docs/agent-skill/" rel="next"><small>Next</small>Agent Skill &amp; plugin</a>
       </nav>
       <p class="edit"><a href="https://github.com/OpenOSINT/OpenOSINT/edit/main/site/content/docs/index.md" rel="noopener">Edit this page on GitHub</a></p>

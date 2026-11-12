@@ -79,7 +79,7 @@
   <article class="prose">
     <nav class="crumbs" aria-label="Breadcrumb"><a href="/blog/">&larr; Blog</a></nav>
     <h1>Google Dorks for Security Researchers: A Practical Reference</h1>
-    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 4 min read</p>
+    <p class="meta"><time datetime="2026-05-24">2026-05-24</time> &middot; 5 min read</p>
     <h2>Why sensitive data ends up indexed</h2>
 <div class="indent">
 <p>Misconfiguration, not malice, accounts for most indexed sensitive data. A Jenkins CI server deployed without a robots.txt gets crawled within days. An S3 bucket set to public serves its directory listing to Googlebot. A developer commits a config file to a public repository that references internal hostnames. A company migrates its internal wiki and accidentally removes the access controls during the cutover. Google doesn't distinguish between what should and shouldn't be publicly accessible &mdash; it indexes what it can reach. Dorks are filters that make that index useful for security research by narrowing results to specific file types, URL patterns, and content signatures.</p>
@@ -160,7 +160,7 @@ site:target.com intext:"@target.com" filetype:pdf
 
 
 <aside class="oo-cta">
-  <p>Want this watched for you? <a href="https://app.openosint.tech/monitor?utm_source=openosint.tech&amp;utm_medium=referral&amp;utm_campaign=blog">OpenOSINT Monitor</a> checks your domain&rsquo;s email authentication, TLS, security headers and lookalike domains, and emails you when something changes.</p>
+  <p>Want to try this without installing anything? <a href="https://app.openosint.tech/?utm_source=docs&amp;utm_medium=referral&amp;utm_campaign=google-dorks-guide">OpenOSINT Cloud</a> answers questions about a domain, an IP address or a company, with a source on every claim. First check free, no account.</p>
 </aside>
 
   </article>
