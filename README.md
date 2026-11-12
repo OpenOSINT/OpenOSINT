@@ -78,7 +78,7 @@ Sherlock, holehe, sublist3r and phoneinfoga run as local binaries you install yo
 
 ## Why OpenOSINT
 
-Tools run as real Python code and every finding cites the call that produced it. Compared with SpiderFoot, OpenOSINT has far fewer modules and is built to be driven by an agent. See the [comparison](https://openosint.tech/docs/#comparison).
+Tools run as real Python code and every finding cites the call that produced it. Compared with SpiderFoot, OpenOSINT has far fewer modules and is built to be driven by an agent. See the [comparison](https://openosint.tech/docs/#compared-with-other-tools).
 
 ## Passive by default
 
