@@ -1,10 +1,7 @@
 <!-- mcp-name: io.github.OpenOSINT/openosint -->
 
 <div align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/docs/readme-conversion/docs/assets/logo-dark.svg">
-    <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/docs/readme-conversion/docs/assets/logo-light.svg" alt="OpenOSINT" width="270">
-  </picture>
+  <img src="docs/assets/logo.svg" alt="OpenOSINT" width="270">
   <p><strong>OpenOSINT is an open-source OSINT agent for investigators and security researchers: 21 public-source tools behind a natural-language interface, with an MCP server.</strong></p>
 </div>
 
