@@ -9,6 +9,10 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- The Bright Data link surface `demo` is removed (the public demo at demo.openosint.tech is being retired). A network-exposed web UI is `webui-remote`, a loopback one `webui`; `PUBLIC_DEMO_HOST` and the `OPENOSINT_ALLOWED_HOSTS` check that selected `demo` are gone. The local `openosint web` UI is unchanged.
+
 ## [2.38.1] — 2026-11-14
 
 ### Fixed

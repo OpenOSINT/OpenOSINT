@@ -197,7 +197,7 @@ def public_catalog() -> list[dict]:
     ]
 
 
-_WEB_SURFACES = ("webui", "webui-remote", "demo")
+_WEB_SURFACES = ("webui", "webui-remote")
 
 
 def _add_it_line(missing: list[str]) -> str:

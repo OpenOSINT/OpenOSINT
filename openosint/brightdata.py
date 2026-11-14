@@ -10,7 +10,7 @@ link, ``scrape_url`` the Web Unlocker link, everything else the base link.
 
 * surface (``utm_medium``): where the link is shown. In-product surfaces are set once at
   startup by the entry point: ``cli`` (default), ``mcp``, ``webui`` (loopback web UI),
-  ``webui-remote`` (a network-exposed web UI) and ``demo`` (only demo.openosint.tech).
+  and ``webui-remote`` (a network-exposed web UI).
 * moment (``utm_campaign``): setup, quota, blocked or docs.
 * ``OPENOSINT_NO_REFERRAL_LINKS=1`` swaps every in-product link for a plain
   ``https://brightdata.com`` and drops the commission wording; instructions stay.
@@ -40,7 +40,7 @@ BILLING_URL = "https://brightdata.com/cp/billing"
 OPT_OUT_ENV = "OPENOSINT_NO_REFERRAL_LINKS"
 _TRUTHY = frozenset({"1", "true", "yes", "on"})
 
-SURFACES = ("readme", "docs", "cli", "mcp", "webui", "webui-remote", "demo", "env-example")
+SURFACES = ("readme", "docs", "cli", "mcp", "webui", "webui-remote", "env-example")
 CAMPAIGNS = ("setup", "quota", "blocked", "docs")
 
 REFERRAL_DISCLOSURE = "OpenOSINT earns a referral commission if you sign up through this link."

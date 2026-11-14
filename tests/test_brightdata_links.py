@@ -195,8 +195,6 @@ class TestEntryPointsSetTheSurface:
 
         assert brightdata.current_surface() == "mcp"
 
-    DEMO_HOSTS = "demo.openosint.tech,openosint-demo-8f67039da343.herokuapp.com"
-
     @pytest.mark.parametrize(
         ("host", "allowed_hosts", "force_demo", "surface"),
         [
@@ -204,12 +202,10 @@ class TestEntryPointsSetTheSurface:
             ("127.0.0.1", "", True, "webui"),  # rehearsing demo restrictions locally is still local
             ("0.0.0.0", "", False, "webui-remote"),  # any other network-exposed server
             ("0.0.0.0", "intranet.example.com", False, "webui-remote"),
-            ("0.0.0.0", DEMO_HOSTS, False, "demo"),  # only the configured public demo host
-            ("0.0.0.0", "DEMO.openosint.tech:443", False, "demo"),
-            ("127.0.0.1", DEMO_HOSTS, False, "webui"),
+            ("127.0.0.1", "intranet.example.com", False, "webui"),
         ],
     )
-    def test_web_app_sets_webui_webui_remote_or_demo(
+    def test_web_app_sets_webui_or_webui_remote(
         self, monkeypatch, host, allowed_hosts, force_demo, surface
     ):
         from openosint import web_server

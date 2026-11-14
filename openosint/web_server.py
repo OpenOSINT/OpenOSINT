@@ -159,16 +159,10 @@ def _restriction_lifted_by_declaration(host: str | None) -> bool:
     return os.environ.get("OPENOSINT_PUBLISHED_BIND", "").strip() in _SAFE_BIND_HOSTS
 
 
-PUBLIC_DEMO_HOST = "demo.openosint.tech"
-
-
 def _compute_web_surface(host: str | None) -> str:
-    """The Bright Data link surface: loopback -> webui; the configured public demo host ->
-    demo; any other network-exposed server (or an undeterminable bind) -> webui-remote."""
-    if _is_loopback_host(host):
-        return "webui"
-    allowed = {h.strip().lower().rsplit(":", 1)[0] for h in os.environ.get("OPENOSINT_ALLOWED_HOSTS", "").split(",")}
-    return "demo" if PUBLIC_DEMO_HOST in allowed else "webui-remote"
+    """The Bright Data link surface: loopback -> webui; any other network-exposed server (or an
+    undeterminable bind) -> webui-remote."""
+    return "webui" if _is_loopback_host(host) else "webui-remote"
 
 
 def _compute_demo_mode(host: str | None) -> bool:

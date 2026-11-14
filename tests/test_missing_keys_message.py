@@ -101,7 +101,7 @@ class TestWhereToPutIt:
 
         assert '"env"' in line and "restart" in line.lower() and str(config_path()) in line
 
-    @pytest.mark.parametrize("surface", ["webui", "webui-remote", "demo"])
+    @pytest.mark.parametrize("surface", ["webui", "webui-remote"])
     def test_web_surfaces_lead_with_the_settings_page(self, surface):
         brightdata.set_surface(surface)
 
