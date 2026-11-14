@@ -1,7 +1,7 @@
 <!-- mcp-name: io.github.OpenOSINT/openosint -->
 
 <div align="center">
-  <img src="docs/assets/logo.svg" alt="OpenOSINT" width="270">
+  <img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/assets/logo.svg" alt="OpenOSINT" width="270">
   <p><strong>OpenOSINT is an open-source OSINT agent for investigators and security researchers: 21 public-source tools behind a natural-language interface, with an MCP server.</strong></p>
 </div>
 
@@ -14,7 +14,7 @@
 [![Sponsored by IP2Location](https://img.shields.io/badge/sponsored%20by-IP2Location.io-FF6B35?style=flat-square)](https://www.ip2location.io/?utm_source=openosint&utm_medium=readme&utm_campaign=ip2location)
 [![Sponsored by TestMu AI](https://img.shields.io/badge/sponsored%20by-TestMu%20AI-000000?style=flat-square)](https://www.testmuai.com/?utm_source=openosint&utm_medium=opensourcecollab)
 
-<img src="docs/assets/demo-chat.gif" width="720" alt="OpenOSINT answering a question about a company in chat: tool calls with their times, then an answer with a source on every claim">
+<img src="https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/docs/assets/demo-chat.gif" width="720" alt="OpenOSINT answering a question about a company in chat: tool calls with their times, then an answer with a source on every claim">
 
 **Run it yourself:** `uvx openosint web` (one command, no keys)<br>
 **No terminal?** Use [OpenOSINT Cloud](https://app.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=hero) in your browser, first check free
@@ -101,7 +101,7 @@ claude mcp add openosint -- uvx --from openosint openosint-mcp
 npx skills add OpenOSINT/OpenOSINT
 ```
 
-![OpenOSINT in Claude Code: add the marketplace, install the plugin, run /openosint:osint example.com and get a report where every finding cites its tool call](assets/demo/skill-demo.gif)
+![OpenOSINT in Claude Code: add the marketplace, install the plugin, run /openosint:osint example.com and get a report where every finding cites its tool call](https://raw.githubusercontent.com/OpenOSINT/OpenOSINT/main/assets/demo/skill-demo.gif)
 
 Other clients: [MCP docs](https://openosint.tech/docs/mcp/) · [Agent Skill](https://openosint.tech/docs/agent-skill/).
 

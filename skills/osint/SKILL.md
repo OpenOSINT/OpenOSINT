@@ -27,14 +27,14 @@ OpenOSINT runs real tools in Python and returns their real output. You orchestra
 Use the CLI first: it needs no API key, no AI provider and no MCP server, so it works on any agent. Put `--json` before the subcommand:
 
 ```bash
-uvx --from openosint==2.38.0 openosint --json exposure example.com
-uvx --from openosint==2.38.0 openosint --json dns example.com
-uvx --from openosint==2.38.0 openosint --json rdap example.com
-uvx --from openosint==2.38.0 openosint --json whois example.com
-uvx --from openosint==2.38.0 openosint --json dorks example.com
-uvx --from openosint==2.38.0 openosint --json gdelt "Example Corp"
-uvx --from openosint==2.38.0 openosint --json ip 8.8.8.8
-uvx --from openosint==2.38.0 openosint --json exposure example.com --checks email,registration
+uvx --from openosint==2.38.1 openosint --json exposure example.com
+uvx --from openosint==2.38.1 openosint --json dns example.com
+uvx --from openosint==2.38.1 openosint --json rdap example.com
+uvx --from openosint==2.38.1 openosint --json whois example.com
+uvx --from openosint==2.38.1 openosint --json dorks example.com
+uvx --from openosint==2.38.1 openosint --json gdelt "Example Corp"
+uvx --from openosint==2.38.1 openosint --json ip 8.8.8.8
+uvx --from openosint==2.38.1 openosint --json exposure example.com --checks email,registration
 ```
 
 - `--json` output has `tool`, `target`, `timestamp`, `results` and `error`; cite those.

@@ -2545,7 +2545,7 @@ wheels = [
 
 [[package]]
 name = "openosint"
-version = "2.38.0"
+version = "2.38.1"
 source = { editable = "." }
 dependencies = [
     { name = "aiohttp" },

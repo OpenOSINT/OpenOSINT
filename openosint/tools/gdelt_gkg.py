@@ -52,6 +52,9 @@ _GKG_PATH_RE = re.compile(r"^/gdeltv2/(\d{14})\.gkg\.csv\.zip$")
 SLOT_MINUTES = 15
 WINDOW_HOURS_ENV = "OPENOSINT_GDELT_WINDOW_HOURS"
 MAX_ARTICLES_ENV = "OPENOSINT_GDELT_MAX_ARTICLES"
+FALLBACK_SLOTS_ENV = "OPENOSINT_GDELT_FALLBACK_SLOTS"
+DEFAULT_FALLBACK_SLOTS = 8  # lastupdate.txt can name a file GDELT has not published yet
+MAX_FALLBACK_SLOTS = 32
 DEFAULT_WINDOW_HOURS = 6
 MAX_WINDOW_HOURS = 24
 DEFAULT_MAX_ARTICLES = 30_000
@@ -100,6 +103,10 @@ class GkgError(Exception):
     """Any download, size-cap or format failure; the tool reports it as unavailable."""
 
 
+class GkgNotFound(GkgError):
+    """The file server answered 404: the file is not (yet) published, which is not an outage."""
+
+
 class Place(NamedTuple):
     name: str
     lat: float
@@ -143,6 +150,10 @@ def _env_int(name: str, default: int, lo: int, hi: int) -> int:
 
 def window_hours() -> int:
     return _env_int(WINDOW_HOURS_ENV, DEFAULT_WINDOW_HOURS, 1, MAX_WINDOW_HOURS)
+
+
+def fallback_slots() -> int:
+    return _env_int(FALLBACK_SLOTS_ENV, DEFAULT_FALLBACK_SLOTS, 0, MAX_FALLBACK_SLOTS)
 
 
 def max_articles() -> int:
@@ -202,6 +213,8 @@ def _download(url: str, max_bytes: int, timeout_seconds: int) -> bytes:
             timeout=(_CONNECT_TIMEOUT_SECONDS, timeout_seconds),
             proxies=_gdelt_proxies(),
         ) as response:
+            if response.status_code == 404:
+                raise GkgNotFound("GDELT file server returned HTTP 404.")
             if response.status_code != 200:
                 raise GkgError(f"GDELT file server returned HTTP {response.status_code}.")
             declared = response.headers.get("Content-Length", "")
@@ -417,7 +430,7 @@ class GkgWindow:
             text = _download(LASTUPDATE_URL, MAX_LASTUPDATE_BYTES, timeout_seconds).decode(
                 "utf-8", errors="replace"
             )
-            self._load_slot(parse_lastupdate(text), timeout_seconds)
+            self._load_newest_available(parse_lastupdate(text), timeout_seconds)
         except GkgError as exc:
             with self._state_lock:
                 self._last_error = str(exc)
@@ -426,6 +439,20 @@ class GkgWindow:
         with self._state_lock:
             self._last_poll = time.monotonic()
             self._retry_after = 0.0
+
+    def _load_newest_available(self, slot: str, timeout_seconds: int) -> None:
+        """Load the slot lastupdate.txt names; when GDELT answers 404 for it (it lists files before they
+        are published, and was seen missing the newest four), walk back up to fallback_slots() earlier
+        slots. Only a 404 walks back: any other failure is an outage and propagates."""
+        newest = _slot_dt(slot)
+        for back in range(fallback_slots() + 1):
+            try:
+                self._load_slot(_slot_str(newest - timedelta(minutes=SLOT_MINUTES * back)), timeout_seconds)
+                return
+            except GkgNotFound as exc:
+                logger.warning("GDELT slot %s not published yet; trying an earlier one", slot)
+                missing = exc
+        raise missing
 
     def _load_slot(self, slot: str, timeout_seconds: int) -> bool:
         """Download + parse one slot unless already held. Returns True if it downloaded."""

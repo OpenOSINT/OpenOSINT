@@ -407,6 +407,66 @@ def test_backfill_gives_up_after_consecutive_failures_and_backs_off(monkeypatch)
     assert window._backfill_retry_after > time.monotonic()  # no hammering on every query
 
 
+class RecordedUnpublishedSlots(FakeUpstream):
+    """The sequence seen on 2026-11-14: lastupdate.txt named 09:45 and the four newest files were 404."""
+
+    def __call__(self, url, max_bytes, timeout_seconds):
+        if url != gkg.LASTUPDATE_URL and any(
+            slot in url for slot in self.missing
+        ):
+            with self.lock:
+                self.calls.append(url)
+            raise gkg.GkgNotFound("GDELT file server returned HTTP 404.")
+        return super().__call__(url, max_bytes, timeout_seconds)
+
+
+def test_a_404_for_the_newest_file_walks_back_to_the_latest_published_one(monkeypatch):
+    newest = slot_now()
+    start = gkg._slot_dt(newest)
+    missing = {gkg._slot_str(start - timedelta(minutes=15 * i)) for i in range(4)}
+    upstream = RecordedUnpublishedSlots(newest, missing=missing)
+    monkeypatch.setattr(gkg, "_download", upstream)
+    window = gkg.GkgWindow()
+
+    snapshot = window.snapshot()
+
+    assert snapshot.articles
+    assert [u.rsplit("/", 1)[-1][:14] for u in upstream.downloads()[:5]] == [
+        gkg._slot_str(start - timedelta(minutes=15 * i)) for i in range(5)
+    ]
+
+
+def test_the_walk_back_stops_after_the_configured_number_of_slots(monkeypatch):
+    newest = slot_now()
+    start = gkg._slot_dt(newest)
+    missing = {gkg._slot_str(start - timedelta(minutes=15 * i)) for i in range(40)}
+    upstream = RecordedUnpublishedSlots(newest, missing=missing)
+    monkeypatch.setattr(gkg, "_download", upstream)
+    monkeypatch.setenv(gkg.FALLBACK_SLOTS_ENV, "3")
+
+    with pytest.raises(gkg.GkgError):
+        gkg.GkgWindow().snapshot()
+
+    assert len(upstream.downloads()) == 4  # the named slot and three earlier ones
+
+
+def test_an_outage_that_is_not_a_404_does_not_walk_back(monkeypatch):
+    calls = []
+
+    def down(url, *_a):
+        calls.append(url)
+        if url == gkg.LASTUPDATE_URL:
+            return f"1 a http://data.gdeltproject.org/gdeltv2/{slot_now()}.gkg.csv.zip\n".encode()
+        raise gkg.GkgError("GDELT file server returned HTTP 503.")
+
+    monkeypatch.setattr(gkg, "_download", down)
+
+    with pytest.raises(gkg.GkgError):
+        gkg.GkgWindow().snapshot()
+
+    assert len(calls) == 2  # lastupdate.txt, then the one file
+
+
 def test_cold_failure_raises_and_backs_off_instead_of_retrying_every_query(monkeypatch):
     calls = []
 

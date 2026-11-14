@@ -9,6 +9,12 @@ OpenOSINT adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.38.1] — 2026-11-14
+
+### Fixed
+
+- GDELT news lookups no longer fail when `lastupdate.txt` names a file GDELT has not published yet. GDELT was seen listing a slot whose file, and the three before it, answered 404; because only the newest file was tried on a cold start, every lookup reported the source as unavailable. On a 404 for the newest file the tool now walks back up to `OPENOSINT_GDELT_FALLBACK_SLOTS` earlier 15-minute slots (default 8, 0 to 32; 0 turns it off). Only a 404 walks back: any other failure is still reported as an outage.
+
 ## [2.38.0] — 2026-11-05
 
 ### Added
