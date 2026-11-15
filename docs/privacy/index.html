@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Privacy Policy | OpenOSINT</title>
-<meta name="description" content="How OpenOSINT handles data on the public demo, the Cloud API and self-hosted installs, with GDPR disclosures. Effective 2026-08-30.">
+<meta name="description" content="How OpenOSINT handles data on the Cloud API, self-hosted installs and the retired public demo, with GDPR disclosures. Effective 2026-08-30.">
 <link rel="canonical" href="https://openosint.tech/privacy/">
 <meta name="theme-color" content="#16181b">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -16,7 +16,7 @@
 <meta property="og:site_name" content="OpenOSINT">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Privacy Policy | OpenOSINT">
-<meta property="og:description" content="How OpenOSINT handles data on the public demo, the Cloud API and self-hosted installs, with GDPR disclosures. Effective 2026-08-30.">
+<meta property="og:description" content="How OpenOSINT handles data on the Cloud API, self-hosted installs and the retired public demo, with GDPR disclosures. Effective 2026-08-30.">
 <meta property="og:url" content="https://openosint.tech/privacy/">
 <meta property="og:image" content="https://openosint.tech/assets/social-card.png">
 <meta property="og:image:width" content="1280">
@@ -24,7 +24,7 @@
 <meta property="og:image:alt" content="OpenOSINT: the OSINT toolkit for AI agents. Agent Skill, MCP server and CLI.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Privacy Policy | OpenOSINT">
-<meta name="twitter:description" content="How OpenOSINT handles data on the public demo, the Cloud API and self-hosted installs, with GDPR disclosures. Effective 2026-08-30.">
+<meta name="twitter:description" content="How OpenOSINT handles data on the Cloud API, self-hosted installs and the retired public demo, with GDPR disclosures. Effective 2026-08-30.">
 <meta name="twitter:image" content="https://openosint.tech/assets/social-card.png">
 </head>
 <body>
@@ -63,9 +63,9 @@
 <p>OpenOSINT is offered through several distinct surfaces, and our role is not the same on all of them. This policy is organized by surface for that reason &mdash; read the section for the surface you actually use; do not assume a fact from one section holds on another.</p>
 </div>
 
-<h2 id="demo">1. PUBLIC DEMO (DEMO.OPENOSINT.TECH)</h2>
+<h2 id="demo">1. RETIRED PUBLIC DEMO (DEMO.OPENOSINT.TECH)</h2>
 <div class="indent">
-<p>This surface has its own, separate <b>Terms of Use</b> and <b>Privacy &amp; Cookie Notice</b> at <a href="/demo/terms/">openosint.tech/demo/terms</a> and <a href="/demo/privacy/">openosint.tech/demo/privacy</a>. Those documents control for the demo; this section is a summary, not a substitute. In short: the demo is Bring Your Own Key. When you supply your own key, we use it only to fulfil the lookup you request, directly with the provider you chose &mdash; we do not use an operator-held key on your behalf, and your key is stored in your browser session only, never on our servers. Breach-data lookups are disabled on the demo outright, regardless of key source.</p>
+<p>The public demo was retired on 2026-11-14; <code>demo.openosint.tech</code> now redirects to the OpenOSINT Cloud app and no longer processes any data. The demo had its own <b>Terms of Use</b> and <b>Privacy &amp; Cookie Notice</b>, kept as a record at <a href="/demo/terms/">openosint.tech/demo/terms</a> and <a href="/demo/privacy/">openosint.tech/demo/privacy</a>. Those documents controlled for the demo while it ran; this section is a summary, not a substitute. In short: the demo was Bring Your Own Key. When you supplied your own key, we used it only to fulfil the lookup you requested, directly with the provider you chose &mdash; we did not use an operator-held key on your behalf, and your key was stored in your browser session only, never on our servers. Breach-data lookups were disabled on the demo outright, regardless of key source.</p>
 </div>
 
 <h2 id="cookies">2. COOKIES AND TRACKING</h2>
@@ -85,7 +85,7 @@
 </ul>
 <p><b>Purposes and legal bases (GDPR Art. 6):</b> providing the Service and processing payments &mdash; performance of a contract; security, abuse prevention, and metering &mdash; legitimate interests; legal and tax compliance &mdash; legal obligation.</p>
 <p><b>Data about third parties in queries:</b> a result may include personal data about a third party. For that data <b>you are the data controller</b>, responsible for your lawful basis and for honoring data-subject rights. We process it on your behalf transiently to return the result to you.</p>
-<p><b>Recipients:</b> <b>Gumroad</b> (digital-product payments), <b>Heroku</b> (Cloud API hosting and its Postgres database), <b>IP2Location</b> (a sponsored lookup where we do hold and use our own key on your behalf &mdash; the one exception to the BYOK model above), <b>Formspree</b> (waitlist form submissions), and <b>GitHub</b>/<b>Google</b> (OAuth identity providers for dashboard sign-in only, not query content). A current, detailed list &mdash; including the public demo, which this policy does not otherwise cover &mdash; is available at <a href="/subprocessors/">openosint.tech/subprocessors</a>. Where data is transferred outside the EEA, we rely on appropriate safeguards such as Standard Contractual Clauses.</p>
+<p><b>Recipients:</b> <b>Gumroad</b> (digital-product payments), <b>Heroku</b> (Cloud API hosting and its Postgres database), <b>IP2Location</b> (a sponsored lookup where we do hold and use our own key on your behalf &mdash; the one exception to the BYOK model above), <b>Formspree</b> (waitlist form submissions), and <b>GitHub</b>/<b>Google</b> (OAuth identity providers for dashboard sign-in only, not query content). A current, detailed list is available at <a href="/subprocessors/">openosint.tech/subprocessors</a>. Where data is transferred outside the EEA, we rely on appropriate safeguards such as Standard Contractual Clauses.</p>
 <p><b>Retention:</b> account and billing records are kept as required for legal/tax purposes. Usage metadata &mdash; the redacted identifier, tool name, timing, and status described above &mdash; is retained for 365 days (12 months) and then deleted or anonymized; this figure is pinned in code at <code>cloud/config.py:USAGE_METADATA_RETENTION_DAYS</code> specifically so it cannot silently drift from what this policy states. <b>Open item:</b> whether the underlying Heroku log-drain for this application is actually configured to this figure has not been verified against this repository &mdash; it is an account-level setting outside version control. Stored BYOK credentials are deleted when you remove them or close your account. Waitlist signups are deleted if OpenOSINT Cloud has not launched within 12 months of signup; you may request removal at any time via <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a>.</p>
 </div>
 

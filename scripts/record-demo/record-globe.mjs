@@ -17,7 +17,7 @@
  *                       Ollama (llama3.2) agent turn.
  *
  * Canonical target: 127.0.0.1 only (local `openosint web`) — the tile proxy
- * is warm-cached locally with no shared rate limit. Never demo.openosint.tech.
+ * is warm-cached locally with no shared rate limit. Never a hosted instance.
  *
  * Usage:
  *   node scripts/record-demo/record-globe.mjs           # full recording (requires OPENOSINT_DEMO_KEY unless ollama)
@@ -115,7 +115,7 @@ if (process.argv.includes('--check')) {
 // ---------------------------------------------------------------------------
 if (!/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?\/?$/.test(BASE_URL)) {
   console.error(`ERROR: refusing to record against a non-local URL: ${BASE_URL}`);
-  console.error('Record against a local `openosint web` instance only — never demo.openosint.tech.');
+  console.error('Record against a local `openosint web` instance only — never a hosted one.');
   process.exit(1);
 }
 

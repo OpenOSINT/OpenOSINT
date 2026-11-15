@@ -78,7 +78,7 @@ gifski fallback order if GIF exceeds 10 MB:
 ## Overriding defaults
 
 ```bash
-OPENOSINT_DEMO_URL=https://demo.openosint.tech \
+OPENOSINT_DEMO_URL=http://localhost:8080 \
 OPENOSINT_PROVIDER=anthropic \
 OPENOSINT_MODEL=claude-opus-4-8 \
 make demo

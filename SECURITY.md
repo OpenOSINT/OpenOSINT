@@ -66,10 +66,10 @@ We will keep you informed at each step. If you have not heard back within 72 hou
 
 ### Out of scope
 
-- **The public demo at `demo.openosint.tech`** — it is a demonstration instance only. No sensitive personal data should be submitted there. Reports about behavior exclusive to the demo instance are noted but not treated as security vulnerabilities in the library itself.
+- **The retired public demo** — `demo.openosint.tech` was shut down on 2026-11-14 and now only redirects to the OpenOSINT Cloud app. Reports about it are not accepted.
 - **Third-party APIs (Shodan, VirusTotal, Censys, IP2Location, etc.)** — OpenOSINT is a BYOK (bring your own key) tool. Your API keys are passed directly from your environment to the respective APIs and never touch OpenOSINT's servers. Vulnerabilities in those upstream services should be reported to those providers.
 - Social-engineering attacks against maintainers
-- Denial-of-service attacks against the demo instance
+- Denial-of-service attacks against the OpenOSINT Cloud service or its hosts
 
 ---
 

@@ -19,7 +19,7 @@
 **Run it yourself:** `uvx openosint web` (one command, no keys)<br>
 **No terminal?** Use [OpenOSINT Cloud](https://app.openosint.tech/?utm_source=github&utm_medium=readme&utm_campaign=hero) in your browser, first check free
 
-[Docs](https://openosint.tech/docs/) · [Claude Code plugin](#use-it-from-claude-code-or-any-mcp-client) · [MCP server](https://openosint.tech/docs/mcp/) · [Live demo](https://demo.openosint.tech)
+[Docs](https://openosint.tech/docs/) · [Claude Code plugin](#use-it-from-claude-code-or-any-mcp-client) · [MCP server](https://openosint.tech/docs/mcp/)
 
 </div>
 

@@ -2,9 +2,10 @@
 url: /demo/privacy/
 title: Demo privacy and cookie notice
 seo_title: Demo privacy and cookie notice | OpenOSINT
-description: Privacy and cookie notice for the bring-your-own-key OpenOSINT demo at demo.openosint.tech. Draft, dated 2026-06-26.
+description: Retired on 2026-11-14. Privacy and cookie notice for the bring-your-own-key OpenOSINT demo that ran at demo.openosint.tech. Draft, dated 2026-06-26.
 ---
-<h1 id="intro">PRIVACY &amp; COOKIE NOTICE &mdash; OPENOSINT DEMO</h1>
+<h1 id="intro">PRIVACY &amp; COOKIE NOTICE &mdash; OPENOSINT DEMO (RETIRED)</h1>
+<p class="note"><b>The demo was retired on 2026-11-14.</b> <a href="https://demo.openosint.tech">demo.openosint.tech</a> now redirects to the OpenOSINT Cloud app. This page is kept as a record of how the demo operated until then; it no longer applies to any live service.</p>
 <!-- DRAFT NOTICE -->
 <p class="note">
 &#9888; DRAFT &mdash; This document has not been reviewed by legal counsel. It is provided as a
@@ -12,17 +13,18 @@ good-faith description of actual data flows and must be reviewed before treating
 final legal disclosure.
 </p>
 <div class="indent">
-<p><b>Applies to:</b> the interactive BYOK demo at <a href="https://demo.openosint.tech">demo.openosint.tech</a>.</p>
-<p><b>Does not apply to:</b> OpenOSINT Cloud (the authenticated paid service) &mdash; see
+<p><b>Applied to:</b> the interactive BYOK demo that ran at demo.openosint.tech until 2026-11-14.</p>
+<p><b>Did not apply to:</b> OpenOSINT Cloud (the authenticated paid service) &mdash; see
 <a href="/privacy/">openosint.tech/privacy</a> for that service.</p>
 <p><b>Contact:</b> <a href="mailto:commercial@openosint.tech">commercial@openosint.tech</a></p>
 </div>
 
 <h2 id="storage">1. BROWSER STORAGE &mdash; COMPLETE INVENTORY</h2>
 <div class="indent">
-<p>The demo uses only functional browser storage. There are no cookies. All items listed below
-are set and read exclusively by client-side JavaScript; nothing is transmitted to our servers
-except the in-flight API calls described in &sect;2.</p>
+<p>The demo used only functional browser storage. There were no cookies. All items listed below
+were set and read exclusively by client-side JavaScript; nothing was transmitted to our servers
+except the in-flight API calls described in &sect;2. Anything still in your browser from the demo
+is inert and can be removed by clearing site data for demo.openosint.tech.</p>
 
 <table>
 <tr>
@@ -78,20 +80,20 @@ except the in-flight API calls described in &sect;2.</p>
 
 <h2 id="apikeys">2. YOUR API KEYS &mdash; HOW THEY ARE USED</h2>
 <div class="indent">
-<p>This is a <b>Bring Your Own Key (BYOK)</b> demo. If you enter an API key (Anthropic,
-OpenRouter, Shodan, etc.) it is stored <b>in your browser session only</b>
-(<code>sessionStorage</code>). It is transmitted <b>exclusively</b> in outbound HTTP
-requests that perform the OSINT lookup you requested &mdash; directly to the LLM provider or
-through the proxy you configured. We do not log, copy, or store your key server-side.</p>
-<p>When you close the tab, your session storage is cleared and your key is gone from the
-browser. No copy remains on our infrastructure.</p>
+<p>The demo was a <b>Bring Your Own Key (BYOK)</b> service. If you entered an API key (Anthropic,
+OpenRouter, Shodan, etc.) it was stored <b>in your browser session only</b>
+(<code>sessionStorage</code>). It was transmitted <b>exclusively</b> in outbound HTTP
+requests that performed the OSINT lookup you requested &mdash; directly to the LLM provider or
+through the proxy you configured. We did not log, copy, or store your key server-side.</p>
+<p>When you closed the tab, your session storage was cleared and your key was gone from the
+browser. No copy remained on our infrastructure.</p>
 </div>
 
 <h2 id="cdns">3. THIRD-PARTY SCRIPT CONNECTIONS</h2>
 <div class="indent">
-<p>The demo page loads the following resources from third-party CDNs on every page load.
-None of these services set cookies or track users on this page; they deliver script and font
-files. Your IP address reaches their servers as a byproduct of the HTTP requests.</p>
+<p>The demo page loaded the following resources from third-party CDNs on every page load.
+None of these services set cookies or tracked users on that page; they delivered script and font
+files. Your IP address reached their servers as a byproduct of the HTTP requests.</p>
 <ul>
   <li><b>Google Fonts</b> (fonts.googleapis.com, fonts.gstatic.com) &mdash; Inter and
   JetBrains Mono typefaces.</li>
@@ -100,25 +102,25 @@ files. Your IP address reaches their servers as a byproduct of the HTTP requests
   <li><b>Alpine.js, cytoscape-fcose</b> (cdn.jsdelivr.net) &mdash; UI reactivity and
   graph layout plugin.</li>
 </ul>
-<p>There are <b>no analytics scripts, no advertising scripts, no fingerprinting scripts</b>
-on this page. No Google Analytics, Google Tag Manager, Meta Pixel, Hotjar, Plausible, or
-equivalent service is loaded.</p>
+<p>There were <b>no analytics scripts, no advertising scripts, no fingerprinting scripts</b>
+on that page. No Google Analytics, Google Tag Manager, Meta Pixel, Hotjar, Plausible, or
+equivalent service was loaded.</p>
 </div>
 
 <h2 id="nocookies">4. COOKIES</h2>
 <div class="indent">
-<p>The demo sets <b>no HTTP cookies</b>. All persistence uses <code>localStorage</code> and
-<code>sessionStorage</code> as described in &sect;1. Because there are no non-essential cookies
-or trackers, no cookie consent wall is required or shown &mdash; only an informational
+<p>The demo set <b>no HTTP cookies</b>. All persistence used <code>localStorage</code> and
+<code>sessionStorage</code> as described in &sect;1. Because there were no non-essential cookies
+or trackers, no cookie consent wall was required or shown &mdash; only an informational
 notice bar.</p>
 </div>
 
 <h2 id="thirdparty">5. THIRD-PARTY DATA SOURCES</h2>
 <div class="indent">
-<p>When you run an investigation the demo calls external OSINT data APIs (WHOIS registrars,
+<p>When you ran an investigation the demo called external OSINT data APIs (WHOIS registrars,
 IP geolocation providers, HaveIBeenPwned, Shodan, VirusTotal, etc.) on your behalf. Each
-provider has its own privacy policy. Results may include personal data about third parties;
-you are responsible for having a lawful basis to investigate any target you submit.</p>
+provider has its own privacy policy. Results could include personal data about third parties;
+you were responsible for having a lawful basis to investigate any target you submitted.</p>
 </div>
 
 <h2 id="contact">6. CONTACT</h2>
@@ -130,7 +132,7 @@ you are responsible for having a lawful basis to investigate any target you subm
 <div id="footer">
 <table width="100%" cellpadding="0" cellspacing="0" border="0">
 <tr>
-<td class="mhead-l">OpenOSINT Demo</td>
+<td class="mhead-l">OpenOSINT Demo (retired)</td>
 <td class="mhead-c">Privacy &amp; Cookie Notice</td>
 <td class="mhead-r">2026-06-26</td>
 </tr>
